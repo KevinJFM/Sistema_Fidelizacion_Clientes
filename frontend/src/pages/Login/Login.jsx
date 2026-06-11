@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
 import { setCredentials } from '../../redux/slices/authSlice';
 import { login } from '../../services/authService';
 import './Login.css';
@@ -16,22 +17,50 @@ export default function Login() {
   const [form, setForm]           = useState({ email: '', contrasena: '' });
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const dispatch   = useDispatch();
   const navigate   = useNavigate();
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
     setError('');
+    // Al escribir, se limpia el error de ese campo
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validar campos antes de enviar
+    const errores = {};
+    if (!form.email.trim()) {
+      errores.email = 'Requerido';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errores.email = 'Email inválido';
+    }
+    if (!form.contrasena.trim()) {
+      errores.contrasena = 'Requerido';
+    }
+
+    if (Object.keys(errores).length > 0) {
+      setFieldErrors(errores);
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
       const data = await login(form);
       dispatch(setCredentials(data));
+      toast.success(`¡Bienvenido, ${data.usuario.nombre}!`);
       navigate(ROLE_REDIRECT[data.usuario.rol] ?? '/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Error al iniciar sesión');
@@ -58,11 +87,14 @@ export default function Login() {
         </div>
 
         {/* Formulario */}
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit} noValidate>
 
           <div className="field-group">
-            <label htmlFor="email">Correo electrónico</label>
-            <div className="input-clay">
+            <label htmlFor="email">
+              Correo electrónico
+              {fieldErrors.email && <span className="req-tag">{fieldErrors.email}</span>}
+            </label>
+            <div className={`input-clay ${fieldErrors.email ? 'has-error' : ''}`}>
               <svg className="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
@@ -75,14 +107,16 @@ export default function Login() {
                 value={form.email}
                 onChange={handleChange}
                 autoComplete="off"
-                required
               />
             </div>
           </div>
 
           <div className="field-group">
-            <label htmlFor="contrasena">Contraseña</label>
-            <div className="input-clay">
+            <label htmlFor="contrasena">
+              Contraseña
+              {fieldErrors.contrasena && <span className="req-tag">{fieldErrors.contrasena}</span>}
+            </label>
+            <div className={`input-clay ${fieldErrors.contrasena ? 'has-error' : ''}`}>
               <svg className="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -94,7 +128,6 @@ export default function Login() {
                 placeholder="••••••••"
                 value={form.contrasena}
                 onChange={handleChange}
-                required
               />
               <button
                 type="button"

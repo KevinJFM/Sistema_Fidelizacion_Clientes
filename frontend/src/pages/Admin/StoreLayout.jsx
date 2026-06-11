@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import { logout } from '../../redux/slices/authSlice';
 import './StoreLayout.css';
 
@@ -38,6 +39,7 @@ export default function StoreLayout() {
 
   const handleLogout = () => {
     dispatch(logout());
+    toast.success('Sesión cerrada');
     navigate('/login');
   };
 

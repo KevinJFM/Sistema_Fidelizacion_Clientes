@@ -108,6 +108,34 @@
     0 0 0 3px rgba(124, 58, 237, 0.12);
 }
 
+/* Campo con error de validación */
+.input-clay.has-error {
+  background: #fef2f2;
+  box-shadow:
+    inset 0 2px 8px rgba(220, 38, 38, 0.08),
+    0 0 0 1.5px #ef4444;
+  animation: shake 0.3s ease;
+}
+.input-clay.has-error .input-icon { color: #ef4444; }
+
+.req-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 9px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 20px;
+  color: #dc2626;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
 .input-icon {
   color: #a78bfa;
   flex-shrink: 0;
