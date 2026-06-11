@@ -28,6 +28,6 @@ src/
 ## Scripts
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```

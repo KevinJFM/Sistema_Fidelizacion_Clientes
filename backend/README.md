@@ -24,6 +24,6 @@ uploads/           Archivos subidos
 ## Scripts
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
