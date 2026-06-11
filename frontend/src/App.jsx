@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login/Login';
 import StoreLayout from './pages/Admin/StoreLayout';
 import Dashboard from './pages/Admin/Dashboard';
@@ -15,6 +16,27 @@ const AdminRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            background: '#ffffff',
+            color: '#1e1b4b',
+            borderRadius: '14px',
+            fontSize: '14px',
+            fontWeight: 600,
+            boxShadow: '0 12px 32px rgba(124, 58, 237, 0.18)',
+            padding: '12px 16px',
+          },
+          success: {
+            iconTheme: { primary: '#7c3aed', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#dc2626', secondary: '#fff' },
+          },
+        }}
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
 

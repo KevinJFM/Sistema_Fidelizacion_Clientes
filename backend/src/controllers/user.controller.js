@@ -3,6 +3,8 @@ import pool from '../config/db.js';
 
 const ESTADO_INACTIVO = 2; // estados: 1=activo, 2=inactivo, 3=suspendido
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // Valida la política de contraseñas. Devuelve null si es válida, o un mensaje de error.
 const validarContrasena = (contrasena) => {
   if (contrasena.length < 8) {
@@ -72,6 +74,10 @@ export const createUsuario = async (req, res) => {
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
     }
 
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ message: 'El email no tiene un formato válido' });
+    }
+
     const errorPass = validarContrasena(contrasena);
     if (errorPass) {
       return res.status(400).json({ message: errorPass });
@@ -114,6 +120,11 @@ export const updateUsuario = async (req, res) => {
     );
     if (existing.length === 0) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Validar formato del email
+    if (email && !EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ message: 'El email no tiene un formato válido' });
     }
 
     // Verificar que el email no esté en uso por otro usuario
