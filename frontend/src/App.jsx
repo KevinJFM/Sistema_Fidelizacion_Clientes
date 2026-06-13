@@ -22,15 +22,15 @@ function App() {
           duration: 3500,
           style: {
             background: '#ffffff',
-            color: '#1e1b4b',
+            color: '#0A1259',
             borderRadius: '14px',
             fontSize: '14px',
             fontWeight: 600,
-            boxShadow: '0 12px 32px rgba(124, 58, 237, 0.18)',
+            boxShadow: '0 12px 32px rgba(13, 27, 184, 0.18)',
             padding: '12px 16px',
           },
           success: {
-            iconTheme: { primary: '#7c3aed', secondary: '#fff' },
+            iconTheme: { primary: '#0D1BB8', secondary: '#fff' },
           },
           error: {
             iconTheme: { primary: '#dc2626', secondary: '#fff' },

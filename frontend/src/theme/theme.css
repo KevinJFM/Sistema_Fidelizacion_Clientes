@@ -1,0 +1,164 @@
+/* ============================================
+   MENÚ DE USUARIO (trigger + desplegable)
+   ============================================ */
+.user-menu {
+  position: relative;
+}
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 14px;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.user-menu-trigger:hover {
+  background: rgba(13, 27, 184, 0.06);
+}
+.menu-chevron {
+  color: #9ca3af;
+  transition: transform 0.25s;
+}
+.menu-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Desplegable */
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow: 0 16px 40px rgba(13, 27, 184, 0.18);
+  z-index: 50;
+  animation: dropIn 0.18s ease;
+}
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dropdown-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+  padding: 6px 10px;
+}
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 11px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.theme-option:hover {
+  background: #EEF0FC;
+  color: #0D1BB8;
+}
+.theme-option.active {
+  background: #EEF0FC;
+  color: #0D1BB8;
+}
+.theme-option .check {
+  margin-left: auto;
+  font-weight: 700;
+  color: #0D1BB8;
+}
+
+/* ============================================
+   MODO OSCURO — overrides
+   ============================================ */
+[data-theme="dark"] {
+  /* fondos generales */
+}
+
+/* --- Layout admin --- */
+[data-theme="dark"] .admin-layout { background: #0a0e27; }
+[data-theme="dark"] .admin-sidebar {
+  background: #11152e;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .sidebar-brand { color: #e8ebff; }
+[data-theme="dark"] .sidebar-link { color: #9aa0c9; }
+[data-theme="dark"] .sidebar-link:hover { background: #1e244a; color: #fff; }
+[data-theme="dark"] .admin-header {
+  background: #11152e;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
+}
+[data-theme="dark"] .header-title { color: #e8ebff; }
+
+/* --- Menú de usuario en dark --- */
+[data-theme="dark"] .user-menu-trigger:hover { background: rgba(255, 255, 255, 0.06); }
+[data-theme="dark"] .user-name { color: #e8ebff; }
+[data-theme="dark"] .user-dropdown {
+  background: #1a1f40;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+[data-theme="dark"] .theme-option { color: #c5cae8; }
+[data-theme="dark"] .theme-option:hover,
+[data-theme="dark"] .theme-option.active { background: #272e58; color: #fff; }
+[data-theme="dark"] .theme-option .check { color: #8b95f0; }
+
+/* --- Páginas / tarjetas --- */
+[data-theme="dark"] .page-title,
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .confirm-title { color: #e8ebff; }
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .placeholder-box,
+[data-theme="dark"] .table-card { background: #11152e; }
+[data-theme="dark"] .stat-value { color: #8b95f0; }
+[data-theme="dark"] .stat-label { color: #e8ebff; }
+
+/* --- Tabla --- */
+[data-theme="dark"] .data-table td {
+  color: #c5cae8;
+  border-top-color: #272e58;
+}
+[data-theme="dark"] .data-table th { color: #8b92c0; }
+[data-theme="dark"] .data-table tbody tr:hover { background: #1a1f40; }
+[data-theme="dark"] .badge-rol { background: #272e58; color: #8b95f0; }
+[data-theme="dark"] .pagination { border-top-color: #272e58; }
+[data-theme="dark"] .page-btn { background: #1e244a; color: #c5cae8; }
+[data-theme="dark"] .page-btn:hover:not(:disabled):not(.active) { background: #272e58; color: #fff; }
+[data-theme="dark"] .icon-btn.edit { background: #272e58; color: #8b95f0; }
+
+/* --- Modales / formularios --- */
+[data-theme="dark"] .modal { background: #11152e; }
+[data-theme="dark"] .confirm-text { color: #9aa0c9; }
+[data-theme="dark"] .confirm-text strong { color: #e8ebff; }
+[data-theme="dark"] .form-field label { color: #A6AEEF; }
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select {
+  background: #1e244a;
+  color: #e8ebff;
+}
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field select:focus { background: #272e58; }
+[data-theme="dark"] .password-rules { background: #1a1f40; }
+[data-theme="dark"] .btn-ghost { background: #272e58; color: #c5cae8; }
+[data-theme="dark"] .btn-ghost:hover { background: #323a6b; }
+
+/* --- Login en dark --- */
+[data-theme="dark"] .login-card { background: #11152e; }
+[data-theme="dark"] .login-header h1 { color: #e8ebff; }
+[data-theme="dark"] .input-clay { background: #1e244a; }
+[data-theme="dark"] .input-clay:focus-within { background: #272e58; }
+[data-theme="dark"] .input-clay input { color: #e8ebff; }

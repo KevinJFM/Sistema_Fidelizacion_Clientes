@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { logout } from '../../redux/slices/authSlice';
+import ThemeToggle from '../../theme/ThemeToggle';
 import './StoreLayout.css';
 
 const navItems = [
@@ -86,15 +87,7 @@ export default function StoreLayout() {
       <div className="admin-main">
         <header className="admin-header">
           <div className="header-title">Panel de Administración</div>
-          <div className="header-user">
-            <div className="user-avatar">
-              {(user?.nombre?.[0] ?? 'A').toUpperCase()}
-            </div>
-            <div className="user-info">
-              <span className="user-name">{user?.nombre} {user?.apellido}</span>
-              <span className="user-role">{user?.rol}</span>
-            </div>
-          </div>
+          <ThemeToggle user={user} />
         </header>
 
         <main className="admin-content">
