@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
+import { refreshSession } from './services/authService';
+import { setCredentials, setBootstrapped } from './redux/slices/authSlice';
 import Login from './pages/Login/Login';
 import StoreLayout from './pages/Admin/StoreLayout';
 import Dashboard from './pages/Admin/Dashboard';
@@ -14,6 +17,26 @@ const AdminRoute = ({ children }) => {
 };
 
 function App() {
+  const dispatch = useDispatch();
+  const { bootstrapped } = useSelector((state) => state.auth);
+
+  // Al cargar la app, intenta restaurar la sesión usando la cookie del refresh token
+  useEffect(() => {
+    refreshSession()
+      .then((data) => dispatch(setCredentials(data)))
+      .catch(() => {}) // sin sesión válida: se queda deslogueado
+      .finally(() => dispatch(setBootstrapped()));
+  }, [dispatch]);
+
+  // Evita el parpadeo login→admin mientras se verifica la sesión
+  if (!bootstrapped) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#f4f1fb' }}>
+        <div className="spinner" style={{ borderTopColor: '#0D1BB8', borderColor: 'rgba(13,27,184,0.2)', borderTopWidth: 3, width: 32, height: 32 }} />
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Toaster

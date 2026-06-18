@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { logout } from '../../redux/slices/authSlice';
+import { logoutRequest } from '../../services/authService';
 import ThemeToggle from '../../theme/ThemeToggle';
 import './StoreLayout.css';
 
@@ -38,7 +39,12 @@ export default function StoreLayout() {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutRequest(); // limpia la cookie del refresh token en el backend
+    } catch {
+      // aunque falle, cerramos sesión localmente
+    }
     dispatch(logout());
     toast.success('Sesión cerrada');
     navigate('/login');

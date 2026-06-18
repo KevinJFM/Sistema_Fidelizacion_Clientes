@@ -134,11 +134,35 @@
 }
 [data-theme="dark"] .data-table th { color: #8b92c0; }
 [data-theme="dark"] .data-table tbody tr:hover { background: #1a1f40; }
-[data-theme="dark"] .badge-rol { background: #272e58; color: #8b95f0; }
+[data-theme="dark"] .badge-rol {
+  background: rgba(124, 135, 240, 0.18);
+  color: #aab2f7;
+}
 [data-theme="dark"] .pagination { border-top-color: #272e58; }
 [data-theme="dark"] .page-btn { background: #1e244a; color: #c5cae8; }
 [data-theme="dark"] .page-btn:hover:not(:disabled):not(.active) { background: #272e58; color: #fff; }
-[data-theme="dark"] .icon-btn.edit { background: #272e58; color: #8b95f0; }
+
+/* Botones de acción en dark: fondo translúcido del color de cada acción */
+[data-theme="dark"] .icon-btn.edit {
+  background: rgba(124, 135, 240, 0.16);
+  color: #aab2f7;
+}
+[data-theme="dark"] .icon-btn.edit:hover {
+  background: #4F5FE8;
+  color: #fff;
+}
+[data-theme="dark"] .icon-btn.delete {
+  background: rgba(248, 113, 113, 0.14);
+  color: #f87171;
+}
+[data-theme="dark"] .icon-btn.delete:hover:not(:disabled) {
+  background: #ef4444;
+  color: #fff;
+}
+[data-theme="dark"] .icon-btn:disabled {
+  background: #1a1f40;
+  color: #4b5273;
+}
 
 /* --- Modales / formularios --- */
 [data-theme="dark"] .modal { background: #11152e; }
@@ -153,12 +177,21 @@
 [data-theme="dark"] .form-field input:focus,
 [data-theme="dark"] .form-field select:focus { background: #272e58; }
 [data-theme="dark"] .password-rules { background: #1a1f40; }
-[data-theme="dark"] .btn-ghost { background: #272e58; color: #c5cae8; }
-[data-theme="dark"] .btn-ghost:hover { background: #323a6b; }
+[data-theme="dark"] .btn-ghost {
+  background: transparent;
+  border-color: #3a4170;
+  color: #c5cae8;
+}
+[data-theme="dark"] .btn-ghost:hover {
+  background: #1e244a;
+  border-color: #4b5491;
+  color: #fff;
+}
 
 /* --- Login en dark --- */
 [data-theme="dark"] .login-card { background: #11152e; }
 [data-theme="dark"] .login-header h1 { color: #e8ebff; }
+[data-theme="dark"] .field-group label { color: #c5cae8; }
 [data-theme="dark"] .input-clay { background: #1e244a; }
 [data-theme="dark"] .input-clay:focus-within { background: #272e58; }
 [data-theme="dark"] .input-clay input { color: #e8ebff; }
