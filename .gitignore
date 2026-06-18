@@ -25,3 +25,6 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 *.local
+
+# Claude Code (skills/config local, no se sube)
+.claude/
