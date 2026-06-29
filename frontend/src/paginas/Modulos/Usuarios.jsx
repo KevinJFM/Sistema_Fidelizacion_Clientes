@@ -6,6 +6,7 @@ import {
   updateUsuario,
   deleteUsuario,
 } from '../../servicios/servicioUsuarios';
+import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatTelefono, esTelefonoValido } from '../../utilidades/formato';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -47,6 +48,8 @@ const emptyForm = {
   contrasena: '',
   telefono: '',
   fecha_nacimiento: '',
+  id_departamento: null,
+  id_distrito: null,
   id_rol: 3,
   id_estado: 1,
 };
@@ -66,6 +69,8 @@ export default function Usuarios() {
   const [deleting, setDeleting]   = useState(false);
   const [passTried, setPassTried] = useState(false); // intentó guardar con contraseña inválida
   const [page, setPage]           = useState(1);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [distritos, setDistritos]         = useState([]);
 
   const cargarUsuarios = async () => {
     setLoading(true);
@@ -82,6 +87,7 @@ export default function Usuarios() {
 
   useEffect(() => {
     cargarUsuarios();
+    getDepartamentos().then(setDepartamentos).catch(() => {});
   }, []);
 
   // Datos de la página actual
@@ -96,13 +102,14 @@ export default function Usuarios() {
   const abrirCrear = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setDistritos([]);
     setFieldErrors({});
     setShowPass(false);
     setPassTried(false);
     setModalOpen(true);
   };
 
-  const abrirEditar = (u) => {
+  const abrirEditar = async (u) => {
     setEditingId(u.id_usuario);
     setForm({
       nombre: u.nombre,
@@ -111,13 +118,34 @@ export default function Usuarios() {
       contrasena: '',
       telefono: u.telefono,
       fecha_nacimiento: u.fecha_nacimiento?.slice(0, 10) ?? '',
+      id_departamento: u.id_departamento ?? null,
+      id_distrito: u.id_distrito ?? null,
       id_rol: u.id_rol,
       id_estado: u.id_estado,
     });
     setFieldErrors({});
     setShowPass(false);
     setPassTried(false);
+    if (u.id_departamento) {
+      try { setDistritos(await getDistritos(u.id_departamento)); } catch { setDistritos([]); }
+    } else {
+      setDistritos([]);
+    }
     setModalOpen(true);
+  };
+
+  const onDepartamentoChange = async (e) => {
+    const valor = e.target.value ? Number(e.target.value) : null;
+    setForm((f) => ({ ...f, id_departamento: valor, id_distrito: null }));
+    if (valor) {
+      try { setDistritos(await getDistritos(valor)); } catch { setDistritos([]); }
+    } else {
+      setDistritos([]);
+    }
+  };
+
+  const onDistritoChange = (e) => {
+    setForm((f) => ({ ...f, id_distrito: e.target.value ? Number(e.target.value) : null }));
   };
 
   const handleChange = (e) => {
@@ -385,6 +413,27 @@ export default function Usuarios() {
                   <label>Rol</label>
                   <select name="id_rol" value={form.id_rol} onChange={handleChange}>
                     {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Departamento <span className="optional">(opcional)</span></label>
+                  <select value={form.id_departamento ?? ''} onChange={onDepartamentoChange}>
+                    <option value="">Seleccione...</option>
+                    {departamentos.map((d) => (
+                      <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label>Distrito <span className="optional">(opcional)</span></label>
+                  <select value={form.id_distrito ?? ''} onChange={onDistritoChange} disabled={!form.id_departamento}>
+                    <option value="">{form.id_departamento ? 'Seleccione...' : 'Elige un departamento'}</option>
+                    {distritos.map((d) => (
+                      <option key={d.id_distrito} value={d.id_distrito}>{d.nombre}</option>
+                    ))}
                   </select>
                 </div>
               </div>

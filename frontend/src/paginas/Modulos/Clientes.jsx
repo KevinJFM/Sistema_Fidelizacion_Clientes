@@ -7,6 +7,7 @@ import {
   updateCliente,
   deleteCliente,
 } from '../../servicios/servicioClientes';
+import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -31,6 +32,8 @@ const emptyForm = {
   telefono: '',
   correo: '',
   fecha_nacimiento: '',
+  id_departamento: null,
+  id_distrito: null,
   id_estado: 1,
 };
 
@@ -46,6 +49,8 @@ export default function Clientes() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [confirmCliente, setConfirmCliente] = useState(null);
   const [deleting, setDeleting]   = useState(false);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [distritos, setDistritos]         = useState([]);
 
   const navigate = useNavigate();
 
@@ -60,16 +65,20 @@ export default function Clientes() {
     }
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    cargar();
+    getDepartamentos().then(setDepartamentos).catch(() => {});
+  }, []);
 
   const abrirCrear = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setDistritos([]);
     setFieldErrors({});
     setModalOpen(true);
   };
 
-  const abrirEditar = (c) => {
+  const abrirEditar = async (c) => {
     setEditingId(c.id_cliente);
     setForm({
       id_tipo_documento: c.id_tipo_documento,
@@ -79,10 +88,32 @@ export default function Clientes() {
       telefono: c.telefono ?? '',
       correo: c.correo ?? '',
       fecha_nacimiento: c.fecha_nacimiento?.slice(0, 10) ?? '',
+      id_departamento: c.id_departamento ?? null,
+      id_distrito: c.id_distrito ?? null,
       id_estado: c.id_estado,
     });
     setFieldErrors({});
+    // Cargar los distritos del departamento del cliente (para el select)
+    if (c.id_departamento) {
+      try { setDistritos(await getDistritos(c.id_departamento)); } catch { setDistritos([]); }
+    } else {
+      setDistritos([]);
+    }
     setModalOpen(true);
+  };
+
+  const onDepartamentoChange = async (e) => {
+    const valor = e.target.value ? Number(e.target.value) : null;
+    setForm((f) => ({ ...f, id_departamento: valor, id_distrito: null }));
+    if (valor) {
+      try { setDistritos(await getDistritos(valor)); } catch { setDistritos([]); }
+    } else {
+      setDistritos([]);
+    }
+  };
+
+  const onDistritoChange = (e) => {
+    setForm((f) => ({ ...f, id_distrito: e.target.value ? Number(e.target.value) : null }));
   };
 
   const handleChange = (e) => {
@@ -311,6 +342,27 @@ export default function Clientes() {
                     {fieldErrors.correo && <span className="req-tag">{fieldErrors.correo}</span>}
                   </label>
                   <input type="email" name="correo" value={form.correo} onChange={handleChange} autoComplete="off" placeholder="ejemplo@correo.com" />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Departamento <span className="optional">(opcional)</span></label>
+                  <select value={form.id_departamento ?? ''} onChange={onDepartamentoChange}>
+                    <option value="">Seleccione...</option>
+                    {departamentos.map((d) => (
+                      <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label>Distrito <span className="optional">(opcional)</span></label>
+                  <select value={form.id_distrito ?? ''} onChange={onDistritoChange} disabled={!form.id_departamento}>
+                    <option value="">{form.id_departamento ? 'Seleccione...' : 'Elige un departamento'}</option>
+                    {distritos.map((d) => (
+                      <option key={d.id_distrito} value={d.id_distrito}>{d.nombre}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

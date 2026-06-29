@@ -27,11 +27,13 @@ export const obtenerUsuarios = async (req, res) => {
   try {
     const [filas] = await pool.query(
       `SELECT u.id_usuario, u.nombre, u.apellido, u.email, u.telefono,
-              u.fecha_nacimiento, u.id_rol, u.id_estado,
-              r.rol, e.estado, u.created_at
+              u.fecha_nacimiento, u.id_departamento, u.id_distrito, u.id_rol, u.id_estado,
+              r.rol, e.estado, dep.nombre AS departamento, dis.nombre AS distrito, u.created_at
        FROM usuarios u
        JOIN roles r   ON u.id_rol    = r.id_rol
        JOIN estados e ON u.id_estado = e.id_estado
+       LEFT JOIN departamentos dep ON u.id_departamento = dep.id_departamento
+       LEFT JOIN distritos dis     ON u.id_distrito     = dis.id_distrito
        ORDER BY u.id_usuario DESC`
     );
     return res.status(200).json(filas);
@@ -46,11 +48,13 @@ export const obtenerUsuarioPorId = async (req, res) => {
     const { id } = req.params;
     const [filas] = await pool.query(
       `SELECT u.id_usuario, u.nombre, u.apellido, u.email, u.telefono,
-              u.fecha_nacimiento, u.id_rol, u.id_estado,
-              r.rol, e.estado, u.created_at
+              u.fecha_nacimiento, u.id_departamento, u.id_distrito, u.id_rol, u.id_estado,
+              r.rol, e.estado, dep.nombre AS departamento, dis.nombre AS distrito, u.created_at
        FROM usuarios u
        JOIN roles r   ON u.id_rol    = r.id_rol
        JOIN estados e ON u.id_estado = e.id_estado
+       LEFT JOIN departamentos dep ON u.id_departamento = dep.id_departamento
+       LEFT JOIN distritos dis     ON u.id_distrito     = dis.id_distrito
        WHERE u.id_usuario = ?`,
       [id]
     );
@@ -68,7 +72,10 @@ export const obtenerUsuarioPorId = async (req, res) => {
 // Crear usuario
 export const crearUsuario = async (req, res) => {
   try {
-    const { nombre, apellido, email, contrasena, telefono, fecha_nacimiento, id_rol } = req.body;
+    const {
+      nombre, apellido, email, contrasena, telefono,
+      fecha_nacimiento, id_departamento, id_distrito, id_rol,
+    } = req.body;
 
     if (!nombre || !apellido || !email || !contrasena || !telefono || !fecha_nacimiento || !id_rol) {
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
@@ -94,9 +101,14 @@ export const crearUsuario = async (req, res) => {
     const contrasenaHash = await bcrypt.hash(contrasena, 10);
 
     const [resultado] = await pool.query(
-      `INSERT INTO usuarios (nombre, apellido, email, contrasena_hash, telefono, fecha_nacimiento, id_rol, id_estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-      [nombre, apellido, email, contrasenaHash, telefono, fecha_nacimiento, id_rol]
+      `INSERT INTO usuarios
+        (nombre, apellido, email, contrasena_hash, telefono, fecha_nacimiento,
+         id_departamento, id_distrito, id_rol, id_estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [
+        nombre, apellido, email, contrasenaHash, telefono, fecha_nacimiento,
+        id_departamento ?? null, id_distrito ?? null, id_rol,
+      ]
     );
 
     return res.status(201).json({
@@ -112,7 +124,10 @@ export const crearUsuario = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, apellido, email, telefono, fecha_nacimiento, id_rol, id_estado, contrasena } = req.body;
+    const {
+      nombre, apellido, email, telefono, fecha_nacimiento,
+      id_departamento, id_distrito, id_rol, id_estado, contrasena,
+    } = req.body;
 
     const [existe] = await pool.query(
       'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
@@ -140,10 +155,13 @@ export const actualizarUsuario = async (req, res) => {
 
     await pool.query(
       `UPDATE usuarios
-       SET nombre = ?, apellido = ?, email = ?, telefono = ?,
-           fecha_nacimiento = ?, id_rol = ?, id_estado = ?
+       SET nombre = ?, apellido = ?, email = ?, telefono = ?, fecha_nacimiento = ?,
+           id_departamento = ?, id_distrito = ?, id_rol = ?, id_estado = ?
        WHERE id_usuario = ?`,
-      [nombre, apellido, email, telefono, fecha_nacimiento, id_rol, id_estado, id]
+      [
+        nombre, apellido, email, telefono, fecha_nacimiento,
+        id_departamento ?? null, id_distrito ?? null, id_rol, id_estado, id,
+      ]
     );
 
     // Si se envió contraseña, validarla y actualizarla por separado

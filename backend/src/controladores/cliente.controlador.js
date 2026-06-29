@@ -9,11 +9,14 @@ export const obtenerClientes = async (req, res) => {
     const [filas] = await pool.query(
       `SELECT c.id_cliente, c.id_tipo_documento, c.numero_documento,
               c.nombres, c.apellidos, c.telefono, c.correo, c.fecha_nacimiento,
-              c.puntos_acumulados, c.id_estado,
-              td.nombre AS tipo_documento, e.estado, c.created_at
+              c.id_departamento, c.id_distrito, c.puntos_acumulados, c.id_estado,
+              td.nombre AS tipo_documento, e.estado,
+              dep.nombre AS departamento, dis.nombre AS distrito, c.created_at
        FROM clientes c
        JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
        JOIN estados e          ON c.id_estado         = e.id_estado
+       LEFT JOIN departamentos dep ON c.id_departamento = dep.id_departamento
+       LEFT JOIN distritos dis     ON c.id_distrito     = dis.id_distrito
        ORDER BY c.id_cliente DESC`
     );
     return res.status(200).json(filas);
@@ -34,11 +37,14 @@ export const buscarClientePorDocumento = async (req, res) => {
     const [filas] = await pool.query(
       `SELECT c.id_cliente, c.id_tipo_documento, c.numero_documento,
               c.nombres, c.apellidos, c.telefono, c.correo, c.fecha_nacimiento,
-              c.puntos_acumulados, c.id_estado,
-              td.nombre AS tipo_documento, e.estado
+              c.id_departamento, c.id_distrito, c.puntos_acumulados, c.id_estado,
+              td.nombre AS tipo_documento, e.estado,
+              dep.nombre AS departamento, dis.nombre AS distrito
        FROM clientes c
        JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
        JOIN estados e          ON c.id_estado         = e.id_estado
+       LEFT JOIN departamentos dep ON c.id_departamento = dep.id_departamento
+       LEFT JOIN distritos dis     ON c.id_distrito     = dis.id_distrito
        WHERE c.id_tipo_documento = ? AND c.numero_documento = ?`,
       [id_tipo_documento, numero_documento]
     );
@@ -56,7 +62,10 @@ export const buscarClientePorDocumento = async (req, res) => {
 // Crear cliente
 export const crearCliente = async (req, res) => {
   try {
-    const { id_tipo_documento, numero_documento, nombres, apellidos, telefono, correo, fecha_nacimiento } = req.body;
+    const {
+      id_tipo_documento, numero_documento, nombres, apellidos,
+      telefono, correo, fecha_nacimiento, id_departamento, id_distrito,
+    } = req.body;
 
     if (!id_tipo_documento || !numero_documento || !nombres || !apellidos) {
       return res.status(400).json({ message: 'Tipo de documento, número, nombres y apellidos son requeridos' });
@@ -76,9 +85,14 @@ export const crearCliente = async (req, res) => {
 
     const [resultado] = await pool.query(
       `INSERT INTO clientes
-        (id_tipo_documento, numero_documento, nombres, apellidos, telefono, correo, fecha_nacimiento, puntos_acumulados, id_estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1)`,
-      [id_tipo_documento, numero_documento, nombres, apellidos, telefono ?? null, correo ?? null, fecha_nacimiento ?? null]
+        (id_tipo_documento, numero_documento, nombres, apellidos, telefono, correo,
+         fecha_nacimiento, id_departamento, id_distrito, puntos_acumulados, id_estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+      [
+        id_tipo_documento, numero_documento, nombres, apellidos,
+        telefono ?? null, correo ?? null, fecha_nacimiento ?? null,
+        id_departamento ?? null, id_distrito ?? null,
+      ]
     );
 
     return res.status(201).json({
@@ -94,7 +108,10 @@ export const crearCliente = async (req, res) => {
 export const actualizarCliente = async (req, res) => {
   try {
     const { id } = req.params;
-    const { id_tipo_documento, numero_documento, nombres, apellidos, telefono, correo, fecha_nacimiento, id_estado } = req.body;
+    const {
+      id_tipo_documento, numero_documento, nombres, apellidos,
+      telefono, correo, fecha_nacimiento, id_departamento, id_distrito, id_estado,
+    } = req.body;
 
     const [existe] = await pool.query('SELECT id_cliente FROM clientes WHERE id_cliente = ?', [id]);
     if (existe.length === 0) {
@@ -117,9 +134,14 @@ export const actualizarCliente = async (req, res) => {
     await pool.query(
       `UPDATE clientes
        SET id_tipo_documento = ?, numero_documento = ?, nombres = ?, apellidos = ?,
-           telefono = ?, correo = ?, fecha_nacimiento = ?, id_estado = ?
+           telefono = ?, correo = ?, fecha_nacimiento = ?,
+           id_departamento = ?, id_distrito = ?, id_estado = ?
        WHERE id_cliente = ?`,
-      [id_tipo_documento, numero_documento, nombres, apellidos, telefono ?? null, correo ?? null, fecha_nacimiento ?? null, id_estado, id]
+      [
+        id_tipo_documento, numero_documento, nombres, apellidos,
+        telefono ?? null, correo ?? null, fecha_nacimiento ?? null,
+        id_departamento ?? null, id_distrito ?? null, id_estado, id,
+      ]
     );
 
     return res.status(200).json({ message: 'Cliente actualizado correctamente' });

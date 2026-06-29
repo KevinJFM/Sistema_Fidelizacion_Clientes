@@ -5,6 +5,7 @@ import { setCredentials, logout } from '../redux/slices/sliceAuth';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
   withCredentials: true, // envía/recibe la cookie httpOnly del refresh token
+  timeout: 15000,        // si el backend no responde en 15s, falla (evita spinner infinito)
 });
 
 // Adjunta el access token (en memoria/Redux) a cada petición

@@ -6,6 +6,7 @@ import rutasAuth from "./rutas/autenticacion.rutas.js";
 import rutasUsuarios from "./rutas/usuario.rutas.js";
 import rutasClientes from "./rutas/cliente.rutas.js";
 import rutasTransacciones from "./rutas/transaccion.rutas.js";
+import rutasUbicaciones from "./rutas/ubicacion.rutas.js";
 
 const app = express();
 
@@ -37,5 +38,6 @@ app.use("/api/auth", rutasAuth);
 app.use("/api/usuarios", rutasUsuarios);
 app.use("/api/clientes", rutasClientes);
 app.use("/api/transacciones", rutasTransacciones);
+app.use("/api/ubicaciones", rutasUbicaciones);
 
 export default app;
