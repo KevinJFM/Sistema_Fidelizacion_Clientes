@@ -1,0 +1,65 @@
+import 'dotenv/config';
+import bcrypt from 'bcryptjs';
+import pool from '../configuracion/bd.js';
+
+// Datos del admin inicial (se pueden sobreescribir con variables de entorno)
+const admin = {
+  nombre:          process.env.ADMIN_NOMBRE       || 'Kevin',
+  apellido:        process.env.ADMIN_APELLIDO     || 'Flores',
+  email:           process.env.ADMIN_EMAIL        || 'kevin@ejemplo.com',
+  contrasena:      process.env.ADMIN_PASSWORD     || 'Mi@Password123',
+  telefono:        process.env.ADMIN_TELEFONO     || '5605-0000',
+  fechaNacimiento: '2000-01-01',
+  departamento:    process.env.ADMIN_DEPARTAMENTO || 'Sonsonate',
+  distrito:        process.env.ADMIN_DISTRITO     || 'Izalco',
+};
+
+async function crearAdmin() {
+  try {
+    const [existe] = await pool.query(
+      'SELECT id_usuario FROM usuarios WHERE email = ?',
+      [admin.email]
+    );
+
+    if (existe.length > 0) {
+      console.log(`ℹ  El usuario ${admin.email} ya existe. No se hizo nada.`);
+      return;
+    }
+
+    // Buscar los IDs de departamento y distrito por su nombre
+    const [departamentos] = await pool.query(
+      'SELECT id_departamento FROM departamentos WHERE nombre = ?',
+      [admin.departamento]
+    );
+    const [distritos] = await pool.query(
+      'SELECT id_distrito FROM distritos WHERE nombre = ?',
+      [admin.distrito]
+    );
+
+    const idDepartamento = departamentos[0]?.id_departamento ?? null;
+    const idDistrito     = distritos[0]?.id_distrito ?? null;
+
+    const contrasenaHash = await bcrypt.hash(admin.contrasena, 10);
+
+    // id_rol = 1 (admin), id_estado = 1 (activo)
+    await pool.query(
+      `INSERT INTO usuarios
+        (nombre, apellido, email, contrasena_hash, telefono, fecha_nacimiento, id_departamento, id_distrito, id_rol, id_estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+      [admin.nombre, admin.apellido, admin.email, contrasenaHash, admin.telefono, admin.fechaNacimiento, idDepartamento, idDistrito]
+    );
+
+    console.log('✓ Usuario admin creado correctamente:');
+    console.log(`   Email:        ${admin.email}`);
+    console.log(`   Contraseña:   ${admin.contrasena}`);
+    console.log(`   Departamento: ${admin.departamento} (id ${idDepartamento})`);
+    console.log(`   Distrito:     ${admin.distrito} (id ${idDistrito})`);
+    console.log('   ⚠  Cámbiala después de iniciar sesión.');
+  } catch (err) {
+    console.error('✗ Error al crear el admin:', err.message);
+  } finally {
+    await pool.end();
+  }
+}
+
+crearAdmin();

@@ -2,12 +2,12 @@
   "name": "fidelizacion-backend",
   "version": "1.0.0",
   "description": "Backend del sistema de fidelizacion de clientes",
-  "main": "src/server.js",
+  "main": "src/servidor.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "seed:admin": "node src/seeds/createAdmin.js"
+    "start": "node src/servidor.js",
+    "dev": "nodemon src/servidor.js",
+    "seed:admin": "node src/semillas/crearAdmin.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
