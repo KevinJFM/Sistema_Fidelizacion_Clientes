@@ -1,6 +1,6 @@
 // Logo de Punta Diamante.
 // Modifica aquí el color o el tamaño por defecto y se actualiza en todo el sistema.
-export default function Logo({ size = 48, color = '#0D1BB8', className = '' }) {
+export default function Logo({ size = 48, color = '#E5388A', className = '' }) {
   return (
     <svg
       className={className}

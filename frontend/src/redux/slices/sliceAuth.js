@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState: {
+  initialState: { 
     isAuth: false,
     user: null,
     token: null,          // access token: solo en memoria (no localStorage)
