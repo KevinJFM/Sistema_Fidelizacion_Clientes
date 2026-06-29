@@ -38,17 +38,17 @@
   margin-bottom: 40px;
 }
 .logo-badge {
-  width: 66px; height: 66px;
-  background: linear-gradient(135deg, #0D1BB8, #4F5FE8);
-  border-radius: 22px;
+  width: 104px; height: 104px;
+  background: #ffffff;
+  border-radius: 28px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 18px;
+  margin: 0 auto 16px;
   box-shadow:
-    0 14px 32px rgba(13, 27, 184, 0.45),
-    inset 0 -4px 0 rgba(0, 0, 0, 0.14),
-    inset 0 3px 0 rgba(255, 255, 255, 0.18);
+    0 16px 38px rgba(13, 27, 184, 0.28),
+    inset 0 0 0 1px rgba(13, 27, 184, 0.08);
   animation: badgePop 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 @keyframes badgePop {

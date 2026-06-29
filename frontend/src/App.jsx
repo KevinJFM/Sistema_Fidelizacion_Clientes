@@ -7,7 +7,10 @@ import { setCredentials, setBootstrapped } from './redux/slices/authSlice';
 import Login from './pages/Login/Login';
 import StoreLayout from './pages/Admin/StoreLayout';
 import Dashboard from './pages/Admin/Dashboard';
-import Usuarios from './pages/User/Usuarios';
+import Usuarios from './pages/Home/Usuarios';
+import Clientes from './pages/Home/Clientes';
+import Transacciones from './pages/Home/Transacciones';
+import Historial from './pages/Home/Historial';
 
 const AdminRoute = ({ children }) => {
   const { isAuth, user } = useSelector((state) => state.auth);
@@ -72,6 +75,9 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="clientes" element={<Clientes />} />
+          <Route path="transacciones" element={<Transacciones />} />
+          <Route path="historial" element={<Historial />} />
           <Route path="usuarios" element={<Usuarios />} />
         </Route>
 

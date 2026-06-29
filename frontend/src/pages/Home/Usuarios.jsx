@@ -6,6 +6,7 @@ import {
   updateUsuario,
   deleteUsuario,
 } from '../../services/userService';
+import { formatTelefono, esTelefonoValido } from '../../utils/format';
 import '../Admin/AdminPages.css';
 import './Usuarios.css';
 
@@ -120,8 +121,11 @@ export default function Usuarios() {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: name.startsWith('id_') ? Number(value) : value });
+    const { name } = e.target;
+    let value = e.target.value;
+    if (name.startsWith('id_')) value = Number(value);
+    else if (name === 'telefono') value = formatTelefono(value);
+    setForm({ ...form, [name]: value });
     // Al escribir, se limpia el error de ese campo
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
@@ -147,6 +151,10 @@ export default function Usuarios() {
     // Validar formato del email (solo si no está vacío)
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errores.email = 'Email inválido';
+    }
+    // Validar formato del teléfono
+    if (form.telefono && !esTelefonoValido(form.telefono)) {
+      errores.telefono = 'Formato: 4322-2334';
     }
 
     if (Object.keys(errores).length > 0) {
@@ -361,7 +369,7 @@ export default function Usuarios() {
                     Teléfono
                     {fieldErrors.telefono && <span className="req-tag">{fieldErrors.telefono}</span>}
                   </label>
-                  <input name="telefono" value={form.telefono} onChange={handleChange} />
+                  <input name="telefono" value={form.telefono} onChange={handleChange} placeholder="4322-2334" />
                 </div>
               </div>
 

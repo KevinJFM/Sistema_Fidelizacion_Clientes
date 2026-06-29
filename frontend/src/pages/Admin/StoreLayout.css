@@ -20,23 +20,19 @@
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 8px 28px;
-  font-size: 18px;
-  font-weight: 800;
-  color: #0A1259;
+  justify-content: center;
+  padding: 4px 8px 28px;
 }
 .sidebar-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #0D1BB8, #4F5FE8);
+  width: 84px;
+  height: 84px;
+  border-radius: 20px;
+  background: #ffffff;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 8px 18px rgba(13, 27, 184, 0.4),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 24px rgba(13, 27, 184, 0.25);
 }
 
 /* Navegación */
@@ -161,10 +157,14 @@
     width: 70px;
     padding: 26px 10px;
   }
-  .sidebar-brand span,
   .sidebar-link span,
   .sidebar-logout span {
     display: none;
+  }
+  .sidebar-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
   }
   .sidebar-link,
   .sidebar-logout {

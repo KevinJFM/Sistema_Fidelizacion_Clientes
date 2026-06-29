@@ -128,6 +128,8 @@
   cursor: pointer;
   transition: all 0.2s;
 }
+.icon-btn.historial { background: #e0f2fe; color: #0284c7; }
+.icon-btn.historial:hover { background: #0284c7; color: #fff; }
 .icon-btn.edit   { background: #EEF0FC; color: #0D1BB8; }
 .icon-btn.edit:hover   { background: #0D1BB8; color: #fff; }
 .icon-btn.delete { background: #fef2f2; color: #dc2626; }
@@ -256,7 +258,7 @@
 }
 .form-field label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1E2BB0;
 }
 .form-field .optional {

@@ -4,6 +4,8 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import clientRoutes from "./routes/client.routes.js";
+import transactionRoutes from "./routes/transaction.routes.js";
 
 const app = express();
 
@@ -33,5 +35,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/usuarios", userRoutes);
+app.use("/api/clientes", clientRoutes);
+app.use("/api/transacciones", transactionRoutes);
 
 export default app;

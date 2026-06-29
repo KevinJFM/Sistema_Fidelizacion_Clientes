@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { logout } from '../../redux/slices/authSlice';
 import { logoutRequest } from '../../services/authService';
 import ThemeToggle from '../../theme/ThemeToggle';
+import Logo from '../../components/Logo/Logo';
 import './StoreLayout.css';
 
 const navItems = [
@@ -17,6 +18,39 @@ const navItems = [
         <rect x="14" y="3" width="7" height="5" />
         <rect x="14" y="12" width="7" height="9" />
         <rect x="3" y="16" width="7" height="5" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/clientes',
+    label: 'Clientes',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" y1="8" x2="19" y2="14" />
+        <line x1="22" y1="11" x2="16" y2="11" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/transacciones',
+    label: 'Transacciones',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+        <line x1="1" y1="10" x2="23" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/historial',
+    label: 'Historial',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v5h5" />
+        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+        <path d="M12 7v5l4 2" />
       </svg>
     ),
   },
@@ -56,11 +90,8 @@ export default function StoreLayout() {
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
           <div className="sidebar-logo">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white" />
-            </svg>
+            <Logo size="100%" />
           </div>
-          <span>FidelizApp</span>
         </div>
 
         <nav className="sidebar-nav">

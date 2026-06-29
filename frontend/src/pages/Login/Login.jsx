@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { setCredentials } from '../../redux/slices/authSlice';
 import { login } from '../../services/authService';
+import Logo from '../../components/Logo/Logo';
 import './Login.css';
 
 const ROLE_REDIRECT = {
@@ -78,11 +79,8 @@ export default function Login() {
         {/* Header */}
         <div className="login-header">
           <div className="logo-badge">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white"/>
-            </svg>
+            <Logo size={104} />
           </div>
-          <h1>FidelizApp</h1>
           <p>Bienvenido de nuevo</p>
         </div>
 

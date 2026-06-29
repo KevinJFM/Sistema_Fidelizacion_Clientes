@@ -1,13 +1,23 @@
+import { useState, useEffect } from 'react';
+import { getResumen } from '../../services/transactionService';
 import './AdminPages.css';
 
-const stats = [
-  { label: 'Clientes activos', value: '—', hint: 'Pendiente de conectar' },
-  { label: 'Puntos canjeados', value: '—', hint: 'Pendiente de conectar' },
-  { label: 'Usuarios totales', value: '—', hint: 'Pendiente de conectar' },
-  { label: 'Recompensas', value: '—', hint: 'Pendiente de conectar' },
-];
-
 export default function Dashboard() {
+  const [resumen, setResumen] = useState(null);
+
+  useEffect(() => {
+    getResumen()
+      .then(setResumen)
+      .catch(() => {}); // si falla, se muestran guiones
+  }, []);
+
+  const stats = [
+    { label: 'Clientes registrados', value: resumen?.clientes_total ?? '—',         hint: 'Total en el sistema' },
+    { label: 'Transacciones de hoy',  value: resumen?.transacciones_hoy ?? '—',       hint: 'Registradas hoy' },
+    { label: 'Ventas de hoy',         value: resumen ? `$${resumen.ventas_hoy.toFixed(2)}` : '—', hint: 'Total vendido hoy' },
+    { label: 'Puntos otorgados hoy',  value: resumen?.puntos_hoy ?? '—',              hint: 'Generados hoy' },
+  ];
+
   return (
     <div className="admin-page">
       <h2 className="page-title">Dashboard</h2>
