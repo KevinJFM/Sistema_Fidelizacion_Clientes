@@ -77,7 +77,7 @@ export const crearUsuario = async (req, res) => {
       fecha_nacimiento, id_departamento, id_distrito, id_rol,
     } = req.body;
 
-    if (!nombre || !apellido || !email || !contrasena || !telefono || !fecha_nacimiento || !id_rol) {
+    if (!nombre || !apellido || !email || !contrasena || !telefono || !fecha_nacimiento || !id_rol || !id_departamento || !id_distrito) {
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
     }
 

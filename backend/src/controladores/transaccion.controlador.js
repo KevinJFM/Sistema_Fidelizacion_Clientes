@@ -25,10 +25,21 @@ export const crearTransaccion = async (req, res) => {
       return res.status(400).json({ message: 'El cliente no está activo' });
     }
 
-    // Reglas configurables
-    const puntosPorDolar  = Number(await obtenerConfig('puntos_por_dolar', '1'));
-    const puntosParaCanje = Number(await obtenerConfig('puntos_para_canje', '100'));
-    const valorCanje      = Number(await obtenerConfig('valor_canje', '5'));
+    // ===== Reglas configurables (se pueden ajustar en la tabla configuracion) =====
+    const puntosPorDolar       = Number(await obtenerConfig('puntos_por_dolar', '1'));
+    const puntosParaCanje      = Number(await obtenerConfig('puntos_para_canje', '100'));
+    const valorCanje           = Number(await obtenerConfig('valor_canje', '5'));
+    const bienvenidaPuntos     = Number(await obtenerConfig('bienvenida_puntos', '20'));
+    const bienvenidaDescuento  = Number(await obtenerConfig('bienvenida_descuento', '2'));
+    const descuentoMontoMinimo = Number(await obtenerConfig('descuento_monto_minimo', '30'));
+    const descuentoMontoValor  = Number(await obtenerConfig('descuento_monto_valor', '1'));
+
+    // ¿Es la primera compra registrada del cliente?
+    const [filasConteo] = await pool.query(
+      'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ?',
+      [id_cliente]
+    );
+    const esPrimeraCompra = filasConteo[0].total === 0;
 
     // Escenario activo según la fecha de hoy (fecha especial o dentro del rango)
     const [filasEscenario] = await pool.query(
@@ -40,15 +51,46 @@ export const crearTransaccion = async (req, res) => {
     );
     const escenario = filasEscenario[0] || null;
 
-    // Cálculo de puntos y descuento
-    let puntosOtorgados = Math.floor(montoNumerico * puntosPorDolar) + (escenario ? escenario.puntos_extra : 0);
-    let descuento       = escenario ? Number(escenario.descuento_extra) : 0;
+    // ============================================================
+    //  MOTOR DE REGLAS POR PRIORIDAD
+    //  - Los PUNTOS se acumulan (base + bienvenida + escenario)
+    //  - El DESCUENTO es uno solo, por prioridad:
+    //    1. Canje de puntos (bloquea otros descuentos)
+    //    2. Bienvenida (primera compra)
+    //    3. Escenario / fecha especial
+    //    4. Descuento por monto alto
+    // ============================================================
+    const escenariosAplicados = [];
+    let puntosOtorgados = Math.floor(montoNumerico * puntosPorDolar); // puntos base (siempre)
+    let descuento       = 0;
     let puntosCanjeados = 0;
 
-    if (canjear_puntos && cliente.puntos_acumulados >= puntosParaCanje) {
-      puntosCanjeados = puntosParaCanje;
-      descuento += valorCanje;
+    const quiereCanjear = canjear_puntos && cliente.puntos_acumulados >= puntosParaCanje;
+
+    // --- Puntos extra (acumulables) ---
+    if (esPrimeraCompra) {
+      puntosOtorgados += bienvenidaPuntos;
+      escenariosAplicados.push('Bienvenida (primera compra)');
     }
+    if (escenario) {
+      puntosOtorgados += escenario.puntos_extra;
+      escenariosAplicados.push(`Escenario: ${escenario.nombre}`);
+    }
+
+    // --- Descuento: solo el de mayor prioridad ---
+    if (quiereCanjear) {
+      puntosCanjeados = puntosParaCanje;
+      descuento = valorCanje;
+      escenariosAplicados.unshift('Canje de puntos'); // máxima prioridad
+    } else if (esPrimeraCompra) {
+      descuento = bienvenidaDescuento;
+    } else if (escenario) {
+      descuento = Number(escenario.descuento_extra);
+    } else if (montoNumerico >= descuentoMontoMinimo) {
+      descuento = descuentoMontoValor;
+      escenariosAplicados.push('Descuento por compra alta');
+    }
+
     if (descuento > montoNumerico) descuento = montoNumerico;
 
     const saldoFinal = cliente.puntos_acumulados + puntosOtorgados - puntosCanjeados;
@@ -99,6 +141,8 @@ export const crearTransaccion = async (req, res) => {
         total_a_pagar: Number((montoNumerico - descuento).toFixed(2)),
         saldo_puntos: saldoFinal,
         escenario: escenario ? escenario.nombre : null,
+        escenarios_aplicados: escenariosAplicados,
+        primera_compra: esPrimeraCompra,
       });
     } catch (e) {
       await conexion.rollback();

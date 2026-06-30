@@ -67,8 +67,8 @@ export const crearCliente = async (req, res) => {
       telefono, correo, fecha_nacimiento, id_departamento, id_distrito,
     } = req.body;
 
-    if (!id_tipo_documento || !numero_documento || !nombres || !apellidos) {
-      return res.status(400).json({ message: 'Tipo de documento, número, nombres y apellidos son requeridos' });
+    if (!id_tipo_documento || !numero_documento || !nombres || !apellidos || !id_departamento || !id_distrito) {
+      return res.status(400).json({ message: 'Tipo de documento, número, nombres, apellidos, departamento y distrito son requeridos' });
     }
 
     if (correo && !REGEX_CORREO.test(correo)) {

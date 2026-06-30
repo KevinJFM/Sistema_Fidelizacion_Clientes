@@ -276,8 +276,13 @@ INSERT INTO tipos_beneficio (nombre, descripcion) VALUES
   ('Cumpleaños',           'Beneficio por fecha de cumpleaños');
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
-  ('puntos_por_dolar',  '1',   'Puntos otorgados por cada $1 de compra'),
-  ('puntos_para_canje', '100', 'Puntos necesarios para canjear una recompensa');
+  ('puntos_por_dolar',       '1',   'Puntos otorgados por cada $1 de compra'),
+  ('puntos_para_canje',      '100', 'Puntos necesarios para canjear una recompensa'),
+  ('valor_canje',            '5',   'Descuento en $ al canjear puntos'),
+  ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
+  ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
+  ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
+  ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta');
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)

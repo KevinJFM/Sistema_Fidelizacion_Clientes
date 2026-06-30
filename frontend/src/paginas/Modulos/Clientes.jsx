@@ -105,6 +105,12 @@ export default function Clientes() {
   const onDepartamentoChange = async (e) => {
     const valor = e.target.value ? Number(e.target.value) : null;
     setForm((f) => ({ ...f, id_departamento: valor, id_distrito: null }));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.id_departamento;
+      delete next.id_distrito;
+      return next;
+    });
     if (valor) {
       try { setDistritos(await getDistritos(valor)); } catch { setDistritos([]); }
     } else {
@@ -114,6 +120,11 @@ export default function Clientes() {
 
   const onDistritoChange = (e) => {
     setForm((f) => ({ ...f, id_distrito: e.target.value ? Number(e.target.value) : null }));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.id_distrito;
+      return next;
+    });
   };
 
   const handleChange = (e) => {
@@ -149,6 +160,8 @@ export default function Clientes() {
     if (form.correo && !esCorreoValido(form.correo)) {
       errores.correo = 'Correo inválido';
     }
+    if (!form.id_departamento) errores.id_departamento = 'Requerido';
+    if (!form.id_distrito) errores.id_distrito = 'Requerido';
     if (Object.keys(errores).length > 0) {
       setFieldErrors(errores);
       return;
@@ -346,8 +359,11 @@ export default function Clientes() {
               </div>
 
               <div className="form-row">
-                <div className="form-field">
-                  <label>Departamento <span className="optional">(opcional)</span></label>
+                <div className={`form-field ${fieldErrors.id_departamento ? 'has-error' : ''}`}>
+                  <label>
+                    Departamento
+                    {fieldErrors.id_departamento && <span className="req-tag">{fieldErrors.id_departamento}</span>}
+                  </label>
                   <select value={form.id_departamento ?? ''} onChange={onDepartamentoChange}>
                     <option value="">Seleccione...</option>
                     {departamentos.map((d) => (
@@ -355,8 +371,11 @@ export default function Clientes() {
                     ))}
                   </select>
                 </div>
-                <div className="form-field">
-                  <label>Distrito <span className="optional">(opcional)</span></label>
+                <div className={`form-field ${fieldErrors.id_distrito ? 'has-error' : ''}`}>
+                  <label>
+                    Distrito
+                    {fieldErrors.id_distrito && <span className="req-tag">{fieldErrors.id_distrito}</span>}
+                  </label>
                   <select value={form.id_distrito ?? ''} onChange={onDistritoChange} disabled={!form.id_departamento}>
                     <option value="">{form.id_departamento ? 'Seleccione...' : 'Elige un departamento'}</option>
                     {distritos.map((d) => (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { buscarCliente } from '../../servicios/servicioClientes';
 import { crearTransaccion } from '../../servicios/servicioTransacciones';
+import { formatDui } from '../../utilidades/formato';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -81,7 +82,7 @@ export default function Transacciones() {
       <h2 className="page-title">Registrar transacción</h2>
       <p className="page-subtitle">Busca al huésped, registra su consumo y otorga puntos automáticamente</p>
 
-      <div className="trans-single">
+      <div className="trans-grid">
         <div className="trans-card">
           {/* Buscar huésped */}
           <div className="form-row">
@@ -89,7 +90,7 @@ export default function Transacciones() {
               <label>Tipo de documento</label>
               <select
                 value={busqueda.id_tipo_documento}
-                onChange={(e) => setBusqueda({ ...busqueda, id_tipo_documento: Number(e.target.value) })}
+                onChange={(e) => setBusqueda({ id_tipo_documento: Number(e.target.value), numero_documento: '' })}
               >
                 {TIPOS_DOCUMENTO.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
@@ -99,8 +100,12 @@ export default function Transacciones() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   value={busqueda.numero_documento}
-                  onChange={(e) => setBusqueda({ ...busqueda, numero_documento: e.target.value })}
+                  onChange={(e) => setBusqueda({
+                    ...busqueda,
+                    numero_documento: busqueda.id_tipo_documento === 1 ? formatDui(e.target.value) : e.target.value,
+                  })}
                   onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
+                  placeholder={busqueda.id_tipo_documento === 1 ? '12345678-9' : 'N° de pasaporte'}
                   style={{ flex: 1 }}
                 />
                 <button type="button" className="btn-primary" onClick={handleBuscar} disabled={buscando}>
@@ -162,11 +167,24 @@ export default function Transacciones() {
               </button>
             </form>
           )}
+        </div>
 
-          {resultado && (
+        {/* Columna derecha: resultado de la transacción */}
+        <div className="trans-card">
+          <h3 className="trans-card-title">Resultado</h3>
+          {resultado ? (
             <div className="resultado-card">
               <h4>✓ Transacción registrada</h4>
-              {resultado.escenario && <p className="res-escenario">Escenario aplicado: <strong>{resultado.escenario}</strong></p>}
+              {resultado.escenarios_aplicados?.length > 0 && (
+                <div className="res-escenarios">
+                  <span className="res-escenarios-titulo">Escenarios aplicados:</span>
+                  <div className="res-chips">
+                    {resultado.escenarios_aplicados.map((esc) => (
+                      <span key={esc} className="res-chip">{esc}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <ul>
                 <li><span>Puntos otorgados</span><strong>+{resultado.puntos_otorgados}</strong></li>
                 {resultado.puntos_canjeados > 0 && <li><span>Puntos canjeados</span><strong>-{resultado.puntos_canjeados}</strong></li>}
@@ -175,6 +193,10 @@ export default function Transacciones() {
                 <li><span>Saldo de puntos</span><strong>{resultado.saldo_puntos}</strong></li>
               </ul>
             </div>
+          ) : (
+            <p className="res-vacio">
+              Registra una transacción para ver aquí los puntos otorgados, el descuento y el total a pagar.
+            </p>
           )}
         </div>
       </div>
