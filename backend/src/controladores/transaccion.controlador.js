@@ -41,26 +41,26 @@ export const crearTransaccion = async (req, res) => {
     );
     const esPrimeraCompra = filasConteo[0].total === 0;
 
-    // Escenario activo según la fecha de hoy (fecha especial o dentro del rango)
-    const [filasEscenario] = await pool.query(
-      `SELECT * FROM escenarios
+    // Promoción activa según la fecha de hoy (fecha especial o dentro del rango)
+    const [filasPromocion] = await pool.query(
+      `SELECT * FROM promociones
        WHERE activo = 1
          AND ( fecha_especial = CURDATE()
                OR (fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL AND CURDATE() BETWEEN fecha_inicio AND fecha_fin) )
        LIMIT 1`
     );
-    const escenario = filasEscenario[0] || null;
+    const promocion = filasPromocion[0] || null;
 
     // ============================================================
     //  MOTOR DE REGLAS POR PRIORIDAD
-    //  - Los PUNTOS se acumulan (base + bienvenida + escenario)
+    //  - Los PUNTOS se acumulan (base + bienvenida + promoción)
     //  - El DESCUENTO es uno solo, por prioridad:
     //    1. Canje de puntos (bloquea otros descuentos)
     //    2. Bienvenida (primera compra)
-    //    3. Escenario / fecha especial
+    //    3. Promoción / fecha especial
     //    4. Descuento por monto alto
     // ============================================================
-    const escenariosAplicados = [];
+    const promocionesAplicadas = [];
     let puntosOtorgados = Math.floor(montoNumerico * puntosPorDolar); // puntos base (siempre)
     let descuento       = 0;
     let puntosCanjeados = 0;
@@ -70,25 +70,25 @@ export const crearTransaccion = async (req, res) => {
     // --- Puntos extra (acumulables) ---
     if (esPrimeraCompra) {
       puntosOtorgados += bienvenidaPuntos;
-      escenariosAplicados.push('Bienvenida (primera compra)');
+      promocionesAplicadas.push('Bienvenida (primera compra)');
     }
-    if (escenario) {
-      puntosOtorgados += escenario.puntos_extra;
-      escenariosAplicados.push(`Escenario: ${escenario.nombre}`);
+    if (promocion) {
+      puntosOtorgados += promocion.puntos_extra;
+      promocionesAplicadas.push(`Promoción: ${promocion.nombre}`);
     }
 
     // --- Descuento: solo el de mayor prioridad ---
     if (quiereCanjear) {
       puntosCanjeados = puntosParaCanje;
       descuento = valorCanje;
-      escenariosAplicados.unshift('Canje de puntos'); // máxima prioridad
+      promocionesAplicadas.unshift('Canje de puntos'); // máxima prioridad
     } else if (esPrimeraCompra) {
       descuento = bienvenidaDescuento;
-    } else if (escenario) {
-      descuento = Number(escenario.descuento_extra);
+    } else if (promocion) {
+      descuento = (Number(promocion.descuento_extra) / 100) * montoNumerico;
     } else if (montoNumerico >= descuentoMontoMinimo) {
       descuento = descuentoMontoValor;
-      escenariosAplicados.push('Descuento por compra alta');
+      promocionesAplicadas.push('Descuento por compra alta');
     }
 
     if (descuento > montoNumerico) descuento = montoNumerico;
@@ -106,7 +106,7 @@ export const crearTransaccion = async (req, res) => {
            monto, descuento_aplicado, puntos_otorgados, puntos_canjeados)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          id_cliente, req.usuario.id_usuario, escenario ? escenario.id_escenario : null,
+          id_cliente, req.usuario.id_usuario, promocion ? promocion.id_escenario : null,
           referencia_venta ?? null, fecha_ingreso || null, fecha_salida || null,
           montoNumerico, descuento, puntosOtorgados, puntosCanjeados,
         ]
@@ -140,8 +140,8 @@ export const crearTransaccion = async (req, res) => {
         descuento_aplicado: Number(descuento.toFixed(2)),
         total_a_pagar: Number((montoNumerico - descuento).toFixed(2)),
         saldo_puntos: saldoFinal,
-        escenario: escenario ? escenario.nombre : null,
-        escenarios_aplicados: escenariosAplicados,
+        promocion: promocion ? promocion.nombre : null,
+        promociones_aplicadas: promocionesAplicadas,
         primera_compra: esPrimeraCompra,
       });
     } catch (e) {

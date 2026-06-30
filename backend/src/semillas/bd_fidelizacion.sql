@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
 DROP TABLE IF EXISTS beneficios_emitidos;
-DROP TABLE IF EXISTS escenarios;
+DROP TABLE IF EXISTS promociones;
 DROP TABLE IF EXISTS configuracion;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS usuarios;
@@ -138,9 +138,9 @@ CREATE TABLE clientes (
 );
 
 -- ============================================================
---  ESCENARIOS (reglas de fechas especiales)
+--  PROMOCIONES (reglas de fechas especiales)
 -- ============================================================
-CREATE TABLE escenarios (
+CREATE TABLE promociones (
   id_escenario     INT NOT NULL AUTO_INCREMENT,
   nombre           VARCHAR(80) NOT NULL,
   fecha_inicio     DATE NULL,
@@ -191,7 +191,7 @@ CREATE TABLE transacciones (
   PRIMARY KEY (id_transaccion),
   CONSTRAINT fk_trans_cliente   FOREIGN KEY (id_cliente)   REFERENCES clientes(id_cliente),
   CONSTRAINT fk_trans_usuario   FOREIGN KEY (id_usuario)   REFERENCES usuarios(id_usuario),
-  CONSTRAINT fk_trans_escenario FOREIGN KEY (id_escenario) REFERENCES escenarios(id_escenario),
+  CONSTRAINT fk_trans_promocion FOREIGN KEY (id_escenario) REFERENCES promociones(id_escenario),
   INDEX idx_trans_fecha (fecha),
   INDEX idx_trans_fecha_ingreso (fecha_ingreso)
 );
