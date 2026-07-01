@@ -276,7 +276,8 @@ INSERT INTO tipos_beneficio (nombre, descripcion) VALUES
   ('Cumpleaños',           'Beneficio por fecha de cumpleaños');
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
-  ('puntos_por_dolar',       '1',   'Puntos otorgados por cada $1 de compra'),
+  ('puntos_monto_base',      '1',   'Monto en $ de compra que se toma como base para otorgar puntos'),
+  ('puntos_por_monto',       '1',   'Puntos que gana el cliente por cada monto base'),
   ('puntos_para_canje',      '100', 'Puntos necesarios para canjear una recompensa'),
   ('valor_canje',            '5',   'Descuento en $ al canjear puntos'),
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),

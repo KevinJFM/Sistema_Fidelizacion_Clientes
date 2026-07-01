@@ -26,7 +26,8 @@ export const crearTransaccion = async (req, res) => {
     }
 
     // ===== Reglas configurables (se pueden ajustar en la tabla configuracion) =====
-    const puntosPorDolar       = Number(await obtenerConfig('puntos_por_dolar', '1'));
+    const puntosMontoBase      = Number(await obtenerConfig('puntos_monto_base', '1'));
+    const puntosPorMonto       = Number(await obtenerConfig('puntos_por_monto', '1'));
     const puntosParaCanje      = Number(await obtenerConfig('puntos_para_canje', '100'));
     const valorCanje           = Number(await obtenerConfig('valor_canje', '5'));
     const bienvenidaPuntos     = Number(await obtenerConfig('bienvenida_puntos', '20'));
@@ -66,7 +67,11 @@ export const crearTransaccion = async (req, res) => {
     //    4. Descuento por monto alto
     // ============================================================
     const promocionesAplicadas = [];
-    const puntosBase            = Math.floor(montoNumerico * puntosPorDolar);
+    // Puntos base: por cada "monto base" de compra, gana "puntos por monto".
+    // Ej: base $10 y 1 punto => una compra de $25 da 2 puntos.
+    const puntosBase            = puntosMontoBase > 0
+      ? Math.floor(montoNumerico / puntosMontoBase) * puntosPorMonto
+      : 0;
     let puntosExtraBienvenida   = 0;
     let puntosExtraPromocion    = 0;
     let puntosOtorgados         = puntosBase;

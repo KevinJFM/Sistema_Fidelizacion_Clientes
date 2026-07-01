@@ -9,9 +9,10 @@ import './Configuracion.css';
 const GRUPOS = [
   {
     titulo: 'Puntos',
-    descripcion: 'Cuántos puntos gana el cliente por su compra',
+    descripcion: 'Cuántos puntos gana el cliente por su compra. Ej: por cada $10 de compra, 1 punto.',
     items: [
-      { clave: 'puntos_por_dolar', label: 'Puntos por cada $1 de compra', sufijo: 'pts' },
+      { clave: 'puntos_monto_base', label: 'Por cada $ de compra', sufijo: '$'   },
+      { clave: 'puntos_por_monto',  label: 'El cliente gana',      sufijo: 'pts' },
     ],
   },
   {

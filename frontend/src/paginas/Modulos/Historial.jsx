@@ -174,7 +174,7 @@ export default function Historial() {
       `${t.tipo_documento}: ${t.numero_documento}`,
       t.telefono || '—',
       (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—') +
-        (t.fecha_salida ? ` → ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
+        (t.fecha_salida ? ` a ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
       t.referencia_venta || '—',
       t.nombre_promocion || '—',
       `$${Number(t.monto).toFixed(2)}`,

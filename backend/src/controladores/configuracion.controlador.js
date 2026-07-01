@@ -34,9 +34,11 @@ export const actualizarConfiguracion = async (req, res) => {
     try {
       await conexion.beginTransaction();
       for (const clave of claves) {
+        // Si la clave existe actualiza su valor; si no, la crea.
         await conexion.query(
-          'UPDATE configuracion SET valor = ? WHERE clave = ?',
-          [String(valores[clave]), clave]
+          `INSERT INTO configuracion (clave, valor) VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
+          [clave, String(valores[clave])]
         );
       }
       await conexion.commit();
