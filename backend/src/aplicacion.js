@@ -7,6 +7,7 @@ import rutasUsuarios from "./rutas/usuario.rutas.js";
 import rutasClientes from "./rutas/cliente.rutas.js";
 import rutasTransacciones from "./rutas/transaccion.rutas.js";
 import rutasUbicaciones from "./rutas/ubicacion.rutas.js";
+import rutasConfiguracion from "./rutas/configuracion.rutas.js";
 import rutasPromociones from "./rutas/promocion.rutas.js";
 
 const app = express();
@@ -40,6 +41,7 @@ app.use("/api/usuarios", rutasUsuarios);
 app.use("/api/clientes", rutasClientes);
 app.use("/api/transacciones", rutasTransacciones);
 app.use("/api/ubicaciones", rutasUbicaciones);
+app.use("/api/configuracion", rutasConfiguracion);
 app.use("/api/promociones", rutasPromociones);
 
 export default app;

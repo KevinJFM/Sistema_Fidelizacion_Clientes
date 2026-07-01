@@ -12,6 +12,7 @@ import Clientes from './paginas/Modulos/Clientes';
 import Transacciones from './paginas/Modulos/Transacciones';
 import Historial from './paginas/Modulos/Historial';
 import Promociones from './paginas/Modulos/Promociones';
+import Configuracion from './paginas/Modulos/Configuracion';
 
 const AdminRoute = ({ children }) => {
   const { isAuth, user } = useSelector((state) => state.auth);
@@ -81,6 +82,7 @@ function App() {
           <Route path="historial" element={<Historial />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="promociones" element={<Promociones />} />
+          <Route path="configuracion" element={<Configuracion />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
