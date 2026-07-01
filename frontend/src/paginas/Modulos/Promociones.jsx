@@ -29,11 +29,22 @@ function formatFecha(fechaISO) {
 function estadoHoy(promo) {
   const hoy = new Date().toISOString().slice(0, 10);
   if (!promo.activo) return 'inactivo';
-  if (promo.fecha_especial && promo.fecha_especial.slice(0, 10) === hoy) return 'activo-hoy';
-  if (promo.fecha_inicio && promo.fecha_fin) {
-    if (hoy >= promo.fecha_inicio.slice(0, 10) && hoy <= promo.fecha_fin.slice(0, 10)) return 'activo-hoy';
+
+  // Fecha única
+  if (promo.fecha_especial) {
+    const f = promo.fecha_especial.slice(0, 10);
+    if (f === hoy) return 'activo-hoy';
+    return f > hoy ? 'programada' : 'finalizada';
   }
-  return 'pendiente';
+  // Rango de fechas
+  if (promo.fecha_inicio && promo.fecha_fin) {
+    const ini = promo.fecha_inicio.slice(0, 10);
+    const fin = promo.fecha_fin.slice(0, 10);
+    if (hoy < ini) return 'programada';
+    if (hoy > fin) return 'finalizada';
+    return 'activo-hoy';
+  }
+  return 'programada';
 }
 
 function detectarTipo(promo) {
@@ -103,10 +114,10 @@ export default function Promociones() {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value,
-    }));
+    let nuevoValor = value;
+    if (type === 'number') nuevoValor = value === '' ? '' : Number(value);
+    else if (name === 'activo') nuevoValor = Number(value); // el estado debe ser número (0/1)
+    setForm((prev) => ({ ...prev, [name]: nuevoValor }));
     if (erroresCampo[name]) {
       setErroresCampo((prev) => { const next = { ...prev }; delete next[name]; return next; });
     }
@@ -247,10 +258,13 @@ export default function Promociones() {
                       {estado === 'activo-hoy' && (
                         <span className="badge-estado estado-activo">Activo hoy</span>
                       )}
-                      {estado === 'pendiente' && (
+                      {estado === 'programada' && (
                         <span className="badge-estado" style={{ background: '#fef9c3', color: '#854d0e', border: '1px solid #fde047' }}>
-                          Pendiente
+                          Programada
                         </span>
+                      )}
+                      {estado === 'finalizada' && (
+                        <span className="badge-estado estado-inactivo">Finalizada</span>
                       )}
                       {estado === 'inactivo' && (
                         <span className="badge-estado estado-inactivo">Inactivo</span>
@@ -299,10 +313,11 @@ export default function Promociones() {
       {/* ── Modal crear / editar ── */}
       {modalAbierto && (
         <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
-          <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">{editandoId ? 'Editar promoción' : 'Nueva promoción'}</h3>
 
             <form className="modal-form" onSubmit={handleSubmit} noValidate>
+              <div className="form-row">
               <div className={`form-field ${erroresCampo.nombre ? 'has-error' : ''}`}>
                 <label>
                   Nombre de la promoción
@@ -344,6 +359,7 @@ export default function Promociones() {
                     Rango de fechas
                   </button>
                 </div>
+              </div>
               </div>
 
               {tipoFecha === 'unica' ? (
@@ -395,15 +411,13 @@ export default function Promociones() {
                   </label>
                   <input type="number" name="max_usos_cliente" value={form.max_usos_cliente} onChange={handleChange} min="1" />
                 </div>
-                {!editandoId && (
-                  <div className="form-field">
-                    <label>Estado inicial</label>
-                    <select name="activo" value={form.activo} onChange={handleChange}>
-                      <option value={1}>Activo</option>
-                      <option value={0}>Inactivo</option>
-                    </select>
-                  </div>
-                )}
+                <div className="form-field">
+                  <label>Estado</label>
+                  <select name="activo" value={form.activo} onChange={handleChange}>
+                    <option value={1}>Activo</option>
+                    <option value={0}>Inactivo</option>
+                  </select>
+                </div>
               </div>
 
               <div className="modal-actions">

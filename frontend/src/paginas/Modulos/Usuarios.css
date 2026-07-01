@@ -106,6 +106,8 @@
   text-transform: capitalize;
 }
 .badge-estado {
+  display: inline-block;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
@@ -221,10 +223,10 @@
 .modal {
   background: #fff;
   border-radius: 26px;
-  padding: 28px 32px;
+  padding: 22px 30px;
   width: 100%;
-  max-width: 640px;
-  max-height: 90vh;
+  max-width: 680px;
+  max-height: 95vh;
   overflow-y: auto;
   box-shadow: 0 30px 70px rgba(10, 18, 89, 0.3);
   animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -244,7 +246,7 @@
 .modal-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 .form-row {
   display: grid;

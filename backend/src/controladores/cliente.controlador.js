@@ -90,7 +90,7 @@ export const crearCliente = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
       [
         id_tipo_documento, numero_documento, nombres, apellidos,
-        telefono ?? null, correo ?? null, fecha_nacimiento ?? null,
+        telefono || null, correo || null, fecha_nacimiento || null,
         id_departamento ?? null, id_distrito ?? null,
       ]
     );
@@ -139,7 +139,7 @@ export const actualizarCliente = async (req, res) => {
        WHERE id_cliente = ?`,
       [
         id_tipo_documento, numero_documento, nombres, apellidos,
-        telefono ?? null, correo ?? null, fecha_nacimiento ?? null,
+        telefono || null, correo || null, fecha_nacimiento || null,
         id_departamento ?? null, id_distrito ?? null, id_estado, id,
       ]
     );
