@@ -186,9 +186,28 @@ export default function Transacciones() {
                 </div>
               )}
               <ul>
-                <li><span>Puntos otorgados</span><strong>+{resultado.puntos_otorgados}</strong></li>
-                {resultado.puntos_canjeados > 0 && <li><span>Puntos canjeados</span><strong>-{resultado.puntos_canjeados}</strong></li>}
-                <li><span>Descuento aplicado</span><strong>${resultado.descuento_aplicado.toFixed(2)}</strong></li>
+                <li><span>Puntos base</span><strong>+{resultado.puntos_base}</strong></li>
+                {resultado.puntos_extra_bienvenida > 0 && (
+                  <li className="res-extra"><span>+ Extra bienvenida</span><strong>+{resultado.puntos_extra_bienvenida}</strong></li>
+                )}
+                {resultado.puntos_extra_promocion > 0 && (
+                  <li className="res-extra"><span>+ Extra por promoción</span><strong>+{resultado.puntos_extra_promocion}</strong></li>
+                )}
+                {(resultado.puntos_extra_bienvenida > 0 || resultado.puntos_extra_promocion > 0) && (
+                  <li className="res-subtotal"><span>Total puntos otorgados</span><strong>+{resultado.puntos_otorgados}</strong></li>
+                )}
+                {resultado.puntos_canjeados > 0 && (
+                  <li><span>Puntos canjeados</span><strong>-{resultado.puntos_canjeados}</strong></li>
+                )}
+                <li>
+                  <span>
+                    Descuento aplicado
+                    {resultado.porcentaje_descuento_promo != null && (
+                      <em className="res-porcentaje"> ({resultado.porcentaje_descuento_promo}%)</em>
+                    )}
+                  </span>
+                  <strong>${resultado.descuento_aplicado.toFixed(2)}</strong>
+                </li>
                 <li className="res-total"><span>Total a pagar</span><strong>${resultado.total_a_pagar.toFixed(2)}</strong></li>
                 <li><span>Saldo de puntos</span><strong>{resultado.saldo_puntos}</strong></li>
               </ul>

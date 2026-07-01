@@ -147,7 +147,7 @@ export default function Clientes() {
     e.preventDefault();
 
     const errores = {};
-    ['numero_documento', 'nombres', 'apellidos', 'telefono', 'correo'].forEach((campo) => {
+    ['numero_documento', 'nombres', 'apellidos'].forEach((campo) => {
       if (!String(form[campo]).trim()) errores[campo] = 'Requerido';
     });
     // Formato de DUI (solo cuando el tipo es DUI)

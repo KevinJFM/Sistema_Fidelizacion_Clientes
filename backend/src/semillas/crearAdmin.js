@@ -4,10 +4,10 @@ import pool from '../configuracion/bd.js';
 
 // Datos del admin inicial (se pueden sobreescribir con variables de entorno)
 const admin = {
-  nombre:          process.env.ADMIN_NOMBRE       || 'Kevin',
-  apellido:        process.env.ADMIN_APELLIDO     || 'Flores',
-  email:           process.env.ADMIN_EMAIL        || 'kevin@ejemplo.com',
-  contrasena:      process.env.ADMIN_PASSWORD     || 'Mi@Password123',
+  nombre:          process.env.ADMIN_NOMBRE       || 'roberto',
+  apellido:        process.env.ADMIN_APELLIDO     || 'lopez',
+  email:           process.env.ADMIN_EMAIL        || 'roberto@ejemplo.com',
+  contrasena:      process.env.ADMIN_PASSWORD     || 'Mi@Password1234',
   telefono:        process.env.ADMIN_TELEFONO     || '5605-0000',
   fechaNacimiento: '2000-01-01',
   departamento:    process.env.ADMIN_DEPARTAMENTO || 'Sonsonate',
