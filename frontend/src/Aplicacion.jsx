@@ -11,6 +11,7 @@ import Usuarios from './paginas/Modulos/Usuarios';
 import Clientes from './paginas/Modulos/Clientes';
 import Transacciones from './paginas/Modulos/Transacciones';
 import Historial from './paginas/Modulos/Historial';
+import HistorialCliente from './paginas/Modulos/HistorialCliente';
 import Promociones from './paginas/Modulos/Promociones';
 
 const AdminRoute = ({ children }) => {
@@ -79,6 +80,7 @@ function App() {
           <Route path="clientes" element={<Clientes />} />
           <Route path="transacciones" element={<Transacciones />} />
           <Route path="historial" element={<Historial />} />
+          <Route path="historial-cliente" element={<HistorialCliente />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="promociones" element={<Promociones />} />
         </Route>

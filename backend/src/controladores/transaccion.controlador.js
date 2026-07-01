@@ -61,19 +61,24 @@ export const crearTransaccion = async (req, res) => {
     //    4. Descuento por monto alto
     // ============================================================
     const promocionesAplicadas = [];
-    let puntosOtorgados = Math.floor(montoNumerico * puntosPorDolar); // puntos base (siempre)
-    let descuento       = 0;
-    let puntosCanjeados = 0;
+    const puntosBase            = Math.floor(montoNumerico * puntosPorDolar);
+    let puntosExtraBienvenida   = 0;
+    let puntosExtraPromocion    = 0;
+    let puntosOtorgados         = puntosBase;
+    let descuento               = 0;
+    let puntosCanjeados         = 0;
 
     const quiereCanjear = canjear_puntos && cliente.puntos_acumulados >= puntosParaCanje;
 
     // --- Puntos extra (acumulables) ---
     if (esPrimeraCompra) {
-      puntosOtorgados += bienvenidaPuntos;
+      puntosExtraBienvenida = bienvenidaPuntos;
+      puntosOtorgados += puntosExtraBienvenida;
       promocionesAplicadas.push('Bienvenida (primera compra)');
     }
     if (promocion) {
-      puntosOtorgados += promocion.puntos_extra;
+      puntosExtraPromocion = Number(promocion.puntos_extra);
+      puntosOtorgados += puntosExtraPromocion;
       promocionesAplicadas.push(`Promoción: ${promocion.nombre}`);
     }
 
@@ -135,9 +140,13 @@ export const crearTransaccion = async (req, res) => {
       return res.status(201).json({
         message: 'Transacción registrada correctamente',
         id_transaccion: idTransaccion,
+        puntos_base: puntosBase,
+        puntos_extra_bienvenida: puntosExtraBienvenida,
+        puntos_extra_promocion: puntosExtraPromocion,
         puntos_otorgados: puntosOtorgados,
         puntos_canjeados: puntosCanjeados,
         descuento_aplicado: Number(descuento.toFixed(2)),
+        porcentaje_descuento_promo: promocion && !quiereCanjear && !esPrimeraCompra ? Number(promocion.descuento_extra) : null,
         total_a_pagar: Number((montoNumerico - descuento).toFixed(2)),
         saldo_puntos: saldoFinal,
         promocion: promocion ? promocion.nombre : null,
@@ -161,14 +170,16 @@ export const listarTransacciones = async (req, res) => {
     const { numero_documento, desde, hasta } = req.query;
 
     let sql = `
-      SELECT t.id_transaccion, t.monto, t.descuento_aplicado, t.puntos_otorgados, t.puntos_canjeados,
+      SELECT t.id_transaccion, t.id_cliente, t.monto, t.descuento_aplicado, t.puntos_otorgados, t.puntos_canjeados,
              t.referencia_venta, t.fecha_ingreso, t.fecha_salida, t.fecha,
              c.nombres, c.apellidos, c.numero_documento, c.telefono, c.correo,
-             td.nombre AS tipo_documento, u.nombre AS cajero
+             td.nombre AS tipo_documento, u.nombre AS cajero,
+             p.nombre AS nombre_promocion
       FROM transacciones t
-      JOIN clientes c        ON t.id_cliente = c.id_cliente
+      JOIN clientes c         ON t.id_cliente = c.id_cliente
       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
-      JOIN usuarios u        ON t.id_usuario = u.id_usuario
+      JOIN usuarios u         ON t.id_usuario = u.id_usuario
+      LEFT JOIN promociones p ON t.id_escenario = p.id_escenario
       WHERE 1 = 1`;
     const parametros = [];
 
