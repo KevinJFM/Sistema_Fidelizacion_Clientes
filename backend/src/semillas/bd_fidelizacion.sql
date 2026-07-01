@@ -282,7 +282,11 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
   ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
   ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
-  ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta');
+  ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
+  -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo)
+  ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
+  ('bienvenida_activo',      '1',   'Activa el beneficio de bienvenida (primera compra)'),
+  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta');
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)

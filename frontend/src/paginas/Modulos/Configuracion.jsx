@@ -5,20 +5,28 @@ import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Configuracion.css';
 
-// Metadatos para mostrar cada regla con un nombre amigable y su unidad
+// Metadatos de cada regla. `toggle` es la clave del interruptor ON/OFF (si aplica).
 const GRUPOS = [
   {
     titulo: 'Puntos',
-    descripcion: 'Cómo se ganan y canjean los puntos',
+    descripcion: 'Cuántos puntos gana el cliente por su compra',
     items: [
-      { clave: 'puntos_por_dolar',  label: 'Puntos por cada $1 de compra',     sufijo: 'pts' },
-      { clave: 'puntos_para_canje', label: 'Puntos necesarios para canjear',    sufijo: 'pts' },
-      { clave: 'valor_canje',       label: 'Descuento al canjear puntos',       sufijo: '$'   },
+      { clave: 'puntos_por_dolar', label: 'Puntos por cada $1 de compra', sufijo: 'pts' },
+    ],
+  },
+  {
+    titulo: 'Canje de puntos',
+    descripcion: 'Permite cambiar puntos por un descuento',
+    toggle: 'canje_activo',
+    items: [
+      { clave: 'puntos_para_canje', label: 'Puntos necesarios para canjear', sufijo: 'pts' },
+      { clave: 'valor_canje',       label: 'Descuento al canjear puntos',    sufijo: '$'   },
     ],
   },
   {
     titulo: 'Bienvenida (primera compra)',
     descripcion: 'Beneficio que recibe el cliente en su primera transacción',
+    toggle: 'bienvenida_activo',
     items: [
       { clave: 'bienvenida_puntos',    label: 'Puntos extra de bienvenida', sufijo: 'pts' },
       { clave: 'bienvenida_descuento', label: 'Descuento de bienvenida',    sufijo: '$'   },
@@ -27,12 +35,16 @@ const GRUPOS = [
   {
     titulo: 'Descuento por compra alta',
     descripcion: 'Descuento automático cuando la compra supera cierto monto',
+    toggle: 'descuento_monto_activo',
     items: [
       { clave: 'descuento_monto_minimo', label: 'Monto mínimo de compra', sufijo: '$' },
       { clave: 'descuento_monto_valor',  label: 'Descuento otorgado',     sufijo: '$' },
     ],
   },
 ];
+
+// Claves que son interruptores (se guardan como '1'/'0', no se validan como números)
+const CLAVES_TOGGLE = GRUPOS.map((g) => g.toggle).filter(Boolean);
 
 export default function Configuracion() {
   const [valores, setValores] = useState({});
@@ -49,7 +61,10 @@ export default function Configuracion() {
       setValores(mapa);
 
       // Claves que no están en ningún grupo (por si se agregan nuevas)
-      const conocidas = GRUPOS.flatMap((g) => g.items.map((i) => i.clave));
+      const conocidas = [
+        ...GRUPOS.flatMap((g) => g.items.map((i) => i.clave)),
+        ...CLAVES_TOGGLE,
+      ];
       setOtros(data.filter((c) => !conocidas.includes(c.clave)));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al cargar la configuración');
@@ -64,10 +79,17 @@ export default function Configuracion() {
     setValores((prev) => ({ ...prev, [clave]: valor }));
   };
 
+  const handleToggle = (clave) => {
+    setValores((prev) => ({ ...prev, [clave]: prev[clave] === '1' ? '0' : '1' }));
+  };
+
+  const activo = (grupo) => !grupo.toggle || valores[grupo.toggle] === '1';
+
   const handleGuardar = async (e) => {
     e.preventDefault();
-    // Validar que no haya vacíos ni negativos
+    // Validar solo los valores numéricos (no los interruptores)
     for (const [clave, valor] of Object.entries(valores)) {
+      if (CLAVES_TOGGLE.includes(clave)) continue;
       if (valor === '' || Number(valor) < 0) {
         toast.error('Los valores no pueden estar vacíos ni ser negativos');
         return;
@@ -93,37 +115,55 @@ export default function Configuracion() {
         <div className="config-card"><p className="table-empty">Cargando...</p></div>
       ) : (
         <form onSubmit={handleGuardar}>
-          {GRUPOS.map((grupo) => (
-            <div className="config-card" key={grupo.titulo}>
-              <div className="config-head">
-                <h3>{grupo.titulo}</h3>
-                <p>{grupo.descripcion}</p>
-              </div>
-              <div className="config-grid">
-                {grupo.items.map((item) => (
-                  <div className="config-item" key={item.clave}>
-                    <label>{item.label}</label>
-                    <div className="config-input">
-                      {item.sufijo === '$' && <span className="config-sufijo">$</span>}
-                      <input
-                        type="number"
-                        min="0"
-                        step={item.sufijo === '$' ? '0.01' : '1'}
-                        value={valores[item.clave] ?? ''}
-                        onChange={(e) => handleChange(item.clave, e.target.value)}
-                      />
-                      {item.sufijo === 'pts' && <span className="config-sufijo">pts</span>}
-                    </div>
+          {GRUPOS.map((grupo) => {
+            const habilitado = activo(grupo);
+            return (
+              <div className={`config-card ${grupo.toggle && !habilitado ? 'config-card-off' : ''}`} key={grupo.titulo}>
+                <div className="config-head">
+                  <div>
+                    <h3>{grupo.titulo}</h3>
+                    <p>{grupo.descripcion}</p>
                   </div>
-                ))}
+                  {grupo.toggle && (
+                    <button
+                      type="button"
+                      className={`switch ${habilitado ? 'switch-on' : ''}`}
+                      onClick={() => handleToggle(grupo.toggle)}
+                      aria-pressed={habilitado}
+                      title={habilitado ? 'Regla activa' : 'Regla desactivada'}
+                    >
+                      <span className="switch-knob" />
+                      <span className="switch-label">{habilitado ? 'Activo' : 'Inactivo'}</span>
+                    </button>
+                  )}
+                </div>
+                <div className="config-grid">
+                  {grupo.items.map((item) => (
+                    <div className="config-item" key={item.clave}>
+                      <label>{item.label}</label>
+                      <div className="config-input">
+                        {item.sufijo === '$' && <span className="config-sufijo">$</span>}
+                        <input
+                          type="number"
+                          min="0"
+                          step={item.sufijo === '$' ? '0.01' : '1'}
+                          value={valores[item.clave] ?? ''}
+                          disabled={!habilitado}
+                          onChange={(e) => handleChange(item.clave, e.target.value)}
+                        />
+                        {item.sufijo === 'pts' && <span className="config-sufijo">pts</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Otras claves que no están agrupadas */}
           {otros.length > 0 && (
             <div className="config-card">
-              <div className="config-head"><h3>Otros</h3></div>
+              <div className="config-head"><div><h3>Otros</h3></div></div>
               <div className="config-grid">
                 {otros.map((c) => (
                   <div className="config-item" key={c.clave}>

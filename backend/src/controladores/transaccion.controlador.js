@@ -34,6 +34,11 @@ export const crearTransaccion = async (req, res) => {
     const descuentoMontoMinimo = Number(await obtenerConfig('descuento_monto_minimo', '30'));
     const descuentoMontoValor  = Number(await obtenerConfig('descuento_monto_valor', '1'));
 
+    // Interruptores ON/OFF de cada regla (1 = activo). Si no existe la clave, se asume activo.
+    const canjeActivo          = Number(await obtenerConfig('canje_activo', '1')) === 1;
+    const bienvenidaActivo     = Number(await obtenerConfig('bienvenida_activo', '1')) === 1;
+    const descuentoMontoActivo = Number(await obtenerConfig('descuento_monto_activo', '1')) === 1;
+
     // ¿Es la primera compra registrada del cliente?
     const [filasConteo] = await pool.query(
       'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ?',
@@ -68,10 +73,13 @@ export const crearTransaccion = async (req, res) => {
     let descuento               = 0;
     let puntosCanjeados         = 0;
 
-    const quiereCanjear = canjear_puntos && cliente.puntos_acumulados >= puntosParaCanje;
+    // El canje solo procede si la regla está activa
+    const quiereCanjear = canjeActivo && canjear_puntos && cliente.puntos_acumulados >= puntosParaCanje;
+    // La bienvenida solo aplica si la regla está activa y es la primera compra
+    const aplicaBienvenida = bienvenidaActivo && esPrimeraCompra;
 
     // --- Puntos extra (acumulables) ---
-    if (esPrimeraCompra) {
+    if (aplicaBienvenida) {
       puntosExtraBienvenida = bienvenidaPuntos;
       puntosOtorgados += puntosExtraBienvenida;
       promocionesAplicadas.push('Bienvenida (primera compra)');
@@ -82,16 +90,16 @@ export const crearTransaccion = async (req, res) => {
       promocionesAplicadas.push(`Promoción: ${promocion.nombre}`);
     }
 
-    // --- Descuento: solo el de mayor prioridad ---
+    // --- Descuento: solo el de mayor prioridad (respetando los interruptores) ---
     if (quiereCanjear) {
       puntosCanjeados = puntosParaCanje;
       descuento = valorCanje;
       promocionesAplicadas.unshift('Canje de puntos'); // máxima prioridad
-    } else if (esPrimeraCompra) {
+    } else if (aplicaBienvenida) {
       descuento = bienvenidaDescuento;
     } else if (promocion) {
       descuento = (Number(promocion.descuento_extra) / 100) * montoNumerico;
-    } else if (montoNumerico >= descuentoMontoMinimo) {
+    } else if (descuentoMontoActivo && montoNumerico >= descuentoMontoMinimo) {
       descuento = descuentoMontoValor;
       promocionesAplicadas.push('Descuento por compra alta');
     }
@@ -146,7 +154,7 @@ export const crearTransaccion = async (req, res) => {
         puntos_otorgados: puntosOtorgados,
         puntos_canjeados: puntosCanjeados,
         descuento_aplicado: Number(descuento.toFixed(2)),
-        porcentaje_descuento_promo: promocion && !quiereCanjear && !esPrimeraCompra ? Number(promocion.descuento_extra) : null,
+        porcentaje_descuento_promo: promocion && !quiereCanjear && !aplicaBienvenida ? Number(promocion.descuento_extra) : null,
         total_a_pagar: Number((montoNumerico - descuento).toFixed(2)),
         saldo_puntos: saldoFinal,
         promocion: promocion ? promocion.nombre : null,
