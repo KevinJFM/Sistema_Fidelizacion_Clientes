@@ -175,12 +175,12 @@ export default function Transacciones() {
           {resultado ? (
             <div className="resultado-card">
               <h4>✓ Transacción registrada</h4>
-              {resultado.escenarios_aplicados?.length > 0 && (
-                <div className="res-escenarios">
-                  <span className="res-escenarios-titulo">Escenarios aplicados:</span>
+              {resultado.promociones_aplicadas?.length > 0 && (
+                <div className="res-promociones">
+                  <span className="res-promociones-titulo">Promociones aplicadas:</span>
                   <div className="res-chips">
-                    {resultado.escenarios_aplicados.map((esc) => (
-                      <span key={esc} className="res-chip">{esc}</span>
+                    {resultado.promociones_aplicadas.map((p) => (
+                      <span key={p} className="res-chip">{p}</span>
                     ))}
                   </div>
                 </div>
