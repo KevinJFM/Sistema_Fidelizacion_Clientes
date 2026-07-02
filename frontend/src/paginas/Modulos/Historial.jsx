@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
 import { descargarCSV } from '../../utilidades/csv';
 import { exportarPDF } from '../../utilidades/pdf';
+import { formatDocumento } from '../../utilidades/formato';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -102,7 +103,7 @@ function ModalDetalle({ t, onClose }) {
 export default function Historial() {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando]   = useState(true);
-  const [filtros, setFiltros]     = useState({ numero_documento: '', desde: '', hasta: '' });
+  const [filtros, setFiltros]     = useState({ numero_documento: '', tipo_documento: '', desde: '', hasta: '' });
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
   const [searchParams] = useSearchParams();
 
@@ -132,13 +133,14 @@ export default function Historial() {
     e.preventDefault();
     const f = {};
     if (filtros.numero_documento) f.numero_documento = filtros.numero_documento;
+    if (filtros.tipo_documento) f.tipo_documento = filtros.tipo_documento;
     if (filtros.desde) f.desde = filtros.desde;
     if (filtros.hasta) f.hasta = filtros.hasta;
     cargar(f);
   };
 
   const limpiar = () => {
-    setFiltros({ numero_documento: '', desde: '', hasta: '' });
+    setFiltros({ numero_documento: '', tipo_documento: '', desde: '', hasta: '' });
     cargar();
   };
 
@@ -161,7 +163,9 @@ export default function Historial() {
       { label: 'Cajero',           valor: (t) => t.cajero },
       { label: 'Registrado',       valor: (t) => new Date(t.fecha).toLocaleString() },
     ];
-    const sufijo = filtros.numero_documento ? `_${filtros.numero_documento}` : '_completo';
+    const sufijo = filtros.numero_documento
+      ? `_${filtros.numero_documento}`
+      : (filtros.tipo_documento ? `_${filtros.tipo_documento.toLowerCase()}` : '_completo');
     descargarCSV(`historial${sufijo}_${new Date().toISOString().slice(0, 10)}.csv`, columnas, historial);
     toast.success('Historial exportado');
   };
@@ -186,15 +190,20 @@ export default function Historial() {
     const individual = filtros.numero_documento && historial.length > 0;
     const titulo = individual
       ? `Historial de ${historial[0].nombres} ${historial[0].apellidos}`
-      : 'Historial de transacciones';
+      : (filtros.tipo_documento
+          ? `Historial de transacciones (solo ${filtros.tipo_documento})`
+          : 'Historial de transacciones');
 
     const sub = [`Generado: ${new Date().toLocaleString()}`];
     if (filtros.numero_documento) sub.push(`Documento: ${filtros.numero_documento}`);
+    if (filtros.tipo_documento) sub.push(`Tipo: ${filtros.tipo_documento}`);
     if (filtros.desde) sub.push(`Desde: ${filtros.desde}`);
     if (filtros.hasta) sub.push(`Hasta: ${filtros.hasta}`);
 
     const resumen = `Transacciones: ${historial.length}    Ventas: $${totalVentas.toFixed(2)}    Puntos otorgados: ${totalPuntos}`;
-    const sufijo = filtros.numero_documento ? `_${filtros.numero_documento}` : '_completo';
+    const sufijo = filtros.numero_documento
+      ? `_${filtros.numero_documento}`
+      : (filtros.tipo_documento ? `_${filtros.tipo_documento.toLowerCase()}` : '_completo');
 
     exportarPDF({ titulo, subtitulo: sub.join('     |     '), head, body, resumen,
       archivo: `historial${sufijo}_${new Date().toISOString().slice(0, 10)}.pdf` });
@@ -211,10 +220,21 @@ export default function Historial() {
 
       <form className="filtros-row" onSubmit={aplicarFiltros} style={{ marginBottom: 18 }}>
         <input
-          placeholder="N° de documento"
+          placeholder={filtros.tipo_documento === 'DUI' ? '12345678-9' : (filtros.tipo_documento === 'Pasaporte' ? 'N° de pasaporte' : 'N° de documento')}
           value={filtros.numero_documento}
-          onChange={(e) => setFiltros({ ...filtros, numero_documento: e.target.value })}
+          onChange={(e) => setFiltros({
+            ...filtros,
+            numero_documento: filtros.tipo_documento ? formatDocumento(filtros.tipo_documento, e.target.value) : e.target.value,
+          })}
         />
+        <select
+          value={filtros.tipo_documento}
+          onChange={(e) => setFiltros({ ...filtros, tipo_documento: e.target.value, numero_documento: '' })}
+        >
+          <option value="">Todos los documentos</option>
+          <option value="DUI">Solo DUI</option>
+          <option value="Pasaporte">Solo Pasaporte</option>
+        </select>
         <div className="filtro-fecha">
           <label>Desde (ingreso)</label>
           <input type="date" value={filtros.desde}

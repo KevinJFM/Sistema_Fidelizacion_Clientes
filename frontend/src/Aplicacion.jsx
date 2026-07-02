@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { refreshSession } from './servicios/servicioAuth';
+import { inicioDeRol } from './utilidades/roles';
 import { setCredentials, setBootstrapped } from './redux/slices/sliceAuth';
 import Login from './paginas/Acceso/Acceso';
 import StoreLayout from './paginas/Administracion/Panel';
@@ -15,10 +16,18 @@ import HistorialCliente from './paginas/Modulos/HistorialCliente';
 import Promociones from './paginas/Modulos/Promociones';
 import Configuracion from './paginas/Modulos/Configuracion';
 
-const AdminRoute = ({ children }) => {
+// Requiere sesión iniciada (cualquier rol)
+const RequireAuth = ({ children }) => {
+  const { isAuth } = useSelector((state) => state.auth);
+  if (!isAuth) return <Navigate to="/login" replace />;
+  return children;
+};
+
+// Requiere que el rol del usuario esté en la lista; si no, lo manda a su inicio
+const RequireRole = ({ roles, children }) => {
   const { isAuth, user } = useSelector((state) => state.auth);
-  if (!isAuth) return <Navigate to="/login" />;
-  if (user?.rol !== 'admin') return <Navigate to="/" />;
+  if (!isAuth) return <Navigate to="/login" replace />;
+  if (!roles.includes(user?.rol)) return <Navigate to={inicioDeRol(user?.rol)} replace />;
   return children;
 };
 
@@ -72,19 +81,19 @@ function App() {
         <Route
           path="/admin"
           element={
-            <AdminRoute>
+            <RequireAuth>
               <StoreLayout />
-            </AdminRoute>
+            </RequireAuth>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="clientes" element={<Clientes />} />
-          <Route path="transacciones" element={<Transacciones />} />
-          <Route path="historial" element={<Historial />} />
-          <Route path="historial-cliente" element={<HistorialCliente />} />
-          <Route path="usuarios" element={<Usuarios />} />
-          <Route path="promociones" element={<Promociones />} />
-          <Route path="configuracion" element={<Configuracion />} />
+          <Route index element={<RequireRole roles={['admin', 'recepcionista']}><Dashboard /></RequireRole>} />
+          <Route path="clientes" element={<RequireRole roles={['admin', 'recepcionista']}><Clientes /></RequireRole>} />
+          <Route path="transacciones" element={<RequireRole roles={['admin', 'recepcionista']}><Transacciones /></RequireRole>} />
+          <Route path="historial" element={<RequireRole roles={['admin', 'recepcionista']}><Historial /></RequireRole>} />
+          <Route path="historial-cliente" element={<RequireRole roles={['admin', 'recepcionista', 'empleado']}><HistorialCliente /></RequireRole>} />
+          <Route path="usuarios" element={<RequireRole roles={['admin']}><Usuarios /></RequireRole>} />
+          <Route path="promociones" element={<RequireRole roles={['admin']}><Promociones /></RequireRole>} />
+          <Route path="configuracion" element={<RequireRole roles={['admin']}><Configuracion /></RequireRole>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />

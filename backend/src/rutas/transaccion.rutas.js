@@ -9,10 +9,13 @@ import { autorizarRoles } from '../middlewares/rol.middleware.js';
 
 const router = Router();
 
-router.use(verificarToken, autorizarRoles('admin', 'cajero'));
+router.use(verificarToken);
 
-router.get('/resumen', obtenerResumen);
-router.get('/', listarTransacciones);
-router.post('/', crearTransaccion);
+// Resumen del dashboard: admin y recepcionista
+router.get('/resumen', autorizarRoles('admin', 'recepcionista'), obtenerResumen);
+// Listado: admin y recepcionista (historial) y empleado (para el perfil del huésped, siempre filtrado)
+router.get('/', autorizarRoles('admin', 'recepcionista', 'empleado'), listarTransacciones);
+// Registrar consumo: solo admin y recepcionista
+router.post('/', autorizarRoles('admin', 'recepcionista'), crearTransaccion);
 
 export default router;

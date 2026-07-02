@@ -8,7 +8,8 @@ import { autorizarRoles } from '../middlewares/rol.middleware.js';
 
 const router = Router();
 
-router.use(verificarToken, autorizarRoles('admin', 'cajero'));
+// Se usan en los formularios de clientes/usuarios (crear/editar)
+router.use(verificarToken, autorizarRoles('admin', 'recepcionista'));
 
 router.get('/departamentos', obtenerDepartamentos);
 router.get('/distritos', obtenerDistritosPorDepartamento);

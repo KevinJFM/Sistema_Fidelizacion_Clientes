@@ -8,14 +8,6 @@ import './Configuracion.css';
 // Metadatos de cada regla. `toggle` es la clave del interruptor ON/OFF (si aplica).
 const GRUPOS = [
   {
-    titulo: 'Puntos',
-    descripcion: 'Cuántos puntos gana el cliente por su compra. Ej: por cada $10 de compra, 1 punto.',
-    items: [
-      { clave: 'puntos_monto_base', label: 'Por cada $ de compra', sufijo: '$'   },
-      { clave: 'puntos_por_monto',  label: 'El cliente gana',      sufijo: 'pts' },
-    ],
-  },
-  {
     titulo: 'Canje de puntos',
     descripcion: 'Permite cambiar puntos por un descuento',
     toggle: 'canje_activo',
@@ -47,6 +39,9 @@ const GRUPOS = [
 // Claves que son interruptores (se guardan como '1'/'0', no se validan como números)
 const CLAVES_TOGGLE = GRUPOS.map((g) => g.toggle).filter(Boolean);
 
+// Claves que existen en la BD pero no se muestran en esta pantalla
+const CLAVES_OCULTAS = ['puntos_monto_base', 'puntos_por_monto'];
+
 export default function Configuracion() {
   const [valores, setValores] = useState({});
   const [otros, setOtros]     = useState([]); // claves no contempladas en GRUPOS
@@ -65,6 +60,7 @@ export default function Configuracion() {
       const conocidas = [
         ...GRUPOS.flatMap((g) => g.items.map((i) => i.clave)),
         ...CLAVES_TOGGLE,
+        ...CLAVES_OCULTAS,
       ];
       setOtros(data.filter((c) => !conocidas.includes(c.clave)));
     } catch (err) {
@@ -123,7 +119,7 @@ export default function Configuracion() {
                 <div className="config-head">
                   <div>
                     <h3>{grupo.titulo}</h3>
-                    <p>{grupo.descripcion}</p>
+                    {grupo.descripcion && <p>{grupo.descripcion}</p>}
                   </div>
                   {grupo.toggle && (
                     <button

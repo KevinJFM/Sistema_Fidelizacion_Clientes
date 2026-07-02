@@ -2,7 +2,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { buscarCliente } from '../../servicios/servicioClientes';
 import { crearTransaccion } from '../../servicios/servicioTransacciones';
-import { formatDui } from '../../utilidades/formato';
+import { formatDui, formatPasaporte } from '../../utilidades/formato';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -102,7 +102,7 @@ export default function Transacciones() {
                   value={busqueda.numero_documento}
                   onChange={(e) => setBusqueda({
                     ...busqueda,
-                    numero_documento: busqueda.id_tipo_documento === 1 ? formatDui(e.target.value) : e.target.value,
+                    numero_documento: busqueda.id_tipo_documento === 1 ? formatDui(e.target.value) : formatPasaporte(e.target.value),
                   })}
                   onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
                   placeholder={busqueda.id_tipo_documento === 1 ? '12345678-9' : 'N° de pasaporte'}

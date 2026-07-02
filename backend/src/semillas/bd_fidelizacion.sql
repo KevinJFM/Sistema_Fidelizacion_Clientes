@@ -263,8 +263,9 @@ CREATE TABLE bitacora (
 INSERT INTO estados (estado) VALUES ('activo'), ('inactivo'), ('suspendido');
 
 INSERT INTO roles (rol, descripcion) VALUES
-  ('admin',  'Acceso total al sistema'),
-  ('cajero', 'Registra ventas, puntos y canjes');
+  ('admin',         'Acceso total al sistema'),
+  ('recepcionista', 'Front desk: registra huéspedes, consumos y consultas'),
+  ('empleado',      'Consulta de puntos de los huéspedes');
 
 INSERT INTO tipos_documento (nombre) VALUES ('DUI'), ('Pasaporte');
 

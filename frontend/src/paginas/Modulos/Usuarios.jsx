@@ -13,8 +13,8 @@ import './Usuarios.css';
 
 const ROLES = [
   { id: 1, label: 'Admin' },
-  { id: 2, label: 'Cajero' },
-  { id: 3, label: 'Cliente' },
+  { id: 2, label: 'Recepcionista' },
+  { id: 3, label: 'Empleado' },
 ];
 const ESTADO_INACTIVO = 2;
 
@@ -50,7 +50,7 @@ const emptyForm = {
   fecha_nacimiento: '',
   id_departamento: null,
   id_distrito: null,
-  id_rol: 3,
+  id_rol: 2,
   id_estado: 1,
 };
 

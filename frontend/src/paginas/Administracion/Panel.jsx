@@ -12,6 +12,7 @@ const navItems = [
     to: '/admin',
     end: true,
     label: 'Dashboard',
+    roles: ['admin', 'recepcionista'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="9" />
@@ -24,6 +25,7 @@ const navItems = [
   {
     to: '/admin/clientes',
     label: 'Clientes',
+    roles: ['admin', 'recepcionista'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -36,6 +38,7 @@ const navItems = [
   {
     to: '/admin/transacciones',
     label: 'Transacciones',
+    roles: ['admin', 'recepcionista'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
@@ -46,6 +49,7 @@ const navItems = [
   {
     to: '/admin/historial',
     label: 'Historial',
+    roles: ['admin', 'recepcionista'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 3v5h5" />
@@ -57,6 +61,7 @@ const navItems = [
   {
     to: '/admin/historial-cliente',
     label: 'Perfil Cliente',
+    roles: ['admin', 'recepcionista', 'empleado'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="8" r="4" />
@@ -68,6 +73,7 @@ const navItems = [
   {
     to: '/admin/promociones',
     label: 'Promociones',
+    roles: ['admin'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -83,6 +89,7 @@ const navItems = [
   {
     to: '/admin/usuarios',
     label: 'Usuarios',
+    roles: ['admin'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -95,6 +102,7 @@ const navItems = [
   {
     to: '/admin/configuracion',
     label: 'Configuración',
+    roles: ['admin'],
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -131,7 +139,7 @@ export default function StoreLayout() {
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
+          {navItems.filter((item) => item.roles.includes(user?.rol)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

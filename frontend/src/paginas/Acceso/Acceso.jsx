@@ -4,14 +4,9 @@ import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { setCredentials } from '../../redux/slices/sliceAuth';
 import { login } from '../../servicios/servicioAuth';
+import { inicioDeRol } from '../../utilidades/roles';
 import Logo from '../../componentes/Logo/Logo';
 import './Acceso.css';
-
-const ROLE_REDIRECT = {
-  admin:   '/admin/',
-  cajero:  '/cajero/',
-  cliente: '/cliente/',
-};
 
 export default function Login() {
   const [showPass, setShowPass]   = useState(false);
@@ -62,7 +57,7 @@ export default function Login() {
       const data = await login(form);
       dispatch(setCredentials(data));
       toast.success(`¡Bienvenido, ${data.usuario.nombre}!`);
-      navigate(ROLE_REDIRECT[data.usuario.rol] ?? '/login');
+      navigate(inicioDeRol(data.usuario.rol));
     } catch (err) {
       setError(err.response?.data?.message || 'Error al iniciar sesión');
     } finally {

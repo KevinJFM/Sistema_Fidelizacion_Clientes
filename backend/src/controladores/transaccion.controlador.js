@@ -180,7 +180,7 @@ export const crearTransaccion = async (req, res) => {
 // Listar transacciones con filtros (documento y rango de fecha de hospedaje)
 export const listarTransacciones = async (req, res) => {
   try {
-    const { numero_documento, desde, hasta } = req.query;
+    const { numero_documento, tipo_documento, desde, hasta } = req.query;
 
     let sql = `
       SELECT t.id_transaccion, t.id_cliente, t.monto, t.descuento_aplicado, t.puntos_otorgados, t.puntos_canjeados,
@@ -199,6 +199,11 @@ export const listarTransacciones = async (req, res) => {
     if (numero_documento) {
       sql += ' AND c.numero_documento LIKE ?';
       parametros.push(`%${numero_documento}%`);
+    }
+    // Filtro por tipo de documento (DUI, Pasaporte, etc.)
+    if (tipo_documento) {
+      sql += ' AND td.nombre = ?';
+      parametros.push(tipo_documento);
     }
     // Búsqueda por fecha de hospedaje (lo que pidió el hotel)
     if (desde) {

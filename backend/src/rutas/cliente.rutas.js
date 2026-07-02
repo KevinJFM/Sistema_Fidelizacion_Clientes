@@ -11,13 +11,15 @@ import { autorizarRoles } from '../middlewares/rol.middleware.js';
 
 const router = Router();
 
-// Admin y cajero/recepcionista pueden gestionar clientes
-router.use(verificarToken, autorizarRoles('admin', 'cajero'));
+router.use(verificarToken);
 
-router.get('/', obtenerClientes);
-router.get('/buscar', buscarClientePorDocumento);
-router.post('/', crearCliente);
-router.put('/:id', actualizarCliente);
-router.delete('/:id', eliminarCliente);
+// Buscar por documento: admin, recepcionista y empleado (para consultar el perfil)
+router.get('/buscar', autorizarRoles('admin', 'recepcionista', 'empleado'), buscarClientePorDocumento);
+
+// Gestión de clientes: solo admin y recepcionista
+router.get('/', autorizarRoles('admin', 'recepcionista'), obtenerClientes);
+router.post('/', autorizarRoles('admin', 'recepcionista'), crearCliente);
+router.put('/:id', autorizarRoles('admin', 'recepcionista'), actualizarCliente);
+router.delete('/:id', autorizarRoles('admin', 'recepcionista'), eliminarCliente);
 
 export default router;
