@@ -23,12 +23,7 @@
 .login-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    150deg,
-    rgba(7, 14, 90, 0.90) 0%,
-    rgba(10, 18, 89, 0.75) 45%,
-    rgba(79, 95, 232, 0.52) 100%
-  );
+  background: transparent;
 }
 
 .login-hero-content {
@@ -65,14 +60,15 @@
   letter-spacing: -1px;
   line-height: 1.1;
   margin-bottom: 10px;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 4px 32px rgba(0,0,0,0.55);
 }
 
 .hero-subtitle {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.75);
+  color: #ffffff;
   font-weight: 500;
   margin-bottom: 36px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.65);
 }
 
 .hero-pills {
