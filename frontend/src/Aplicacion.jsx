@@ -48,7 +48,7 @@ function App() {
   // Evita el parpadeo login→admin mientras se verifica la sesión
   if (!bootstrapped) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#f4f1fb' }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#F4F6FE' }}>
         <div className="spinner" style={{ borderTopColor: '#0D1BB8', borderColor: 'rgba(13,27,184,0.2)', borderTopWidth: 3, width: 32, height: 32 }} />
       </div>
     );

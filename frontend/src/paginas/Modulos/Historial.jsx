@@ -15,7 +15,7 @@ const estiloModal = {
   padding: '28px 32px',
   width: '100%',
   maxWidth: 460,
-  boxShadow: '0 30px 70px rgba(10,18,89,0.25)',
+  boxShadow: '0 30px 70px rgba(6,58,52,0.25)',
   color: '#111827',
 };
 

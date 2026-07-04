@@ -1,5 +1,33 @@
+/* =====================================================
+   PUNTA DIAMANTES — Variables de marca
+   ===================================================== */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Azul principal */
+  --pd-teal-dark:    #0A1259;   /* fondo sidebar, títulos */
+  --pd-teal:         #0D1BB8;   /* botones, activo */
+  --pd-teal-mid:     #1E2BB0;   /* hover, labels */
+  --pd-teal-light:   #EEF0FC;   /* badges, fondos claros */
+  --pd-teal-xlight:  #F4F6FE;   /* fondo hover tabla */
+
+  /* Acento de marca */
+  --pd-pink:         #E5388A;   /* logo diamante */
+  --pd-pink-light:   #FCE8F3;
+
+  /* Calidez */
+  --pd-gold:         #D4A843;
+  --pd-sand:         #F4F6FE;   /* fondo general */
+
+  /* Texto */
+  --pd-text-dark:    #0A1259;
+  --pd-text-mid:     #1E2BB0;
+  --pd-text-muted:   #7C87E6;
+  --pd-text-xmuted:  #A6AEEF;
+
+  /* Estado */
+  --pd-success:      #16a34a;
+  --pd-danger:       #dc2626;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   line-height: 1.5;
 }
 
@@ -11,4 +39,6 @@
 
 body {
   min-height: 100vh;
+  background: var(--pd-sand);
+  color: var(--pd-text-dark);
 }

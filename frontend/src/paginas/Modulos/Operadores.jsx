@@ -289,7 +289,7 @@ export default function Operadores() {
                     <strong>{Number(resultado.puntos_consumo).toFixed(2)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 6 }}>
-                    <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados</span>
+                    <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados</span>
                     <strong style={{ color: '#16a34a' }}>+{Number(resultado.puntos_otorgados).toFixed(2)}</strong>
                   </div>
                   {!resultado.alcanzo_minimo && (

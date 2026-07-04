@@ -1,0 +1,114 @@
+/* ===== Hero banner del Dashboard ===== */
+.dashboard-hero {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  margin-bottom: 28px;
+  min-height: 160px;
+
+  background-image: url('/img/hotel-bg2.jpg');
+  background-size: cover;
+  background-position: center 40%;
+  background-color: #0A1259;
+}
+
+.dashboard-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(7, 14, 90, 0.82) 0%,
+    rgba(13, 27, 184, 0.58) 60%,
+    rgba(229, 56, 138, 0.28) 100%
+  );
+}
+
+.dashboard-hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 36px 40px;
+}
+
+.dashboard-hero-content h2 {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+.dashboard-hero-content p {
+  font-size: 14px;
+  color: rgba(255,255,255,0.72);
+  font-weight: 500;
+}
+
+/* ===== Grid de stat cards ===== */
+.stats-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.stat-card-v2 {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  box-shadow:
+    0 8px 24px rgba(13, 27, 184, 0.06),
+    inset 0 -2px 0 rgba(0,0,0,0.03);
+  cursor: default;
+  transition: box-shadow 0.25s;
+}
+
+.stat-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stat-value-v2 {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.stat-label-v2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pd-text-dark);
+}
+
+.stat-hint-v2 {
+  font-size: 11px;
+  color: var(--pd-text-xmuted);
+  font-weight: 500;
+}
+
+/* Dark mode */
+[data-theme="dark"] .stat-card-v2 { background: #11152e; }
+[data-theme="dark"] .stat-label-v2 { color: #e8ebff; }
+[data-theme="dark"] .dashboard-hero-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(4, 6, 40, 0.90) 0%,
+    rgba(10, 18, 89, 0.72) 60%,
+    rgba(229, 56, 138, 0.30) 100%
+  );
+}

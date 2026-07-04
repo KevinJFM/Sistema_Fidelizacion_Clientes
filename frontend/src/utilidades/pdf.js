@@ -36,7 +36,7 @@ function obtenerLogoPNG(color = ROSA, px = 200) {
   });
 }
 
-// Dibuja la barra azul del encabezado con la insignia del logo y el nombre del hotel.
+// Dibuja la barra teal del encabezado con la insignia del logo y el nombre del hotel.
 function dibujarEncabezado(doc, logoPng, ancho) {
   doc.setFillColor(...AZUL);
   doc.rect(0, 0, ancho, 72, 'F');

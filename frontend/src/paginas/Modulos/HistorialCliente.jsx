@@ -63,7 +63,7 @@ function ModalDetalle({ t, onClose }) {
         {t.nombre_promocion && (
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #e5e7eb', fontSize: 14 }}>
             <span style={{ color: '#6b7280', fontWeight: 500 }}>Promoción</span>
-            <span style={{ background: '#EEF0FC', color: '#0D1BB8', fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20 }}>{t.nombre_promocion}</span>
+            <span style={{ background: '#EEF0FC', color: '#0A1259', fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20 }}>{t.nombre_promocion}</span>
           </div>
         )}
 

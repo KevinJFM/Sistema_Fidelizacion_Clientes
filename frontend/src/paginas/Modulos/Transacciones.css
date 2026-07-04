@@ -14,12 +14,12 @@
   background: #ffffff;
   border-radius: 22px;
   padding: 24px;
-  box-shadow: 0 12px 32px rgba(13, 27, 184, 0.08);
+  box-shadow: 0 12px 32px rgba(7, 159, 143, 0.08);
 }
 .trans-card-title {
   font-size: 17px;
   font-weight: 800;
-  color: #0A1259;
+  color: var(--pd-teal-dark);
   margin-bottom: 18px;
 }
 
@@ -28,7 +28,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #EEF0FC;
+  background: var(--pd-teal-light);
   border-radius: 14px;
   padding: 14px 18px;
   margin-top: 14px;
@@ -36,7 +36,7 @@
 .cliente-nombre {
   display: block;
   font-weight: 700;
-  color: #0A1259;
+  color: var(--pd-teal-dark);
   font-size: 15px;
 }
 .cliente-doc {
@@ -47,7 +47,7 @@
 }
 .cliente-puntos {
   text-align: center;
-  background: linear-gradient(135deg, #0D1BB8, #4F5FE8);
+  background: linear-gradient(135deg, var(--pd-teal-dark), var(--pd-teal));
   color: #fff;
   border-radius: 12px;
   padding: 8px 16px;
@@ -94,8 +94,8 @@
 .res-promociones-titulo { font-size: 12px; color: #6b7280; font-weight: 600; }
 .res-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .res-chip {
-  background: #EEF0FC;
-  color: #0D1BB8;
+  background: var(--pd-teal-light);
+  color: var(--pd-teal-dark);
   font-size: 12px;
   font-weight: 600;
   padding: 4px 11px;
@@ -111,8 +111,8 @@
   color: #374151;
   border-bottom: 1px dashed #d1fae5;
 }
-.resultado-card li.res-total { font-size: 16px; color: #0A1259; border-bottom: none; }
-.resultado-card li.res-total strong { color: #0D1BB8; }
+.resultado-card li.res-total { font-size: 16px; color: var(--pd-teal-dark); border-bottom: none; }
+.resultado-card li.res-total strong { color: var(--pd-teal); }
 
 /* Filas de desglose de puntos */
 .resultado-card li.res-extra {
@@ -124,7 +124,7 @@
 .resultado-card li.res-extra strong { color: #16a34a; }
 .resultado-card li.res-subtotal {
   font-weight: 700;
-  color: #0A1259;
+  color: var(--pd-teal-dark);
   border-top: 1px solid #bbf7d0;
   border-bottom: 1px dashed #d1fae5;
   padding-top: 5px;
@@ -167,7 +167,7 @@
 }
 .filtros-row input:focus,
 .filtros-row select:focus {
-  border-color: #1E2BB0;
+  border-color: var(--pd-teal);
 }
 .filtro-fecha { display: flex; flex-direction: column; gap: 4px; }
 .filtro-fecha label { font-size: 11px; color: #9ca3af; font-weight: 600; }
@@ -181,7 +181,7 @@
   font-size: 14px;
   color: #6b7280;
 }
-.hist-resumen strong { color: #0D1BB8; }
+.hist-resumen strong { color: var(--pd-teal); }
 
 /* Botón ojo en tabla */
 .btn-icon-table {
@@ -195,7 +195,7 @@
   align-items: center;
   transition: background 0.15s, color 0.15s;
 }
-.btn-icon-table:hover { background: #EEF0FC; color: #0D1BB8; border-color: #0D1BB8; }
+.btn-icon-table:hover { background: var(--pd-teal-light); color: var(--pd-teal-dark); border-color: var(--pd-teal); }
 
 /* Modal de detalle de transacción */
 .detalle-seccion {
@@ -209,19 +209,19 @@
 .detalle-label { color: #6b7280; font-weight: 500; }
 .detalle-valor { color: #111827; font-weight: 600; text-align: right; }
 .detalle-promo {
-  background: #EEF0FC;
-  color: #0D1BB8;
+  background: var(--pd-teal-light);
+  color: var(--pd-teal-dark);
   font-size: 12px;
   padding: 3px 10px;
   border-radius: 20px;
 }
-.detalle-total .detalle-label { font-weight: 700; color: #0A1259; }
-.detalle-total .detalle-valor { font-size: 16px; color: #0D1BB8; font-weight: 800; }
+.detalle-total .detalle-label { font-weight: 700; color: var(--pd-teal-dark); }
+.detalle-total .detalle-valor { font-size: 16px; color: var(--pd-teal); font-weight: 800; }
 
 /* Badge de promoción en tabla */
 .badge-promo {
-  background: #EEF0FC;
-  color: #0D1BB8;
+  background: var(--pd-teal-light);
+  color: var(--pd-teal-dark);
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;
@@ -234,7 +234,7 @@
   background: #fff;
   border-radius: 22px;
   padding: 24px 28px;
-  box-shadow: 0 12px 32px rgba(13, 27, 184, 0.08);
+  box-shadow: 0 12px 32px rgba(7, 159, 143, 0.08);
   display: flex;
   align-items: center;
   gap: 24px;
@@ -244,7 +244,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0D1BB8, #4F5FE8);
+  background: linear-gradient(135deg, var(--pd-teal-dark), var(--pd-teal));
   color: #fff;
   font-size: 22px;
   font-weight: 800;
@@ -254,7 +254,7 @@
   flex-shrink: 0;
 }
 .perfil-info { flex: 1; min-width: 160px; }
-.perfil-info h3 { margin: 0 0 4px; font-size: 18px; color: #0A1259; }
+.perfil-info h3 { margin: 0 0 4px; font-size: 18px; color: var(--pd-teal-dark); }
 .perfil-info p  { margin: 2px 0; font-size: 13px; }
 .perfil-stats {
   display: flex;

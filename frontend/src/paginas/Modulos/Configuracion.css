@@ -3,7 +3,7 @@
   border-radius: 22px;
   padding: 24px;
   margin-bottom: 20px;
-  box-shadow: 0 12px 32px rgba(13, 27, 184, 0.08);
+  box-shadow: 0 12px 32px rgba(7, 159, 143, 0.08);
 }
 
 .config-head {
@@ -16,7 +16,7 @@
 .config-head h3 {
   font-size: 17px;
   font-weight: 800;
-  color: #0A1259;
+  color: var(--pd-teal-dark);
 }
 .config-head p {
   font-size: 13px;
@@ -56,7 +56,7 @@
   transition: transform 0.2s;
 }
 .switch-on .switch-knob {
-  background: #1E2BB0;
+  background: var(--pd-teal);
 }
 .switch-on .switch-knob::after {
   transform: translateX(20px);
@@ -67,7 +67,7 @@
   color: #9ca3af;
 }
 .switch-on .switch-label {
-  color: #1E2BB0;
+  color: var(--pd-teal);
 }
 
 /* Tarjeta con la regla desactivada */
@@ -89,22 +89,22 @@
 .config-item label {
   font-size: 13px;
   font-weight: 600;
-  color: #1E2BB0;
+  color: var(--pd-teal-mid);
 }
 
 .config-input {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #EEF0FC;
+  background: var(--pd-teal-light);
   border: 1px solid transparent;
   border-radius: 12px;
   padding: 0 14px;
   transition: all 0.2s;
 }
 .config-input:focus-within {
-  background: #E0E4FA;
-  border-color: #A6AEEF;
+  background: #C8EBE6;
+  border-color: var(--pd-text-xmuted);
 }
 .config-input input {
   flex: 1;
@@ -114,13 +114,13 @@
   padding: 12px 0;
   font-size: 15px;
   font-weight: 600;
-  color: #0A1259;
+  color: var(--pd-teal-dark);
   font-family: inherit;
 }
 .config-sufijo {
   font-size: 13px;
   font-weight: 700;
-  color: #7C87E6;
+  color: var(--pd-text-muted);
 }
 
 .config-actions {
