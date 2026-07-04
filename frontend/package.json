@@ -12,6 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.7",
     "axios": "^1.7.0",
+    "framer-motion": "^12.42.2",
     "goey-toast": "^0.5.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
