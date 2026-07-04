@@ -9,6 +9,7 @@ import rutasTransacciones from "./rutas/transaccion.rutas.js";
 import rutasUbicaciones from "./rutas/ubicacion.rutas.js";
 import rutasConfiguracion from "./rutas/configuracion.rutas.js";
 import rutasPromociones from "./rutas/promocion.rutas.js";
+import rutasOperadores from "./rutas/operador.rutas.js";
 
 const app = express();
 
@@ -43,5 +44,6 @@ app.use("/api/transacciones", rutasTransacciones);
 app.use("/api/ubicaciones", rutasUbicaciones);
 app.use("/api/configuracion", rutasConfiguracion);
 app.use("/api/promociones", rutasPromociones);
+app.use("/api/operadores", rutasOperadores);
 
 export default app;

@@ -15,6 +15,8 @@ import Historial from './paginas/Modulos/Historial';
 import HistorialCliente from './paginas/Modulos/HistorialCliente';
 import Promociones from './paginas/Modulos/Promociones';
 import Configuracion from './paginas/Modulos/Configuracion';
+import Operadores from './paginas/Modulos/Operadores';
+import HistorialOperadores from './paginas/Modulos/HistorialOperadores';
 
 // Requiere sesión iniciada (cualquier rol)
 const RequireAuth = ({ children }) => {
@@ -91,6 +93,8 @@ function App() {
           <Route path="transacciones" element={<RequireRole roles={['admin', 'recepcionista']}><Transacciones /></RequireRole>} />
           <Route path="historial" element={<RequireRole roles={['admin', 'recepcionista']}><Historial /></RequireRole>} />
           <Route path="historial-cliente" element={<RequireRole roles={['admin', 'recepcionista', 'empleado']}><HistorialCliente /></RequireRole>} />
+          <Route path="operadores" element={<RequireRole roles={['admin', 'recepcionista']}><Operadores /></RequireRole>} />
+          <Route path="operadores-historial" element={<RequireRole roles={['admin', 'recepcionista']}><HistorialOperadores /></RequireRole>} />
           <Route path="usuarios" element={<RequireRole roles={['admin']}><Usuarios /></RequireRole>} />
           <Route path="promociones" element={<RequireRole roles={['admin']}><Promociones /></RequireRole>} />
           <Route path="configuracion" element={<RequireRole roles={['admin']}><Configuracion /></RequireRole>} />

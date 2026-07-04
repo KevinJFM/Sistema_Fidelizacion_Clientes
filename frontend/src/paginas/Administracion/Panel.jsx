@@ -71,6 +71,31 @@ const navItems = [
     ),
   },
   {
+    to: '/admin/operadores',
+    label: 'Tour Operadores',
+    roles: ['admin', 'recepcionista'],
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/operadores-historial',
+    label: 'Historial Operadores',
+    roles: ['admin', 'recepcionista'],
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v5h5" />
+        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+        <path d="M12 7v5l4 2" />
+      </svg>
+    ),
+  },
+  {
     to: '/admin/promociones',
     label: 'Promociones',
     roles: ['admin'],

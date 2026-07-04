@@ -172,14 +172,14 @@ export default function Historial() {
 
   const exportarPdf = () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
-    const head = ['Huésped', 'Documento', 'Teléfono', 'Hospedaje', 'Folio', 'Promoción', 'Monto', 'Desc.', 'Puntos', 'Registrado'];
+    const head = ['Huésped', 'Documento', 'Teléfono', 'Correo', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Puntos', 'Registrado'];
     const body = historial.map((t) => [
       `${t.nombres} ${t.apellidos}`,
       `${t.tipo_documento}: ${t.numero_documento}`,
       t.telefono || '—',
+      t.correo || '—',
       (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—') +
         (t.fecha_salida ? ` a ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
-      t.referencia_venta || '—',
       t.nombre_promocion || '—',
       `$${Number(t.monto).toFixed(2)}`,
       `$${Number(t.descuento_aplicado).toFixed(2)}`,

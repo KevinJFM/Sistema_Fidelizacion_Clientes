@@ -195,8 +195,8 @@ export default function HistorialCliente() {
             <div className="perfil-info">
               <h3>{cliente.nombres} {cliente.apellidos}</h3>
               <p><span className="badge-rol" style={{ marginRight: 6 }}>{cliente.tipo_documento}</span>{cliente.numero_documento}</p>
-              {cliente.telefono && <p style={{ color: '#6b7280', fontSize: 13 }}>{cliente.telefono}</p>}
-              {cliente.correo && <p style={{ color: '#6b7280', fontSize: 13 }}>{cliente.correo}</p>}
+              {cliente.telefono && <p style={{ color: '#6b7280', fontSize: 13 }}>Tel: {cliente.telefono}</p>}
+              {cliente.correo && <p style={{ color: '#6b7280', fontSize: 13 }}>Correo: {cliente.correo}</p>}
             </div>
             <div className="perfil-stats">
               <div className="perfil-stat">
@@ -236,6 +236,7 @@ export default function HistorialCliente() {
                   <tr>
                     <th>#</th>
                     <th>Fecha</th>
+                    <th>Correo</th>
                     <th>Hospedaje</th>
                     <th>Folio</th>
                     <th>Promoción</th>
@@ -251,6 +252,7 @@ export default function HistorialCliente() {
                     <tr key={t.id_transaccion}>
                       <td style={{ color: '#9ca3af', fontSize: 12 }}>#{t.id_transaccion}</td>
                       <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
+                      <td>{t.correo || '—'}</td>
                       <td>
                         {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—'}
                         {t.fecha_salida ? ` → ${new Date(t.fecha_salida).toLocaleDateString()}` : ''}

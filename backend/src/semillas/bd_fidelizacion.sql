@@ -14,6 +14,8 @@ DROP TABLE IF EXISTS bitacora;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
+DROP TABLE IF EXISTS transacciones_operador;
+DROP TABLE IF EXISTS operadores_turisticos;
 DROP TABLE IF EXISTS beneficios_emitidos;
 DROP TABLE IF EXISTS promociones;
 DROP TABLE IF EXISTS configuracion;
@@ -213,6 +215,41 @@ CREATE TABLE movimientos_puntos (
 );
 
 -- ============================================================
+--  TOUR OPERADORES (programa de puntos B2B)
+--  Empresas que traen grupos. Puntos DECIMAL (1.5 x persona, 0.5% consumo).
+-- ============================================================
+CREATE TABLE operadores_turisticos (
+  id_operador       INT NOT NULL AUTO_INCREMENT,
+  nombre            VARCHAR(120)  NOT NULL,
+  telefono          VARCHAR(20)   NULL,
+  correo            VARCHAR(120)  NULL,
+  puntos_acumulados DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  id_estado         INT NOT NULL DEFAULT 1,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_operador),
+  CONSTRAINT fk_operador_estado FOREIGN KEY (id_estado) REFERENCES estados(id_estado)
+);
+
+CREATE TABLE transacciones_operador (
+  id_transaccion_op  INT NOT NULL AUTO_INCREMENT,
+  id_operador        INT NOT NULL,
+  id_usuario         INT NOT NULL,                 -- recepcionista/admin que registró
+  num_personas       INT NOT NULL DEFAULT 0,
+  monto_habitaciones DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  monto_consumo      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- 1.5 x personas (si grupo >= mínimo)
+  puntos_consumo     DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- 0.5% de (habitaciones + consumo)
+  puntos_otorgados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- total
+  puntos_canjeados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  fecha              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_transaccion_op),
+  CONSTRAINT fk_transop_operador FOREIGN KEY (id_operador) REFERENCES operadores_turisticos(id_operador),
+  CONSTRAINT fk_transop_usuario  FOREIGN KEY (id_usuario)  REFERENCES usuarios(id_usuario),
+  INDEX idx_transop_fecha (fecha)
+);
+
+-- ============================================================
 --  CONFIGURACIÓN GLOBAL
 -- ============================================================
 CREATE TABLE configuracion (
@@ -288,7 +325,12 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo)
   ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
   ('bienvenida_activo',      '1',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta');
+  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta'),
+  -- Programa de Tour Operadores (B2B)
+  ('operador_puntos_persona',   '1.5',   'Puntos por persona cuando el grupo llega al mínimo'),
+  ('operador_min_personas',     '5',     'Mínimo de personas para otorgar puntos por grupo'),
+  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear'),
+  ('operador_tasa_hab_consumo', '0.005', 'Puntos ganados por cada $1 en habitaciones y consumo');
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)

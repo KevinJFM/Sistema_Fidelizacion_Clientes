@@ -139,7 +139,7 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   doc.setTextColor(80);
   doc.text(`${cliente.tipo_documento}: ${cliente.numero_documento}`, 46, 129);
   if (cliente.telefono) doc.text(`Tel: ${cliente.telefono}`, 46, 144);
-  if (cliente.correo)   doc.text(cliente.correo, 46, 159);
+  if (cliente.correo)   doc.text(`Correo: ${cliente.correo}`, 46, 159);
 
   // Stats en la derecha de la tarjeta
   const statsX = ancho - 180;
@@ -164,13 +164,12 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   doc.text(`${historial.length} transacciones  |  $${totalGastado.toFixed(2)} gastados`, statsX, 164);
 
   // Tabla de transacciones
-  const head = ['#', 'Fecha', 'Hospedaje', 'Folio', 'Promoción', 'Monto', 'Desc.', 'Total', 'Puntos'];
+  const head = ['#', 'Fecha', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Total', 'Puntos'];
   const body = historial.map((t) => [
     `#${t.id_transaccion}`,
     new Date(t.fecha).toLocaleDateString(),
     (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—') +
       (t.fecha_salida ? ` a ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
-    t.referencia_venta || '—',
     t.nombre_promocion || '—',
     `$${Number(t.monto).toFixed(2)}`,
     `-$${Number(t.descuento_aplicado).toFixed(2)}`,
