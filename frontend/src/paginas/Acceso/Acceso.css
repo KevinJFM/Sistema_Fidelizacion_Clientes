@@ -123,12 +123,14 @@
   color: var(--pd-teal-dark, #0A1259);
   letter-spacing: -0.5px;
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .card-subtitle {
   font-size: 14px;
   color: var(--pd-text-muted, #7C87E6);
   margin-bottom: 28px;
+  text-align: center;
 }
 
 /* ===== Form ===== */
@@ -311,3 +313,9 @@
 [data-theme="dark"] .input-clay { background: #1e244a; }
 [data-theme="dark"] .input-clay:focus-within { background: #272e58; }
 [data-theme="dark"] .input-clay input { color: #e8ebff; }
+/* Íconos de correo/contraseña más visibles en modo oscuro */
+[data-theme="dark"] .input-icon { color: #5fd4c6; }
+[data-theme="dark"] .input-clay:focus-within .input-icon { color: #8fe9dc; }
+/* Ojo de mostrar/ocultar contraseña */
+[data-theme="dark"] .toggle-pass { color: #5fd4c6; }
+[data-theme="dark"] .toggle-pass:hover { color: #8fe9dc; }
