@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { listarTransaccionesOperador, getOperadores } from '../../servicios/servicioOperadores';
+import { listarTransaccionesOperador } from '../../servicios/servicioOperadores';
 import { exportarPDF } from '../../utilidades/pdf';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -19,7 +19,6 @@ const estiloModal = {
 
 function ModalDetalleOperador({ t, onClose }) {
   if (!t) return null;
-  const totalMontos = Number(t.monto_habitaciones) + Number(t.monto_consumo);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div style={estiloModal} onClick={(e) => e.stopPropagation()}>
@@ -47,34 +46,10 @@ function ModalDetalleOperador({ t, onClose }) {
           </div>
         ))}
 
-        {/* Montos */}
-        <div style={{ background: '#f9fafb', borderRadius: 14, padding: '14px 16px', margin: '16px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8 }}>
-            <span style={{ color: '#6b7280' }}>Habitaciones</span>
-            <span style={{ fontWeight: 600 }}>${Number(t.monto_habitaciones).toFixed(2)}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 12 }}>
-            <span style={{ color: '#6b7280' }}>Consumo</span>
-            <span style={{ fontWeight: 600 }}>${Number(t.monto_consumo).toFixed(2)}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 10 }}>
-            <span style={{ fontWeight: 700, color: '#0A1259' }}>Total</span>
-            <span style={{ fontWeight: 800, color: '#0D1BB8', fontSize: 18 }}>${totalMontos.toFixed(2)}</span>
-          </div>
-        </div>
-
-        {/* Puntos */}
+        {/* Puntos (el operador solo gana puntos por persona) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-            <span style={{ color: '#6b7280' }}>Puntos por personas</span>
-            <strong>{Number(t.puntos_personas).toFixed(2)}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-            <span style={{ color: '#6b7280' }}>Puntos por habitaciones + consumo</span>
-            <strong>{Number(t.puntos_consumo).toFixed(2)}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 8 }}>
-            <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, paddingTop: 4 }}>
+            <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados (por personas)</span>
             <strong style={{ color: '#16a34a', fontSize: 18 }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>
           </div>
         </div>
@@ -86,9 +61,8 @@ function ModalDetalleOperador({ t, onClose }) {
 export default function HistorialOperadores() {
   const [searchParams] = useSearchParams();
   const [historial, setHistorial] = useState([]);
-  const [operadores, setOperadores] = useState([]);
   const [cargando, setCargando]   = useState(true);
-  const [filtros, setFiltros]     = useState({ id_operador: '', desde: '', hasta: '' });
+  const [filtros, setFiltros]     = useState({ tipo: '', desde: '', hasta: '' });
   const [detalle, setDetalle]     = useState(null);
 
   const cargar = async (f = {}) => {
@@ -103,10 +77,9 @@ export default function HistorialOperadores() {
   };
 
   useEffect(() => {
-    getOperadores().then(setOperadores).catch(() => {});
+    // Enlace directo desde "Ver historial" de un operador específico
     const op = searchParams.get('op');
     if (op) {
-      setFiltros((f) => ({ ...f, id_operador: op }));
       cargar({ id_operador: op });
     } else {
       cargar();
@@ -117,45 +90,44 @@ export default function HistorialOperadores() {
   const aplicarFiltros = (e) => {
     e.preventDefault();
     const f = {};
-    if (filtros.id_operador) f.id_operador = filtros.id_operador;
+    if (filtros.tipo) f.tipo = filtros.tipo;
     if (filtros.desde) f.desde = filtros.desde;
     if (filtros.hasta) f.hasta = filtros.hasta;
     cargar(f);
   };
 
   const limpiar = () => {
-    setFiltros({ id_operador: '', desde: '', hasta: '' });
+    setFiltros({ tipo: '', desde: '', hasta: '' });
     cargar();
   };
 
   const totalPersonas = historial.reduce((s, t) => s + Number(t.num_personas), 0);
-  const totalMontos   = historial.reduce((s, t) => s + Number(t.monto_habitaciones) + Number(t.monto_consumo), 0);
   const totalPuntos   = historial.reduce((s, t) => s + Number(t.puntos_otorgados), 0);
 
   const exportarPdf = () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
-    const head = ['Operador', 'Correo', 'Personas', 'Habitaciones', 'Consumo', 'Puntos', 'Registrado por', 'Fecha'];
+    const head = ['Operador', 'Tipo', 'Correo', 'Personas', 'Puntos', 'Registrado por', 'Fecha'];
     const body = historial.map((t) => [
       t.operador,
+      t.tipo || '—',
       t.correo || '—',
       String(t.num_personas),
-      `$${Number(t.monto_habitaciones).toFixed(2)}`,
-      `$${Number(t.monto_consumo).toFixed(2)}`,
       `+${Number(t.puntos_otorgados).toFixed(2)}`,
       t.registrado_por,
       new Date(t.fecha).toLocaleDateString(),
     ]);
 
-    const opSel = operadores.find((o) => String(o.id_operador) === String(filtros.id_operador));
-    const titulo = opSel ? `Historial de ${opSel.nombre}` : 'Historial de Tour Operadores';
+    const titulo = filtros.tipo
+      ? `Historial de Tour Operadores (${filtros.tipo})`
+      : 'Historial de Tour Operadores';
 
     const sub = [`Generado: ${new Date().toLocaleString()}`];
-    if (opSel) sub.push(`Operador: ${opSel.nombre}`);
+    if (filtros.tipo) sub.push(`Tipo: ${filtros.tipo}`);
     if (filtros.desde) sub.push(`Desde: ${filtros.desde}`);
     if (filtros.hasta) sub.push(`Hasta: ${filtros.hasta}`);
 
-    const resumen = `Registros: ${historial.length}    Personas: ${totalPersonas}    Montos: $${totalMontos.toFixed(2)}    Puntos otorgados: ${totalPuntos.toFixed(2)}`;
-    const sufijo = opSel ? `_${opSel.nombre.replace(/\s+/g, '_').toLowerCase()}` : '_todos';
+    const resumen = `Registros: ${historial.length}    Personas: ${totalPersonas}    Puntos otorgados: ${totalPuntos.toFixed(2)}`;
+    const sufijo = filtros.tipo ? `_${filtros.tipo.replace(/\s+/g, '_').toLowerCase()}` : '_todos';
 
     exportarPDF({
       titulo,
@@ -175,11 +147,12 @@ export default function HistorialOperadores() {
 
       <form className="filtros-row" onSubmit={aplicarFiltros} style={{ marginBottom: 18 }}>
         <select
-          value={filtros.id_operador}
-          onChange={(e) => setFiltros({ ...filtros, id_operador: e.target.value })}
+          value={filtros.tipo}
+          onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
         >
           <option value="">Todos los operadores</option>
-          {operadores.map((o) => <option key={o.id_operador} value={o.id_operador}>{o.nombre}</option>)}
+          <option value="Persona natural">Persona natural</option>
+          <option value="Empresa">Empresa</option>
         </select>
         <div className="filtro-fecha">
           <label>Desde</label>
@@ -204,7 +177,6 @@ export default function HistorialOperadores() {
       <div className="hist-resumen">
         <span>Registros: <strong>{historial.length}</strong></span>
         <span>Personas: <strong>{totalPersonas}</strong></span>
-        <span>Montos: <strong>${totalMontos.toFixed(2)}</strong></span>
         <span>Puntos otorgados: <strong>{totalPuntos.toFixed(2)}</strong></span>
       </div>
 
@@ -218,10 +190,9 @@ export default function HistorialOperadores() {
             <thead>
               <tr>
                 <th>Operador</th>
+                <th>Tipo</th>
                 <th>Correo</th>
                 <th>Personas</th>
-                <th>Habitaciones</th>
-                <th>Consumo</th>
                 <th>Puntos</th>
                 <th>Registrado por</th>
                 <th>Fecha</th>
@@ -232,10 +203,9 @@ export default function HistorialOperadores() {
               {historial.map((t) => (
                 <tr key={t.id_transaccion_op}>
                   <td><strong>{t.operador}</strong></td>
+                  <td>{t.tipo || '—'}</td>
                   <td>{t.correo || '—'}</td>
                   <td>{t.num_personas}</td>
-                  <td>${Number(t.monto_habitaciones).toFixed(2)}</td>
-                  <td>${Number(t.monto_consumo).toFixed(2)}</td>
                   <td><strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong></td>
                   <td>{t.registrado_por}</td>
                   <td><small>{new Date(t.fecha).toLocaleString()}</small></td>

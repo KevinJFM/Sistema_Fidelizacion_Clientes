@@ -160,7 +160,7 @@ export default function Configuracion() {
           {/* Otras claves que no están agrupadas */}
           {otros.length > 0 && (
             <div className="config-card">
-              <div className="config-head"><div><h3>Otros</h3></div></div>
+              <div className="config-head"><div><h3>Tour Operadores</h3></div></div>
               <div className="config-grid">
                 {otros.map((c) => (
                   <div className="config-item" key={c.clave}>

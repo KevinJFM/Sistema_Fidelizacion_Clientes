@@ -71,7 +71,7 @@
   gap: 11px;
   padding: 11px 12px;
   border-radius: 13px;
-  color: rgba(255,255,255,0.52);
+  color: #5fd4c6;
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
@@ -81,7 +81,7 @@
 }
 .sidebar-link:hover {
   background: rgba(255,255,255,0.09);
-  color: rgba(255,255,255,0.92);
+  color: #8fe9dc;
 }
 .sidebar-link.active {
   background: linear-gradient(135deg, var(--pd-teal) 0%, #4F5FE8 100%);
@@ -106,7 +106,10 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  color: #5fd4c6;
 }
+.sidebar-link:hover .nav-icon { color: #8fe9dc; }
+.sidebar-link.active .nav-icon { color: #fff; }
 .nav-label { flex: 1; }
 
 /* Botón logout */

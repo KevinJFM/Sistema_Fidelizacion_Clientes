@@ -11,6 +11,7 @@ USE db_fidelizacion;
 CREATE TABLE IF NOT EXISTS operadores_turisticos (
   id_operador       INT NOT NULL AUTO_INCREMENT,
   nombre            VARCHAR(120)  NOT NULL,
+  tipo              VARCHAR(20)   NOT NULL DEFAULT 'Persona natural',  -- 'Persona natural' o 'Empresa'
   telefono          VARCHAR(20)   NULL,
   correo            VARCHAR(120)  NULL,
   puntos_acumulados DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -26,10 +27,7 @@ CREATE TABLE IF NOT EXISTS transacciones_operador (
   id_operador        INT NOT NULL,
   id_usuario         INT NOT NULL,                         -- recepcionista/admin que registró
   num_personas       INT NOT NULL DEFAULT 0,
-  monto_habitaciones DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  monto_consumo      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- 1.5 x personas (si grupo >= mínimo)
-  puntos_consumo     DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- 0.5% de (habitaciones + consumo)
+  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- puntos por persona (si grupo >= mínimo)
   puntos_otorgados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- total
   puntos_canjeados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -43,5 +41,4 @@ CREATE TABLE IF NOT EXISTS transacciones_operador (
 INSERT IGNORE INTO configuracion (clave, valor, descripcion) VALUES
   ('operador_puntos_persona',   '1.5',   'Puntos por persona cuando el grupo llega al mínimo'),
   ('operador_min_personas',     '5',     'Mínimo de personas para otorgar puntos por grupo'),
-  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear'),
-  ('operador_tasa_hab_consumo', '0.005', 'Puntos ganados por cada $1 en habitaciones y consumo');
+  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear');

@@ -221,6 +221,7 @@ CREATE TABLE movimientos_puntos (
 CREATE TABLE operadores_turisticos (
   id_operador       INT NOT NULL AUTO_INCREMENT,
   nombre            VARCHAR(120)  NOT NULL,
+  tipo              VARCHAR(20)   NOT NULL DEFAULT 'Persona natural',  -- 'Persona natural' o 'Empresa'
   telefono          VARCHAR(20)   NULL,
   correo            VARCHAR(120)  NULL,
   puntos_acumulados DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -235,10 +236,7 @@ CREATE TABLE transacciones_operador (
   id_operador        INT NOT NULL,
   id_usuario         INT NOT NULL,                 -- recepcionista/admin que registró
   num_personas       INT NOT NULL DEFAULT 0,
-  monto_habitaciones DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  monto_consumo      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- 1.5 x personas (si grupo >= mínimo)
-  puntos_consumo     DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- 0.5% de (habitaciones + consumo)
+  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- puntos por persona (si grupo >= mínimo)
   puntos_otorgados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- total
   puntos_canjeados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -314,10 +312,9 @@ INSERT INTO tipos_beneficio (nombre, descripcion) VALUES
   ('Cumpleaños',           'Beneficio por fecha de cumpleaños');
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
-  ('puntos_monto_base',      '1',   'Monto en $ de compra que se toma como base para otorgar puntos'),
-  ('puntos_por_monto',       '1',   'Puntos que gana el cliente por cada monto base'),
-  ('puntos_para_canje',      '100', 'Puntos necesarios para canjear una recompensa'),
-  ('valor_canje',            '5',   'Descuento en $ al canjear puntos'),
+  -- Nota: los puntos base son una regla FIJA del sistema (1 punto por cada $0.05 = 20 puntos por $1), no configurable.
+  ('puntos_para_canje',      '1200', 'Puntos necesarios para canjear una recompensa'),
+  ('valor_canje',            '60',   'Descuento en $ al canjear puntos'),
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
   ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
   ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
@@ -329,8 +326,7 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   -- Programa de Tour Operadores (B2B)
   ('operador_puntos_persona',   '1.5',   'Puntos por persona cuando el grupo llega al mínimo'),
   ('operador_min_personas',     '5',     'Mínimo de personas para otorgar puntos por grupo'),
-  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear'),
-  ('operador_tasa_hab_consumo', '0.005', 'Puntos ganados por cada $1 en habitaciones y consumo');
+  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear');
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)

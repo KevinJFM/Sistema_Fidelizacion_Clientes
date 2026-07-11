@@ -14,8 +14,9 @@ import './Usuarios.css';
 import './Transacciones.css';
 
 const ESTADO_INACTIVO = 2;
-const emptyForm = { nombre: '', telefono: '', correo: '' };
-const emptyGrupo = { num_personas: '', monto_habitaciones: '', monto_consumo: '' };
+const emptyForm = { nombre: '', tipo: 'Persona natural', telefono: '', correo: '' };
+const TIPOS_OPERADOR = ['Persona natural', 'Empresa'];
+const emptyGrupo = { num_personas: '' };
 
 export default function Operadores() {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export default function Operadores() {
   const abrirNuevo = () => { setEditingId(null); setForm(emptyForm); setErrores({}); setModalOpen(true); };
   const abrirEditar = (o) => {
     setEditingId(o.id_operador);
-    setForm({ nombre: o.nombre, telefono: o.telefono || '', correo: o.correo || '' });
+    setForm({ nombre: o.nombre, tipo: o.tipo || 'Persona natural', telefono: o.telefono || '', correo: o.correo || '' });
     setErrores({});
     setModalOpen(true);
   };
@@ -111,10 +112,8 @@ export default function Operadores() {
   const handleRegistrarGrupo = async (e) => {
     e.preventDefault();
     const personas = Number(grupo.num_personas) || 0;
-    const hab = Number(grupo.monto_habitaciones) || 0;
-    const con = Number(grupo.monto_consumo) || 0;
-    if (personas <= 0 && hab <= 0 && con <= 0) {
-      toast.error('Registra al menos personas o un monto');
+    if (personas <= 0) {
+      toast.error('Ingresa la cantidad de personas');
       return;
     }
     setRegistrando(true);
@@ -122,8 +121,6 @@ export default function Operadores() {
       const r = await registrarConsumoOperador({
         id_operador: grupoOp.id_operador,
         num_personas: personas,
-        monto_habitaciones: hab,
-        monto_consumo: con,
       });
       setResultado(r);
       toast.success('Consumo registrado');
@@ -164,6 +161,7 @@ export default function Operadores() {
             <thead>
               <tr>
                 <th>Nombre</th>
+                <th>Tipo</th>
                 <th>Teléfono</th>
                 <th>Correo</th>
                 <th>Puntos</th>
@@ -175,6 +173,7 @@ export default function Operadores() {
               {filtrados.map((o) => (
                 <tr key={o.id_operador}>
                   <td><strong>{o.nombre}</strong></td>
+                  <td>{o.tipo || '—'}</td>
                   <td>{o.telefono || '—'}</td>
                   <td>{o.correo || '—'}</td>
                   <td><strong>{Number(o.puntos_acumulados).toFixed(2)}</strong></td>
@@ -229,11 +228,19 @@ export default function Operadores() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">{editingId ? 'Editar operador' : 'Nuevo operador'}</h3>
             <form className="modal-form" onSubmit={handleSubmit} noValidate autoComplete="off">
-              <div className={`form-field ${errores.nombre ? 'has-error' : ''}`}>
-                <label>Nombre {errores.nombre && <span className="req-tag">{errores.nombre}</span>}</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} />
+              <div className="form-row" style={{ gridTemplateColumns: '1fr 1.7fr' }}>
+                <div className="form-field">
+                  <label>Tipo</label>
+                  <select name="tipo" value={form.tipo} onChange={handleChange}>
+                    {TIPOS_OPERADOR.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className={`form-field ${errores.nombre ? 'has-error' : ''}`}>
+                  <label>Nombre {errores.nombre && <span className="req-tag">{errores.nombre}</span>}</label>
+                  <input name="nombre" value={form.nombre} onChange={handleChange} />
+                </div>
               </div>
-              <div className="form-row">
+              <div className="form-row" style={{ gridTemplateColumns: '1fr 1.7fr' }}>
                 <div className="form-field">
                   <label>Teléfono</label>
                   <input name="telefono" value={form.telefono} onChange={handleChange} placeholder="4322-2334" />
@@ -265,31 +272,11 @@ export default function Operadores() {
                 <input type="number" min="0" value={grupo.num_personas}
                   onChange={(e) => setGrupo({ ...grupo, num_personas: e.target.value })} />
               </div>
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Monto habitaciones ($)</label>
-                  <input type="number" step="0.01" min="0" value={grupo.monto_habitaciones}
-                    onChange={(e) => setGrupo({ ...grupo, monto_habitaciones: e.target.value })} />
-                </div>
-                <div className="form-field">
-                  <label>Monto consumo ($)</label>
-                  <input type="number" step="0.01" min="0" value={grupo.monto_consumo}
-                    onChange={(e) => setGrupo({ ...grupo, monto_consumo: e.target.value })} />
-                </div>
-              </div>
 
               {resultado ? (
                 <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <span>Puntos por personas</span>
-                    <strong>{Number(resultado.puntos_personas).toFixed(2)}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <span>Puntos por habitaciones + consumo</span>
-                    <strong>{Number(resultado.puntos_consumo).toFixed(2)}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 6 }}>
-                    <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
+                    <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados (por personas)</span>
                     <strong style={{ color: '#16a34a' }}>+{Number(resultado.puntos_otorgados).toFixed(2)}</strong>
                   </div>
                   {!resultado.alcanzo_minimo && (

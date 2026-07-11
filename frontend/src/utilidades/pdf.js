@@ -52,7 +52,7 @@ function dibujarEncabezado(doc, logoPng, ancho) {
   doc.setTextColor(255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text('Punta Diamante', x, 34);
+  doc.text('Punta Diamantes', x, 34);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.text('Sistema de Fidelización de Clientes', x, 51);

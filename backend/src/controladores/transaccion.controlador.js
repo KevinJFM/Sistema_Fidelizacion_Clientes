@@ -1,5 +1,9 @@
 import pool from '../configuracion/bd.js';
 
+// Regla FIJA del sistema (no editable): 1 punto por cada $0.05 de consumo (= 20 puntos por $1).
+// Ej: $1 = 20 pts, $25 = 500 pts, $50 = 1000 pts.
+const CENTAVOS_POR_PUNTO = 5;
+
 // Lee un valor de la tabla configuracion (con valor por defecto)
 const obtenerConfig = async (clave, porDefecto) => {
   const [filas] = await pool.query('SELECT valor FROM configuracion WHERE clave = ?', [clave]);
@@ -26,10 +30,8 @@ export const crearTransaccion = async (req, res) => {
     }
 
     // ===== Reglas configurables (se pueden ajustar en la tabla configuracion) =====
-    const puntosMontoBase      = Number(await obtenerConfig('puntos_monto_base', '1'));
-    const puntosPorMonto       = Number(await obtenerConfig('puntos_por_monto', '1'));
-    const puntosParaCanje      = Number(await obtenerConfig('puntos_para_canje', '100'));
-    const valorCanje           = Number(await obtenerConfig('valor_canje', '5'));
+    const puntosParaCanje      = Number(await obtenerConfig('puntos_para_canje', '1200'));
+    const valorCanje           = Number(await obtenerConfig('valor_canje', '60'));
     const bienvenidaPuntos     = Number(await obtenerConfig('bienvenida_puntos', '20'));
     const bienvenidaDescuento  = Number(await obtenerConfig('bienvenida_descuento', '2'));
     const descuentoMontoMinimo = Number(await obtenerConfig('descuento_monto_minimo', '30'));
@@ -67,11 +69,9 @@ export const crearTransaccion = async (req, res) => {
     //    4. Descuento por monto alto
     // ============================================================
     const promocionesAplicadas = [];
-    // Puntos base: por cada "monto base" de compra, gana "puntos por monto".
-    // Ej: base $10 y 1 punto => una compra de $25 da 2 puntos.
-    const puntosBase            = puntosMontoBase > 0
-      ? Math.floor(montoNumerico / puntosMontoBase) * puntosPorMonto
-      : 0;
+    // Puntos base (regla fija del sistema): 1 punto por cada $0.05 de consumo (20 puntos por $1).
+    // Se calcula en centavos para evitar errores de redondeo. Ej: $25 => 500 pts, $50 => 1000 pts.
+    const puntosBase            = Math.floor(Math.round(montoNumerico * 100) / CENTAVOS_POR_PUNTO);
     let puntosExtraBienvenida   = 0;
     let puntosExtraPromocion    = 0;
     let puntosOtorgados         = puntosBase;
