@@ -312,21 +312,16 @@ INSERT INTO tipos_beneficio (nombre, descripcion) VALUES
   ('Cumpleaños',           'Beneficio por fecha de cumpleaños');
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
-  -- Nota: los puntos base son una regla FIJA del sistema (1 punto por cada $0.05 = 20 puntos por $1), no configurable.
-  ('puntos_para_canje',      '1200', 'Puntos necesarios para canjear una recompensa'),
-  ('valor_canje',            '60',   'Descuento en $ al canjear puntos'),
+  -- Reglas FIJAS del sistema (NO en esta tabla): ganar $1 = 1 punto; cada punto vale $0.05;
+  -- catálogo de canje (recompensas.js); operador = 100 puntos por visita. Fijas por código.
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
   ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
   ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
   ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
-  -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo)
-  ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
+  -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
+  -- El canje siempre está activo (no configurable), por eso no está aquí.
   ('bienvenida_activo',      '1',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta'),
-  -- Programa de Tour Operadores (B2B)
-  ('operador_puntos_persona',   '1.5',   'Puntos por persona cuando el grupo llega al mínimo'),
-  ('operador_min_personas',     '5',     'Mínimo de personas para otorgar puntos por grupo'),
-  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear');
+  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta');
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)

@@ -3,6 +3,7 @@ import {
   crearTransaccion,
   listarTransacciones,
   obtenerResumen,
+  listarRecompensas,
 } from '../controladores/transaccion.controlador.js';
 import { verificarToken } from '../middlewares/autenticacion.middleware.js';
 import { autorizarRoles } from '../middlewares/rol.middleware.js';
@@ -11,6 +12,8 @@ const router = Router();
 
 router.use(verificarToken);
 
+// Catálogo de recompensas (para el canje): admin y recepcionista
+router.get('/recompensas', autorizarRoles('admin', 'recepcionista'), listarRecompensas);
 // Resumen del dashboard: admin y recepcionista
 router.get('/resumen', autorizarRoles('admin', 'recepcionista'), obtenerResumen);
 // Listado: admin y recepcionista (historial) y empleado (para el perfil del huésped, siempre filtrado)

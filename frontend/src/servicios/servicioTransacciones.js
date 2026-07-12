@@ -14,3 +14,8 @@ export const getResumen = async () => {
   const { data } = await api.get('/transacciones/resumen');
   return data;
 };
+
+export const getRecompensas = async () => {
+  const { data } = await api.get('/transacciones/recompensas');
+  return data;
+};

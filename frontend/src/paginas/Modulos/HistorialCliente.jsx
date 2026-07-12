@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { buscarCliente } from '../../servicios/servicioClientes';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
 import { exportarPDFCliente } from '../../utilidades/pdf';
 import { formatDui } from '../../utilidades/formato';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -106,6 +107,7 @@ export default function HistorialCliente() {
   const [historial, setHistorial] = useState([]);
   const [buscando, setBuscando]   = useState(false);
   const [detalle, setDetalle]     = useState(null);
+  const [page, setPage]           = useState(1);
 
   const handleBuscar = async () => {
     if (!busqueda.numero_documento.trim()) {
@@ -133,6 +135,8 @@ export default function HistorialCliente() {
   const totalDescuentos = historial.reduce((s, t) => s + Number(t.descuento_aplicado), 0);
   const totalPuntos     = historial.reduce((s, t) => s + t.puntos_otorgados, 0);
   const totalCanjeados  = historial.reduce((s, t) => s + t.puntos_canjeados, 0);
+  const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [historial]); // a la página 1 al buscar otro cliente
 
   const handleExportarPDF = () => {
     if (!cliente || historial.length === 0) {
@@ -194,7 +198,10 @@ export default function HistorialCliente() {
             </div>
             <div className="perfil-info">
               <h3>{cliente.nombres} {cliente.apellidos}</h3>
-              <p><span className="badge-rol" style={{ marginRight: 6 }}>{cliente.tipo_documento}</span>{cliente.numero_documento}</p>
+              <p>
+                <span className="badge-rol" style={{ marginRight: 6, background: '#0D1BB8', color: '#fff' }}>{cliente.tipo_documento}</span>
+                <strong style={{ color: '#111827' }}>{cliente.numero_documento}</strong>
+              </p>
               {cliente.telefono && <p style={{ color: '#6b7280', fontSize: 13 }}>Tel: {cliente.telefono}</p>}
               {cliente.correo && <p style={{ color: '#6b7280', fontSize: 13 }}>Correo: {cliente.correo}</p>}
             </div>
@@ -248,7 +255,7 @@ export default function HistorialCliente() {
                   </tr>
                 </thead>
                 <tbody>
-                  {historial.map((t) => (
+                  {pageItems.map((t) => (
                     <tr key={t.id_transaccion}>
                       <td style={{ color: '#9ca3af', fontSize: 12 }}>#{t.id_transaccion}</td>
                       <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
@@ -284,6 +291,8 @@ export default function HistorialCliente() {
               </table>
             )}
           </div>
+
+          <Paginacion total={historial.length} page={page} onChange={setPage} />
         </>
       )}
 

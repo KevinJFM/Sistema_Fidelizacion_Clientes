@@ -5,6 +5,7 @@ import { listarTransacciones } from '../../servicios/servicioTransacciones';
 import { descargarCSV } from '../../utilidades/csv';
 import { exportarPDF } from '../../utilidades/pdf';
 import { formatDocumento } from '../../utilidades/formato';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -105,6 +106,7 @@ export default function Historial() {
   const [cargando, setCargando]   = useState(true);
   const [filtros, setFiltros]     = useState({ numero_documento: '', tipo_documento: '', desde: '', hasta: '' });
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
+  const [page, setPage] = useState(1);
   const [searchParams] = useSearchParams();
 
   const cargar = async (f = {}) => {
@@ -212,6 +214,8 @@ export default function Historial() {
 
   const totalVentas = historial.reduce((s, t) => s + Number(t.monto), 0);
   const totalPuntos = historial.reduce((s, t) => s + t.puntos_otorgados, 0);
+  const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [historial]); // a la página 1 cuando cambia el resultado
 
   return (
     <div className="admin-page">
@@ -289,7 +293,7 @@ export default function Historial() {
               </tr>
             </thead>
             <tbody>
-              {historial.map((t) => (
+              {pageItems.map((t) => (
                 <tr key={t.id_transaccion}>
                   <td>{t.nombres} {t.apellidos}</td>
                   <td><span className="badge-rol">{t.tipo_documento}</span> {t.numero_documento}</td>
@@ -327,6 +331,8 @@ export default function Historial() {
           </table>
         )}
       </div>
+
+      <Paginacion total={historial.length} page={page} onChange={setPage} />
 
       <ModalDetalle t={detalleSeleccionado} onClose={() => setDetalleSeleccionado(null)} />
     </div>

@@ -37,8 +37,4 @@ CREATE TABLE IF NOT EXISTS transacciones_operador (
   CONSTRAINT fk_transop_usuario  FOREIGN KEY (id_usuario)  REFERENCES usuarios(id_usuario)
 );
 
--- Reglas configurables del programa de operadores (reusa la tabla configuracion)
-INSERT IGNORE INTO configuracion (clave, valor, descripcion) VALUES
-  ('operador_puntos_persona',   '1.5',   'Puntos por persona cuando el grupo llega al mínimo'),
-  ('operador_min_personas',     '5',     'Mínimo de personas para otorgar puntos por grupo'),
-  ('operador_valor_punto',      '1',     'Valor en $ de cada punto al canjear');
+-- Nota: el operador gana 100 puntos por visita (regla fija del sistema, no configurable).

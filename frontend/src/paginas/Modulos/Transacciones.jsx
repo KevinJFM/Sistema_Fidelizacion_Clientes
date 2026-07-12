@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { buscarCliente } from '../../servicios/servicioClientes';
-import { crearTransaccion } from '../../servicios/servicioTransacciones';
+import { crearTransaccion, getRecompensas } from '../../servicios/servicioTransacciones';
 import { formatDui, formatPasaporte } from '../../utilidades/formato';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -17,7 +17,7 @@ const emptyForm = {
   fecha_ingreso: '',
   fecha_salida: '',
   referencia_venta: '',
-  canjear_puntos: false,
+  id_recompensa: '',
 };
 
 export default function Transacciones() {
@@ -28,6 +28,11 @@ export default function Transacciones() {
   const [form, setForm]           = useState(emptyForm);
   const [saving, setSaving]       = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [recompensas, setRecompensas] = useState([]);
+
+  useEffect(() => {
+    getRecompensas().then(setRecompensas).catch(() => {});
+  }, []);
 
   const handleBuscar = async () => {
     if (!busqueda.numero_documento.trim()) {
@@ -64,7 +69,7 @@ export default function Transacciones() {
         referencia_venta: form.referencia_venta || null,
         fecha_ingreso: form.fecha_ingreso || null,
         fecha_salida: form.fecha_salida || null,
-        canjear_puntos: form.canjear_puntos,
+        id_recompensa: form.id_recompensa || null,
       });
       setResultado(res);
       toast.success('Transacción registrada');
@@ -155,11 +160,21 @@ export default function Transacciones() {
                   onChange={(e) => setForm({ ...form, referencia_venta: e.target.value })} />
               </div>
 
-              <label className="check-row">
-                <input type="checkbox" checked={form.canjear_puntos}
-                  onChange={(e) => setForm({ ...form, canjear_puntos: e.target.checked })} />
-                Canjear puntos en esta transacción
-              </label>
+              <div className="form-field">
+                <label>Canjear puntos por... <span className="optional">(opcional)</span></label>
+                <select value={form.id_recompensa}
+                  onChange={(e) => setForm({ ...form, id_recompensa: e.target.value })}>
+                  <option value="">No canjear</option>
+                  {recompensas.map((r) => {
+                    const alcanza = cliente && cliente.puntos_acumulados >= r.puntos;
+                    return (
+                      <option key={r.id} value={r.id} disabled={!alcanza}>
+                        {r.nombre} — {r.puntos} pts (${Number(r.valor).toFixed(2)}){alcanza ? '' : ' · faltan puntos'}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
               <button type="submit" className="btn-primary" disabled={saving}
                 style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}>

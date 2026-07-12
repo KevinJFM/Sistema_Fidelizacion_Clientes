@@ -9,6 +9,7 @@ import {
 } from '../../servicios/servicioClientes';
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 
@@ -41,6 +42,7 @@ export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [filtro, setFiltro]     = useState('');
+  const [page, setPage]         = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -207,6 +209,8 @@ export default function Clientes() {
       `${c.nombres} ${c.apellidos}`.toLowerCase().includes(t)
     );
   });
+  const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
 
   return (
     <div className="admin-page">
@@ -252,7 +256,7 @@ export default function Clientes() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((c) => (
+              {pageItems.map((c) => (
                 <tr key={c.id_cliente}>
                   <td><span className="badge-rol">{c.tipo_documento}</span> {c.numero_documento}</td>
                   <td>{c.nombres} {c.apellidos}</td>
@@ -299,6 +303,8 @@ export default function Clientes() {
           </table>
         )}
       </div>
+
+      <Paginacion total={filtrados.length} page={page} onChange={setPage} />
 
       {/* Modal crear/editar */}
       {modalOpen && (

@@ -8,6 +8,7 @@ import {
 } from '../../servicios/servicioUsuarios';
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatTelefono, esTelefonoValido } from '../../utilidades/formato';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 
@@ -30,16 +31,6 @@ const PASSWORD_RULES = [
   { test: (v) => /[a-z]/.test(v), label: 'Una letra minúscula' },
   { test: (v) => /[0-9]/.test(v), label: 'Un número' },
 ];
-
-const PAGE_SIZE = 5;
-
-// Genera los números de página con elipsis cuando hay muchas
-const getPages = (total, current) => {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
-  if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
-  return [1, '...', current - 1, current, current + 1, '...', total];
-};
 
 const emptyForm = {
   nombre: '',
@@ -91,13 +82,7 @@ export default function Usuarios() {
   }, []);
 
   // Datos de la página actual
-  const totalPages = Math.max(1, Math.ceil(usuarios.length / PAGE_SIZE));
-  const pageItems  = usuarios.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // Si la página actual queda fuera de rango (ej. tras borrar), se ajusta
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  const pageItems = usuarios.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const abrirCrear = () => {
     setEditingId(null);
@@ -323,53 +308,9 @@ export default function Usuarios() {
           </table>
         )}
 
-        {/* Paginación */}
-        {!loading && usuarios.length > PAGE_SIZE && (
-          <div className="pagination">
-            <span className="page-info">
-              Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, usuarios.length)} de {usuarios.length}
-            </span>
-
-            <div className="page-controls">
-              <button
-                className="page-btn nav"
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-                title="Anterior"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-
-              {getPages(totalPages, page).map((p, i) =>
-                p === '...' ? (
-                  <span key={`dots-${i}`} className="page-dots">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    className={`page-btn ${p === page ? 'active' : ''}`}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-
-              <button
-                className="page-btn nav"
-                onClick={() => setPage(page + 1)}
-                disabled={page === totalPages}
-                title="Siguiente"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      <Paginacion total={usuarios.length} page={page} onChange={setPage} />
 
       {/* Modal */}
       {modalOpen && (

@@ -9,6 +9,7 @@ import {
   registrarConsumoOperador,
 } from '../../servicios/servicioOperadores';
 import { formatTelefono, esCorreoValido } from '../../utilidades/formato';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -23,6 +24,7 @@ export default function Operadores() {
   const [operadores, setOperadores] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [filtro, setFiltro]         = useState('');
+  const [page, setPage]             = useState(1);
 
   // Modal crear/editar
   const [modalOpen, setModalOpen]   = useState(false);
@@ -54,6 +56,8 @@ export default function Operadores() {
     o.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
     (o.correo || '').toLowerCase().includes(filtro.toLowerCase())
   );
+  const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
 
   // ---------- Crear / editar ----------
   const abrirNuevo = () => { setEditingId(null); setForm(emptyForm); setErrores({}); setModalOpen(true); };
@@ -170,7 +174,7 @@ export default function Operadores() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((o) => (
+              {pageItems.map((o) => (
                 <tr key={o.id_operador}>
                   <td><strong>{o.nombre}</strong></td>
                   <td>{o.tipo || '—'}</td>
@@ -221,6 +225,8 @@ export default function Operadores() {
           </table>
         )}
       </div>
+
+      <Paginacion total={filtrados.length} page={page} onChange={setPage} />
 
       {/* Modal crear/editar operador */}
       {modalOpen && (
@@ -276,12 +282,9 @@ export default function Operadores() {
               {resultado ? (
                 <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
-                    <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados (por personas)</span>
+                    <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados (por visita)</span>
                     <strong style={{ color: '#16a34a' }}>+{Number(resultado.puntos_otorgados).toFixed(2)}</strong>
                   </div>
-                  {!resultado.alcanzo_minimo && (
-                    <small style={{ color: '#9ca3af' }}>Grupo menor a {resultado.minimo_personas}: no gana puntos por personas.</small>
-                  )}
                   <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
                 </div>
               ) : null}

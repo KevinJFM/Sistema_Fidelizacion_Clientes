@@ -4,11 +4,8 @@ const ESTADO_ACTIVO = 1;
 const ESTADO_INACTIVO = 2;
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Lee un valor de la tabla configuracion (con valor por defecto)
-const obtenerConfig = async (clave, porDefecto) => {
-  const [filas] = await pool.query('SELECT valor FROM configuracion WHERE clave = ?', [clave]);
-  return filas.length ? filas[0].valor : porDefecto;
-};
+// Regla FIJA del sistema (no editable): el operador gana puntos por VISITA registrada.
+const PUNTOS_POR_VISITA = 100;
 
 // ===================== CRUD de operadores =====================
 
@@ -101,8 +98,7 @@ export const cambiarEstadoOperador = async (req, res) => {
 
 // ===================== Registro de consumo / puntos =====================
 
-// Registrar un grupo del operador y otorgar puntos
-// El operador SOLO gana puntos por persona: (personas >= mínimo ? puntos_persona x personas : 0)
+// Registrar una visita del operador y otorgar puntos (100 fijos por visita)
 export const registrarConsumoOperador = async (req, res) => {
   try {
     const { id_operador, num_personas } = req.body;
@@ -126,14 +122,8 @@ export const registrarConsumoOperador = async (req, res) => {
       return res.status(400).json({ message: 'El operador no está activo' });
     }
 
-    // Reglas configurables
-    const puntosPorPersona = Number(await obtenerConfig('operador_puntos_persona', '1.5'));
-    const minPersonas      = Number(await obtenerConfig('operador_min_personas', '5'));
-
-    // Cálculo de puntos: el operador SOLO gana puntos por persona (a partir del mínimo)
-    const puntosPersonas = personas >= minPersonas ? puntosPorPersona * personas : 0;
-    const puntosOtorgados = Number(puntosPersonas.toFixed(2));
-
+    // Regla fija: 100 puntos por cada visita registrada
+    const puntosOtorgados = PUNTOS_POR_VISITA;
     const saldoFinal = Number(filasOp[0].puntos_acumulados) + puntosOtorgados;
 
     // Escritura atómica
@@ -144,7 +134,7 @@ export const registrarConsumoOperador = async (req, res) => {
         `INSERT INTO transacciones_operador
           (id_operador, id_usuario, num_personas, puntos_personas, puntos_otorgados)
          VALUES (?, ?, ?, ?, ?)`,
-        [id_operador, req.usuario.id_usuario, personas, puntosPersonas, puntosOtorgados]
+        [id_operador, req.usuario.id_usuario, personas, puntosOtorgados, puntosOtorgados]
       );
       await conexion.query(
         'UPDATE operadores_turisticos SET puntos_acumulados = ? WHERE id_operador = ?',
@@ -153,13 +143,10 @@ export const registrarConsumoOperador = async (req, res) => {
       await conexion.commit();
 
       return res.status(201).json({
-        message: 'Consumo registrado correctamente',
+        message: 'Visita registrada correctamente',
         id_transaccion_op: resultado.insertId,
-        puntos_personas: puntosPersonas,
         puntos_otorgados: puntosOtorgados,
         saldo_puntos: Number(saldoFinal.toFixed(2)),
-        alcanzo_minimo: personas >= minPersonas,
-        minimo_personas: minPersonas,
       });
     } catch (e) {
       await conexion.rollback();

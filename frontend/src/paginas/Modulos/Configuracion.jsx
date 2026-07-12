@@ -8,15 +8,6 @@ import './Configuracion.css';
 // Metadatos de cada regla. `toggle` es la clave del interruptor ON/OFF (si aplica).
 const GRUPOS = [
   {
-    titulo: 'Canje de puntos',
-    descripcion: 'Permite cambiar puntos por un descuento',
-    toggle: 'canje_activo',
-    items: [
-      { clave: 'puntos_para_canje', label: 'Puntos necesarios para canjear', sufijo: 'pts' },
-      { clave: 'valor_canje',       label: 'Descuento al canjear puntos',    sufijo: '$'   },
-    ],
-  },
-  {
     titulo: 'Bienvenida (primera compra)',
     descripcion: 'Beneficio que recibe el cliente en su primera transacción',
     toggle: 'bienvenida_activo',
@@ -40,7 +31,10 @@ const GRUPOS = [
 const CLAVES_TOGGLE = GRUPOS.map((g) => g.toggle).filter(Boolean);
 
 // Claves que existen en la BD pero no se muestran en esta pantalla
-const CLAVES_OCULTAS = ['puntos_monto_base', 'puntos_por_monto'];
+const CLAVES_OCULTAS = [
+  'puntos_monto_base', 'puntos_por_monto', 'valor_canje', 'puntos_para_canje', 'canje_activo',
+  'operador_puntos_persona', 'operador_min_personas', 'operador_valor_punto',
+];
 
 export default function Configuracion() {
   const [valores, setValores] = useState({});

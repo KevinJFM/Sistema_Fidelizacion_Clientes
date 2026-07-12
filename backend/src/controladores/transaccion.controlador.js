@@ -1,8 +1,9 @@
 import pool from '../configuracion/bd.js';
+import { RECOMPENSAS, conValor, buscarRecompensa } from '../configuracion/recompensas.js';
 
-// Regla FIJA del sistema (no editable): 1 punto por cada $0.05 de consumo (= 20 puntos por $1).
-// Ej: $1 = 20 pts, $25 = 500 pts, $50 = 1000 pts.
-const CENTAVOS_POR_PUNTO = 5;
+// Regla FIJA del sistema (no editable): ganar $1 de consumo = 1 punto.
+// (El valor del punto $0.05 y el catálogo de canje viven en recompensas.js)
+const DOLARES_POR_PUNTO = 1;    // 1 punto por cada $1
 
 // Lee un valor de la tabla configuracion (con valor por defecto)
 const obtenerConfig = async (clave, porDefecto) => {
@@ -10,10 +11,15 @@ const obtenerConfig = async (clave, porDefecto) => {
   return filas.length ? filas[0].valor : porDefecto;
 };
 
+// Listar el catálogo de recompensas (fijo) con su valor en $
+export const listarRecompensas = (req, res) => {
+  return res.status(200).json(RECOMPENSAS.map(conValor));
+};
+
 // Registrar una transacción (otorga/canjea puntos de forma atómica)
 export const crearTransaccion = async (req, res) => {
   try {
-    const { id_cliente, monto, referencia_venta, fecha_ingreso, fecha_salida, canjear_puntos } = req.body;
+    const { id_cliente, monto, referencia_venta, fecha_ingreso, fecha_salida, id_recompensa } = req.body;
     const montoNumerico = Number(monto);
 
     if (!id_cliente || !montoNumerico || montoNumerico <= 0) {
@@ -30,15 +36,13 @@ export const crearTransaccion = async (req, res) => {
     }
 
     // ===== Reglas configurables (se pueden ajustar en la tabla configuracion) =====
-    const puntosParaCanje      = Number(await obtenerConfig('puntos_para_canje', '1200'));
-    const valorCanje           = Number(await obtenerConfig('valor_canje', '60'));
     const bienvenidaPuntos     = Number(await obtenerConfig('bienvenida_puntos', '20'));
     const bienvenidaDescuento  = Number(await obtenerConfig('bienvenida_descuento', '2'));
     const descuentoMontoMinimo = Number(await obtenerConfig('descuento_monto_minimo', '30'));
     const descuentoMontoValor  = Number(await obtenerConfig('descuento_monto_valor', '1'));
 
     // Interruptores ON/OFF de cada regla (1 = activo). Si no existe la clave, se asume activo.
-    const canjeActivo          = Number(await obtenerConfig('canje_activo', '1')) === 1;
+    // El canje SIEMPRE está activo (no es configurable).
     const bienvenidaActivo     = Number(await obtenerConfig('bienvenida_activo', '1')) === 1;
     const descuentoMontoActivo = Number(await obtenerConfig('descuento_monto_activo', '1')) === 1;
 
@@ -69,44 +73,53 @@ export const crearTransaccion = async (req, res) => {
     //    4. Descuento por monto alto
     // ============================================================
     const promocionesAplicadas = [];
-    // Puntos base (regla fija del sistema): 1 punto por cada $0.05 de consumo (20 puntos por $1).
-    // Se calcula en centavos para evitar errores de redondeo. Ej: $25 => 500 pts, $50 => 1000 pts.
-    const puntosBase            = Math.floor(Math.round(montoNumerico * 100) / CENTAVOS_POR_PUNTO);
     let puntosExtraBienvenida   = 0;
     let puntosExtraPromocion    = 0;
-    let puntosOtorgados         = puntosBase;
+    let puntosOtorgados         = 0;
     let descuento               = 0;
     let puntosCanjeados         = 0;
 
-    // El canje solo procede si la regla está activa
-    const quiereCanjear = canjeActivo && canjear_puntos && cliente.puntos_acumulados >= puntosParaCanje;
-    // La bienvenida solo aplica si la regla está activa y es la primera compra
+    // Recompensa elegida para canjear (del catálogo fijo). Validaciones:
+    const recompensa = id_recompensa ? buscarRecompensa(id_recompensa) : null;
+    if (id_recompensa) {
+      if (!recompensa) return res.status(400).json({ message: 'Recompensa no válida' });
+      if (cliente.puntos_acumulados < recompensa.puntos) {
+        return res.status(400).json({ message: 'El cliente no tiene puntos suficientes para esa recompensa' });
+      }
+    }
+    const quiereCanjear = !!recompensa && cliente.puntos_acumulados >= recompensa.puntos;
     const aplicaBienvenida = bienvenidaActivo && esPrimeraCompra;
 
-    // --- Puntos extra (acumulables) ---
-    if (aplicaBienvenida) {
-      puntosExtraBienvenida = bienvenidaPuntos;
-      puntosOtorgados += puntosExtraBienvenida;
-      promocionesAplicadas.push('Bienvenida (primera compra)');
-    }
-    if (promocion) {
-      puntosExtraPromocion = Number(promocion.puntos_extra);
-      puntosOtorgados += puntosExtraPromocion;
-      promocionesAplicadas.push(`Promoción: ${promocion.nombre}`);
-    }
+    // Puntos base (regla fija): 1 punto por cada $1 de consumo. En un canje NO se ganan puntos.
+    const puntosBase = quiereCanjear ? 0 : Math.floor(montoNumerico / DOLARES_POR_PUNTO);
 
-    // --- Descuento: solo el de mayor prioridad (respetando los interruptores) ---
     if (quiereCanjear) {
-      puntosCanjeados = puntosParaCanje;
-      descuento = valorCanje;
-      promocionesAplicadas.unshift('Canje de puntos'); // máxima prioridad
-    } else if (aplicaBienvenida) {
-      descuento = bienvenidaDescuento;
-    } else if (promocion) {
-      descuento = (Number(promocion.descuento_extra) / 100) * montoNumerico;
-    } else if (descuentoMontoActivo && montoNumerico >= descuentoMontoMinimo) {
-      descuento = descuentoMontoValor;
-      promocionesAplicadas.push('Descuento por compra alta');
+      // CANJE: el cliente usa su beneficio (premio). No gana puntos nuevos ni recibe descuento en $.
+      // Paga el monto completo y se le descuentan los puntos del premio.
+      puntosCanjeados = recompensa.puntos;
+      promocionesAplicadas.push(`Canje: ${recompensa.nombre}`);
+    } else {
+      // Flujo normal: acumula puntos (base + bienvenida + promoción) y aplica UN descuento por prioridad.
+      puntosOtorgados = puntosBase;
+      if (aplicaBienvenida) {
+        puntosExtraBienvenida = bienvenidaPuntos;
+        puntosOtorgados += puntosExtraBienvenida;
+        promocionesAplicadas.push('Bienvenida (primera compra)');
+      }
+      if (promocion) {
+        puntosExtraPromocion = Number(promocion.puntos_extra);
+        puntosOtorgados += puntosExtraPromocion;
+        promocionesAplicadas.push(`Promoción: ${promocion.nombre}`);
+      }
+
+      if (aplicaBienvenida) {
+        descuento = bienvenidaDescuento;
+      } else if (promocion) {
+        descuento = (Number(promocion.descuento_extra) / 100) * montoNumerico;
+      } else if (descuentoMontoActivo && montoNumerico >= descuentoMontoMinimo) {
+        descuento = descuentoMontoValor;
+        promocionesAplicadas.push('Descuento por compra alta');
+      }
     }
 
     if (descuento > montoNumerico) descuento = montoNumerico;
@@ -124,7 +137,7 @@ export const crearTransaccion = async (req, res) => {
            monto, descuento_aplicado, puntos_otorgados, puntos_canjeados)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          id_cliente, req.usuario.id_usuario, promocion ? promocion.id_escenario : null,
+          id_cliente, req.usuario.id_usuario, (!quiereCanjear && promocion) ? promocion.id_escenario : null,
           referencia_venta ?? null, fecha_ingreso || null, fecha_salida || null,
           montoNumerico, descuento, puntosOtorgados, puntosCanjeados,
         ]
@@ -136,15 +149,18 @@ export const crearTransaccion = async (req, res) => {
         [saldoFinal, id_cliente]
       );
 
-      await conexion.query(
-        'INSERT INTO movimientos_puntos (id_cliente, id_transaccion, tipo, puntos, descripcion) VALUES (?, ?, ?, ?, ?)',
-        [id_cliente, idTransaccion, 'ganado', puntosOtorgados, 'Puntos por transacción']
-      );
+      // Solo se registra "ganado" cuando realmente se otorgan puntos (en un canje no se ganan)
+      if (puntosOtorgados > 0) {
+        await conexion.query(
+          'INSERT INTO movimientos_puntos (id_cliente, id_transaccion, tipo, puntos, descripcion) VALUES (?, ?, ?, ?, ?)',
+          [id_cliente, idTransaccion, 'ganado', puntosOtorgados, 'Puntos por transacción']
+        );
+      }
 
       if (puntosCanjeados > 0) {
         await conexion.query(
           'INSERT INTO movimientos_puntos (id_cliente, id_transaccion, tipo, puntos, descripcion) VALUES (?, ?, ?, ?, ?)',
-          [id_cliente, idTransaccion, 'canjeado', -puntosCanjeados, 'Canje de puntos']
+          [id_cliente, idTransaccion, 'canjeado', -puntosCanjeados, `Canje: ${recompensa.nombre}`]
         );
       }
 
@@ -162,7 +178,7 @@ export const crearTransaccion = async (req, res) => {
         porcentaje_descuento_promo: promocion && !quiereCanjear && !aplicaBienvenida ? Number(promocion.descuento_extra) : null,
         total_a_pagar: Number((montoNumerico - descuento).toFixed(2)),
         saldo_puntos: saldoFinal,
-        promocion: promocion ? promocion.nombre : null,
+        promocion: (!quiereCanjear && promocion) ? promocion.nombre : null,
         promociones_aplicadas: promocionesAplicadas,
         primera_compra: esPrimeraCompra,
       });

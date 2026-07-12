@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listarTransaccionesOperador } from '../../servicios/servicioOperadores';
 import { exportarPDF } from '../../utilidades/pdf';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -64,6 +65,7 @@ export default function HistorialOperadores() {
   const [cargando, setCargando]   = useState(true);
   const [filtros, setFiltros]     = useState({ tipo: '', desde: '', hasta: '' });
   const [detalle, setDetalle]     = useState(null);
+  const [page, setPage]           = useState(1);
 
   const cargar = async (f = {}) => {
     setCargando(true);
@@ -103,6 +105,8 @@ export default function HistorialOperadores() {
 
   const totalPersonas = historial.reduce((s, t) => s + Number(t.num_personas), 0);
   const totalPuntos   = historial.reduce((s, t) => s + Number(t.puntos_otorgados), 0);
+  const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [historial]); // a la página 1 cuando cambia el resultado
 
   const exportarPdf = () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
@@ -200,7 +204,7 @@ export default function HistorialOperadores() {
               </tr>
             </thead>
             <tbody>
-              {historial.map((t) => (
+              {pageItems.map((t) => (
                 <tr key={t.id_transaccion_op}>
                   <td><strong>{t.operador}</strong></td>
                   <td>{t.tipo || '—'}</td>
@@ -223,6 +227,8 @@ export default function HistorialOperadores() {
           </table>
         )}
       </div>
+
+      <Paginacion total={historial.length} page={page} onChange={setPage} />
 
       <ModalDetalleOperador t={detalle} onClose={() => setDetalle(null)} />
     </div>

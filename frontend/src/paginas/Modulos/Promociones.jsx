@@ -7,6 +7,7 @@ import {
   togglePromocion,
   deletePromocion,
 } from '../../servicios/servicioPromociones';
+import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 
@@ -55,6 +56,7 @@ export default function Promociones() {
   const [promociones, setPromociones]         = useState([]);
   const [cargando, setCargando]               = useState(true);
   const [filtro, setFiltro]                   = useState('');
+  const [page, setPage]                       = useState(1);
   const [modalAbierto, setModalAbierto]       = useState(false);
   const [editandoId, setEditandoId]           = useState(null);
   const [form, setForm]                       = useState(formVacio);
@@ -194,6 +196,8 @@ export default function Promociones() {
   const filtrados = promociones.filter((p) =>
     p.nombre.toLowerCase().includes(filtro.toLowerCase())
   );
+  const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
 
   return (
     <div className="admin-page">
@@ -240,7 +244,7 @@ export default function Promociones() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((p) => {
+              {pageItems.map((p) => {
                 const estado = estadoHoy(p);
                 return (
                   <tr key={p.id_escenario}>
@@ -309,6 +313,8 @@ export default function Promociones() {
           </table>
         )}
       </div>
+
+      <Paginacion total={filtrados.length} page={page} onChange={setPage} />
 
       {/* ── Modal crear / editar ── */}
       {modalAbierto && (
