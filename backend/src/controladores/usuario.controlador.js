@@ -77,7 +77,7 @@ export const crearUsuario = async (req, res) => {
       fecha_nacimiento, id_departamento, id_distrito, id_rol,
     } = req.body;
 
-    if (!nombre || !apellido || !email || !contrasena || !telefono || !fecha_nacimiento || !id_rol || !id_departamento || !id_distrito) {
+    if (!nombre || !apellido || !email || !contrasena || !telefono || !id_rol || !id_departamento || !id_distrito) {
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
     }
 
@@ -106,7 +106,7 @@ export const crearUsuario = async (req, res) => {
          id_departamento, id_distrito, id_rol, id_estado)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [
-        nombre, apellido, email, contrasenaHash, telefono, fecha_nacimiento,
+        nombre, apellido, email, contrasenaHash, telefono, fecha_nacimiento || null,
         id_departamento ?? null, id_distrito ?? null, id_rol,
       ]
     );
@@ -159,7 +159,7 @@ export const actualizarUsuario = async (req, res) => {
            id_departamento = ?, id_distrito = ?, id_rol = ?, id_estado = ?
        WHERE id_usuario = ?`,
       [
-        nombre, apellido, email, telefono, fecha_nacimiento,
+        nombre, apellido, email, telefono, fecha_nacimiento || null,
         id_departamento ?? null, id_distrito ?? null, id_rol, id_estado, id,
       ]
     );

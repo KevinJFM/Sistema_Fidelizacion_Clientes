@@ -4,6 +4,7 @@ import { buscarCliente } from '../../servicios/servicioClientes';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
 import { exportarPDFCliente } from '../../utilidades/pdf';
 import { formatDui } from '../../utilidades/formato';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -118,14 +119,14 @@ export default function HistorialCliente() {
     setCliente(null);
     setHistorial([]);
     try {
-      const [c, h] = await Promise.all([
+      const [c, h] = await conMinimo(Promise.all([
         buscarCliente(busqueda.id_tipo_documento, busqueda.numero_documento.trim()),
         listarTransacciones({ numero_documento: busqueda.numero_documento.trim() }),
-      ]);
+      ]));
       setCliente(c);
       setHistorial(h);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Cliente no encontrado');
+      toast.error(mensajeError(err, 'Cliente no encontrado'));
     } finally {
       setBuscando(false);
     }
@@ -170,7 +171,7 @@ export default function HistorialCliente() {
           </div>
           <div className="form-field">
             <label>N° de documento</label>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="busqueda-input-row">
               <input
                 value={busqueda.numero_documento}
                 onChange={(e) => setBusqueda({
@@ -179,7 +180,6 @@ export default function HistorialCliente() {
                 })}
                 onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
                 placeholder={busqueda.id_tipo_documento === 1 ? '12345678-9' : 'N° de pasaporte'}
-                style={{ flex: 1 }}
               />
               <button type="button" className="btn-primary" onClick={handleBuscar} disabled={buscando}>
                 {buscando ? '...' : 'Buscar'}

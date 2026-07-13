@@ -10,6 +10,8 @@ import {
 } from '../../servicios/servicioOperadores';
 import { formatTelefono, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -42,9 +44,9 @@ export default function Operadores() {
   const cargar = async () => {
     setLoading(true);
     try {
-      setOperadores(await getOperadores());
+      setOperadores(await conMinimo(getOperadores()));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cargar operadores');
+      toast.error(mensajeError(err, 'Error al cargar operadores'));
     } finally {
       setLoading(false);
     }
@@ -156,9 +158,7 @@ export default function Operadores() {
           />
         </div>
 
-        {loading ? (
-          <p className="table-empty">Cargando...</p>
-        ) : filtrados.length === 0 ? (
+        {!loading && filtrados.length === 0 ? (
           <p className="table-empty">No hay operadores registrados</p>
         ) : (
           <table className="data-table">
@@ -174,7 +174,9 @@ export default function Operadores() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((o) => (
+              {loading ? (
+                <SkeletonFilas columnas={7} filas={8} />
+              ) : pageItems.map((o) => (
                 <tr key={o.id_operador}>
                   <td><strong>{o.nombre}</strong></td>
                   <td>{o.tipo || '—'}</td>

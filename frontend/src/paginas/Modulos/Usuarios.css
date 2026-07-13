@@ -227,9 +227,9 @@
 .modal {
   background: #fff;
   border-radius: 26px;
-  padding: 22px 30px;
+  padding: 16px 32px;
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   max-height: 95vh;
   overflow-y: auto;
   box-shadow: 0 30px 70px rgba(6, 58, 52, 0.3);
@@ -243,15 +243,21 @@
   font-size: 22px;
   font-weight: 800;
   color: var(--pd-teal-dark);
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 /* Form del modal */
 .modal-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
+/* Inputs un poco más compactos dentro del modal (para evitar scroll) */
+.modal-form .form-field input,
+.modal-form .form-field select {
+  padding: 10px 14px;
+}
+.modal-form .form-field { gap: 5px; }
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -274,6 +280,8 @@
 }
 .form-field input,
 .form-field select {
+  width: 100%;
+  box-sizing: border-box;
   background: var(--pd-teal-light);
   border: 1px solid transparent;
   border-radius: 12px;
@@ -358,12 +366,12 @@
 .password-rules {
   list-style: none;
   margin: 0;
-  padding: 10px 14px;
+  padding: 8px 14px;
   background: var(--pd-teal-xlight);
   border-radius: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 18px;
+  gap: 5px 16px;
 }
 .password-rules li {
   display: flex;

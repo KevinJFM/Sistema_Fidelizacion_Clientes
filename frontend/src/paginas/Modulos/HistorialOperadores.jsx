@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { listarTransaccionesOperador } from '../../servicios/servicioOperadores';
 import { exportarPDF } from '../../utilidades/pdf';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -70,9 +72,9 @@ export default function HistorialOperadores() {
   const cargar = async (f = {}) => {
     setCargando(true);
     try {
-      setHistorial(await listarTransaccionesOperador(f));
+      setHistorial(await conMinimo(listarTransaccionesOperador(f)));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cargar el historial');
+      toast.error(mensajeError(err, 'Error al cargar el historial'));
     } finally {
       setCargando(false);
     }
@@ -185,9 +187,7 @@ export default function HistorialOperadores() {
       </div>
 
       <div className="table-card">
-        {cargando ? (
-          <p className="table-empty">Cargando...</p>
-        ) : historial.length === 0 ? (
+        {!cargando && historial.length === 0 ? (
           <p className="table-empty">No hay registros con esos filtros</p>
         ) : (
           <table className="data-table">
@@ -204,7 +204,9 @@ export default function HistorialOperadores() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((t) => (
+              {cargando ? (
+                <SkeletonFilas columnas={8} filas={8} />
+              ) : pageItems.map((t) => (
                 <tr key={t.id_transaccion_op}>
                   <td><strong>{t.operador}</strong></td>
                   <td>{t.tipo || '—'}</td>

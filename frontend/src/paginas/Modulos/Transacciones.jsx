@@ -90,7 +90,7 @@ export default function Transacciones() {
       <div className="trans-grid">
         <div className="trans-card">
           {/* Buscar huésped */}
-          <div className="form-row" style={{ gridTemplateColumns: '160px 1fr' }}>
+          <div className="form-row busqueda-row">
             <div className="form-field">
               <label>Tipo de documento</label>
               <select

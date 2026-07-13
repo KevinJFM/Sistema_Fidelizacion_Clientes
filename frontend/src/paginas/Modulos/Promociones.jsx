@@ -8,6 +8,8 @@ import {
   deletePromocion,
 } from '../../servicios/servicioPromociones';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 
@@ -69,9 +71,9 @@ export default function Promociones() {
   const cargar = async () => {
     setCargando(true);
     try {
-      setPromociones(await getPromociones());
-    } catch {
-      toast.error('Error al cargar promociones');
+      setPromociones(await conMinimo(getPromociones()));
+    } catch (err) {
+      toast.error(mensajeError(err, 'Error al cargar promociones'));
     } finally {
       setCargando(false);
     }
@@ -225,9 +227,7 @@ export default function Promociones() {
           />
         </div>
 
-        {cargando ? (
-          <p className="table-empty">Cargando...</p>
-        ) : filtrados.length === 0 ? (
+        {!cargando && filtrados.length === 0 ? (
           <p className="table-empty">No hay promociones registradas</p>
         ) : (
           <table className="data-table">
@@ -244,7 +244,9 @@ export default function Promociones() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((p) => {
+              {cargando ? (
+                <SkeletonFilas columnas={8} filas={8} />
+              ) : pageItems.map((p) => {
                 const estado = estadoHoy(p);
                 return (
                   <tr key={p.id_escenario}>

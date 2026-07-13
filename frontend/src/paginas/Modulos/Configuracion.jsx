@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { getConfiguracion, updateConfiguracion } from '../../servicios/servicioConfiguracion';
+import Skeleton from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Configuracion.css';
@@ -45,7 +47,7 @@ export default function Configuracion() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const data = await getConfiguracion();
+      const data = await conMinimo(getConfiguracion());
       const mapa = {};
       data.forEach((c) => { mapa[c.clave] = c.valor; });
       setValores(mapa);
@@ -58,7 +60,7 @@ export default function Configuracion() {
       ];
       setOtros(data.filter((c) => !conocidas.includes(c.clave)));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cargar la configuración');
+      toast.error(mensajeError(err, 'Error al cargar la configuración'));
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,15 @@ export default function Configuracion() {
       <p className="page-subtitle">Ajusta las reglas del programa de fidelización. Aplican a las nuevas transacciones.</p>
 
       {loading ? (
-        <div className="config-card"><p className="table-empty">Cargando...</p></div>
+        Array.from({ length: 2 }).map((_, i) => (
+          <div className="config-card" key={i}>
+            <div className="config-head"><div><Skeleton width={200} height={16} /></div></div>
+            <div className="config-grid">
+              <Skeleton height={46} radius={12} />
+              <Skeleton height={46} radius={12} />
+            </div>
+          </div>
+        ))
       ) : (
         <form onSubmit={handleGuardar}>
           {GRUPOS.map((grupo) => {

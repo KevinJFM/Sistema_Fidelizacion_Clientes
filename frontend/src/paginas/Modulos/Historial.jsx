@@ -6,6 +6,8 @@ import { descargarCSV } from '../../utilidades/csv';
 import { exportarPDF } from '../../utilidades/pdf';
 import { formatDocumento } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -112,9 +114,9 @@ export default function Historial() {
   const cargar = async (f = {}) => {
     setCargando(true);
     try {
-      setHistorial(await listarTransacciones(f));
+      setHistorial(await conMinimo(listarTransacciones(f)));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cargar el historial');
+      toast.error(mensajeError(err, 'Error al cargar el historial'));
     } finally {
       setCargando(false);
     }
@@ -272,9 +274,7 @@ export default function Historial() {
       </div>
 
       <div className="table-card">
-        {cargando ? (
-          <p className="table-empty">Cargando...</p>
-        ) : historial.length === 0 ? (
+        {!cargando && historial.length === 0 ? (
           <p className="table-empty">No hay transacciones con esos filtros</p>
         ) : (
           <table className="data-table">
@@ -293,7 +293,9 @@ export default function Historial() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((t) => (
+              {cargando ? (
+                <SkeletonFilas columnas={10} filas={8} />
+              ) : pageItems.map((t) => (
                 <tr key={t.id_transaccion}>
                   <td>{t.nombres} {t.apellidos}</td>
                   <td><span className="badge-rol">{t.tipo_documento}</span> {t.numero_documento}</td>

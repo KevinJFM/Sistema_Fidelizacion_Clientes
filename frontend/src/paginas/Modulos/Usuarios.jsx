@@ -9,6 +9,8 @@ import {
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatTelefono, esTelefonoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 
@@ -67,10 +69,9 @@ export default function Usuarios() {
     setLoading(true);
     setError('');
     try {
-      const data = await getUsuarios();
-      setUsuarios(data);
+      setUsuarios(await conMinimo(getUsuarios()));
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar usuarios');
+      setError(mensajeError(err, 'Error al cargar usuarios'));
     } finally {
       setLoading(false);
     }
@@ -164,7 +165,7 @@ export default function Usuarios() {
     e.preventDefault();
 
     // Validar campos requeridos (contraseña solo es obligatoria al crear)
-    const requeridos = ['nombre', 'apellido', 'email', 'telefono', 'fecha_nacimiento'];
+    const requeridos = ['nombre', 'apellido', 'email', 'telefono'];
     if (!editingId) requeridos.push('contrasena');
 
     const errores = {};
@@ -253,9 +254,7 @@ export default function Usuarios() {
       {error && <p className="login-error">{error}</p>}
 
       <div className="table-card">
-        {loading ? (
-          <p className="table-empty">Cargando...</p>
-        ) : usuarios.length === 0 ? (
+        {!loading && usuarios.length === 0 ? (
           <p className="table-empty">No hay usuarios registrados</p>
         ) : (
           <table className="data-table">
@@ -270,7 +269,9 @@ export default function Usuarios() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((u) => (
+              {loading ? (
+                <SkeletonFilas columnas={6} filas={8} />
+              ) : pageItems.map((u) => (
                 <tr key={u.id_usuario}>
                   <td>{u.nombre} {u.apellido}</td>
                   <td>{u.email}</td>
@@ -358,8 +359,7 @@ export default function Usuarios() {
               <div className="form-row">
                 <div className={`form-field ${fieldErrors.fecha_nacimiento ? 'has-error' : ''}`}>
                   <label>
-                    Fecha de nacimiento
-                    {fieldErrors.fecha_nacimiento && <span className="req-tag">{fieldErrors.fecha_nacimiento}</span>}
+                    Fecha de nacimiento <span className="optional">(opcional)</span>
                   </label>
                   <input type="date" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={handleChange} />
                 </div>

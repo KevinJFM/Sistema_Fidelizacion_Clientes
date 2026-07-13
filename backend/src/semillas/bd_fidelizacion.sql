@@ -97,7 +97,7 @@ CREATE TABLE usuarios (
   email             VARCHAR(150) NOT NULL UNIQUE,
   contrasena_hash   VARCHAR(255) NOT NULL,
   telefono          VARCHAR(20)  NOT NULL,
-  fecha_nacimiento  DATE         NOT NULL,
+  fecha_nacimiento  DATE         NULL,          -- opcional
   id_departamento   INT          NULL,
   id_distrito       INT          NULL,
   id_rol            INT          NOT NULL,
