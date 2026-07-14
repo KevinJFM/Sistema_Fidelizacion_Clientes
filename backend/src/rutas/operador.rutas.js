@@ -5,6 +5,7 @@ import {
   actualizarOperador,
   cambiarEstadoOperador,
   registrarConsumoOperador,
+  canjearOperador,
   listarTransaccionesOperador,
 } from '../controladores/operador.controlador.js';
 import { verificarToken } from '../middlewares/autenticacion.middleware.js';
@@ -19,6 +20,8 @@ router.use(verificarToken, autorizarRoles('admin', 'recepcionista'));
 router.get('/transacciones', listarTransaccionesOperador);
 // Registrar un grupo y otorgar puntos
 router.post('/transacciones', registrarConsumoOperador);
+// Canjear puntos por una recompensa (resta puntos)
+router.post('/canje', canjearOperador);
 
 // CRUD de operadores
 router.get('/', obtenerOperadores);

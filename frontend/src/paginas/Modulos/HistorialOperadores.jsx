@@ -49,11 +49,20 @@ function ModalDetalleOperador({ t, onClose }) {
           </div>
         ))}
 
-        {/* Puntos (el operador solo gana puntos por persona) */}
+        {/* Puntos: otorgados (por visita) o canjeados */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, paddingTop: 4 }}>
-            <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados (por personas)</span>
-            <strong style={{ color: '#16a34a', fontSize: 18 }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>
+            {Number(t.puntos_canjeados) > 0 ? (
+              <>
+                <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos canjeados</span>
+                <strong style={{ color: '#dc2626', fontSize: 18 }}>-{Number(t.puntos_canjeados).toFixed(2)}</strong>
+              </>
+            ) : (
+              <>
+                <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados (por visita)</span>
+                <strong style={{ color: '#16a34a', fontSize: 18 }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -118,7 +127,9 @@ export default function HistorialOperadores() {
       t.tipo || '—',
       t.correo || '—',
       String(t.num_personas),
-      `+${Number(t.puntos_otorgados).toFixed(2)}`,
+      Number(t.puntos_canjeados) > 0
+        ? `-${Number(t.puntos_canjeados).toFixed(2)}`
+        : `+${Number(t.puntos_otorgados).toFixed(2)}`,
       t.registrado_por,
       new Date(t.fecha).toLocaleDateString(),
     ]);
@@ -212,7 +223,11 @@ export default function HistorialOperadores() {
                   <td>{t.tipo || '—'}</td>
                   <td>{t.correo || '—'}</td>
                   <td>{t.num_personas}</td>
-                  <td><strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong></td>
+                  <td>
+                    {Number(t.puntos_canjeados) > 0
+                      ? <strong style={{ color: '#dc2626' }}>-{Number(t.puntos_canjeados).toFixed(2)}</strong>
+                      : <strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>}
+                  </td>
                   <td>{t.registrado_por}</td>
                   <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
                   <td>

@@ -1,4 +1,5 @@
 import pool from '../configuracion/bd.js';
+import { buscarRecompensa } from '../configuracion/recompensas.js';
 
 const ESTADO_ACTIVO = 1;
 const ESTADO_INACTIVO = 2;
@@ -146,6 +147,73 @@ export const registrarConsumoOperador = async (req, res) => {
         message: 'Visita registrada correctamente',
         id_transaccion_op: resultado.insertId,
         puntos_otorgados: puntosOtorgados,
+        saldo_puntos: Number(saldoFinal.toFixed(2)),
+      });
+    } catch (e) {
+      await conexion.rollback();
+      throw e;
+    } finally {
+      conexion.release();
+    }
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// ===================== Canje de puntos =====================
+
+// El operador canjea sus puntos por una recompensa (habitación).
+// Se RESTAN los puntos del premio. NO se otorgan puntos ni descuento en dinero.
+export const canjearOperador = async (req, res) => {
+  try {
+    const { id_operador, id_recompensa } = req.body;
+
+    if (!id_operador || !id_recompensa) {
+      return res.status(400).json({ message: 'Operador y recompensa requeridos' });
+    }
+
+    const recompensa = buscarRecompensa(id_recompensa);
+    if (!recompensa) {
+      return res.status(400).json({ message: 'Recompensa no válida' });
+    }
+
+    const [filasOp] = await pool.query(
+      'SELECT * FROM operadores_turisticos WHERE id_operador = ?',
+      [id_operador]
+    );
+    if (filasOp.length === 0) {
+      return res.status(404).json({ message: 'Operador no encontrado' });
+    }
+    if (filasOp[0].id_estado !== ESTADO_ACTIVO) {
+      return res.status(400).json({ message: 'El operador no está activo' });
+    }
+    if (Number(filasOp[0].puntos_acumulados) < recompensa.puntos) {
+      return res.status(400).json({ message: 'El operador no tiene puntos suficientes para esa recompensa' });
+    }
+
+    const saldoFinal = Number(filasOp[0].puntos_acumulados) - recompensa.puntos;
+
+    // Escritura atómica: registra el canje y resta los puntos
+    const conexion = await pool.getConnection();
+    try {
+      await conexion.beginTransaction();
+      const [resultado] = await conexion.query(
+        `INSERT INTO transacciones_operador
+          (id_operador, id_usuario, num_personas, puntos_personas, puntos_otorgados, puntos_canjeados)
+         VALUES (?, ?, 0, 0, 0, ?)`,
+        [id_operador, req.usuario.id_usuario, recompensa.puntos]
+      );
+      await conexion.query(
+        'UPDATE operadores_turisticos SET puntos_acumulados = ? WHERE id_operador = ?',
+        [saldoFinal, id_operador]
+      );
+      await conexion.commit();
+
+      return res.status(201).json({
+        message: 'Canje registrado correctamente',
+        id_transaccion_op: resultado.insertId,
+        recompensa: recompensa.nombre,
+        puntos_canjeados: recompensa.puntos,
         saldo_puntos: Number(saldoFinal.toFixed(2)),
       });
     } catch (e) {

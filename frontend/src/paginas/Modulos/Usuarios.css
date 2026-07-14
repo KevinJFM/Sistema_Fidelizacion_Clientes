@@ -138,6 +138,8 @@
 .icon-btn.delete:hover:not(:disabled) { background: #dc2626; color: #fff; }
 .icon-btn.registrar { background: #dcfce7; color: #16a34a; }
 .icon-btn.registrar:hover:not(:disabled) { background: #16a34a; color: #fff; }
+.icon-btn.canje { background: #f3e8ff; color: #9333ea; }
+.icon-btn.canje:hover:not(:disabled) { background: #9333ea; color: #fff; }
 .icon-btn.activate { background: #dcfce7; color: #16a34a; }
 .icon-btn.activate:hover:not(:disabled) { background: #16a34a; color: #fff; }
 .icon-btn:disabled {

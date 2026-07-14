@@ -7,7 +7,9 @@ import {
   updateOperador,
   toggleEstadoOperador,
   registrarConsumoOperador,
+  canjearOperador,
 } from '../../servicios/servicioOperadores';
+import { getRecompensas } from '../../servicios/servicioTransacciones';
 import { formatTelefono, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
@@ -40,6 +42,15 @@ export default function Operadores() {
   const [grupo, setGrupo]           = useState(emptyGrupo);
   const [resultado, setResultado]   = useState(null);
   const [registrando, setRegistrando] = useState(false);
+
+  // Modal canje de puntos
+  const [canjeOp, setCanjeOp]       = useState(null); // operador seleccionado
+  const [recompensas, setRecompensas] = useState([]);
+  const [canjeSel, setCanjeSel]     = useState('');
+  const [canjeando, setCanjeando]   = useState(false);
+  const [resultadoCanje, setResultadoCanje] = useState(null);
+
+  useEffect(() => { getRecompensas().then(setRecompensas).catch(() => {}); }, []);
 
   const cargar = async () => {
     setLoading(true);
@@ -138,6 +149,25 @@ export default function Operadores() {
     }
   };
 
+  // ---------- Canje de puntos ----------
+  const abrirCanje = (o) => { setCanjeOp(o); setCanjeSel(''); setResultadoCanje(null); };
+
+  const handleCanjear = async (e) => {
+    e.preventDefault();
+    if (!canjeSel) { toast.error('Elige una recompensa'); return; }
+    setCanjeando(true);
+    try {
+      const r = await canjearOperador({ id_operador: canjeOp.id_operador, id_recompensa: canjeSel });
+      setResultadoCanje(r);
+      toast.success('Canje registrado');
+      cargar();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al canjear');
+    } finally {
+      setCanjeando(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <div className="page-head">
@@ -191,6 +221,13 @@ export default function Operadores() {
                         disabled={o.id_estado === ESTADO_INACTIVO}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <button className="icon-btn canje" onClick={() => abrirCanje(o)}
+                        title={o.id_estado === ESTADO_INACTIVO ? 'Actívalo para canjear' : 'Canjear puntos'}
+                        disabled={o.id_estado === ESTADO_INACTIVO}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
                         </svg>
                       </button>
                       <button className="icon-btn historial" onClick={() => navigate(`/admin/operadores-historial?op=${o.id_operador}`)} title="Ver historial">
@@ -298,6 +335,65 @@ export default function Operadores() {
                 {!resultado && (
                   <button type="submit" className="btn-primary" disabled={registrando}>
                     {registrando ? 'Registrando...' : 'Registrar y otorgar puntos'}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal canje de puntos */}
+      {canjeOp && (
+        <div className="modal-overlay" onClick={() => setCanjeOp(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Canjear puntos — {canjeOp.nombre}</h3>
+            <form className="modal-form" onSubmit={handleCanjear}>
+              <div className="cliente-card">
+                <div>
+                  <span className="cliente-nombre">{canjeOp.nombre}</span>
+                  <span className="cliente-doc">{canjeOp.tipo}</span>
+                </div>
+                <div className="cliente-puntos">
+                  <span>{Number(canjeOp.puntos_acumulados).toFixed(0)}</span>
+                  <small>puntos</small>
+                </div>
+              </div>
+
+              {!resultadoCanje && (
+                <div className="form-field">
+                  <label>Recompensa a canjear</label>
+                  <select value={canjeSel} onChange={(e) => setCanjeSel(e.target.value)}>
+                    <option value="">Elige una recompensa</option>
+                    {recompensas.map((r) => {
+                      const alcanza = Number(canjeOp.puntos_acumulados) >= r.puntos;
+                      return (
+                        <option key={r.id} value={r.id} disabled={!alcanza}>
+                          {r.nombre} — {r.puntos} pts{alcanza ? '' : ' · faltan puntos'}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {resultadoCanje && (
+                <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
+                    <span style={{ fontWeight: 700, color: '#063A34' }}>{resultadoCanje.recompensa}</span>
+                    <strong style={{ color: '#dc2626' }}>-{Number(resultadoCanje.puntos_canjeados).toFixed(2)}</strong>
+                  </div>
+                  <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultadoCanje.saldo_puntos).toFixed(2)} pts</small>
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={() => setCanjeOp(null)}>
+                  {resultadoCanje ? 'Cerrar' : 'Cancelar'}
+                </button>
+                {!resultadoCanje && (
+                  <button type="submit" className="btn-primary" disabled={canjeando}>
+                    {canjeando ? 'Canjeando...' : 'Canjear'}
                   </button>
                 )}
               </div>
