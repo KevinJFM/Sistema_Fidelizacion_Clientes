@@ -270,6 +270,21 @@
 .perfil-stat-valor { font-size: 22px; font-weight: 800; color: #111827; }
 .perfil-stat-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
+/* Fila de búsqueda: select angosto + documento ancho (escritorio) */
+.busqueda-row { grid-template-columns: 160px 1fr; }
+
+/* Input + botón Buscar (fila en escritorio) */
+.busqueda-input-row { display: flex; gap: 8px; }
+.busqueda-input-row input { flex: 1; min-width: 0; }
+
 @media (max-width: 1000px) {
   .trans-grid { grid-template-columns: 1fr; }
+}
+
+/* En móvil, el N° de documento baja debajo del select y el botón Buscar debajo del input */
+@media (max-width: 640px) {
+  .busqueda-row { grid-template-columns: 1fr; }
+  .busqueda-input-row { flex-direction: column; }
+  .busqueda-input-row input { flex: none; }
+  .busqueda-input-row .btn-primary { width: 100%; }
 }

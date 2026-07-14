@@ -25,6 +25,11 @@ export const registrarConsumoOperador = async (payload) => {
   return data;
 };
 
+export const canjearOperador = async (payload) => {
+  const { data } = await api.post('/operadores/canje', payload);
+  return data;
+};
+
 export const listarTransaccionesOperador = async (filtros = {}) => {
   const { data } = await api.get('/operadores/transacciones', { params: filtros });
   return data;

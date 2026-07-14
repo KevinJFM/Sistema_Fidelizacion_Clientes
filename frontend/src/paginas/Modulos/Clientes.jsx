@@ -10,6 +10,8 @@ import {
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 
@@ -59,9 +61,9 @@ export default function Clientes() {
   const cargar = async () => {
     setLoading(true);
     try {
-      setClientes(await getClientes());
+      setClientes(await conMinimo(getClientes()));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cargar clientes');
+      toast.error(mensajeError(err, 'Error al cargar clientes'));
     } finally {
       setLoading(false);
     }
@@ -239,9 +241,7 @@ export default function Clientes() {
           />
         </div>
 
-        {loading ? (
-          <p className="table-empty">Cargando...</p>
-        ) : filtrados.length === 0 ? (
+        {!loading && filtrados.length === 0 ? (
           <p className="table-empty">No hay clientes registrados</p>
         ) : (
           <table className="data-table">
@@ -256,7 +256,9 @@ export default function Clientes() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((c) => (
+              {loading ? (
+                <SkeletonFilas columnas={6} filas={8} />
+              ) : pageItems.map((c) => (
                 <tr key={c.id_cliente}>
                   <td><span className="badge-rol">{c.tipo_documento}</span> {c.numero_documento}</td>
                   <td>{c.nombres} {c.apellidos}</td>

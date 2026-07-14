@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { listarTransaccionesOperador } from '../../servicios/servicioOperadores';
 import { exportarPDF } from '../../utilidades/pdf';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -47,11 +49,20 @@ function ModalDetalleOperador({ t, onClose }) {
           </div>
         ))}
 
-        {/* Puntos (el operador solo gana puntos por persona) */}
+        {/* Puntos: otorgados (por visita) o canjeados */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, paddingTop: 4 }}>
-            <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados (por personas)</span>
-            <strong style={{ color: '#16a34a', fontSize: 18 }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>
+            {Number(t.puntos_canjeados) > 0 ? (
+              <>
+                <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos canjeados</span>
+                <strong style={{ color: '#dc2626', fontSize: 18 }}>-{Number(t.puntos_canjeados).toFixed(2)}</strong>
+              </>
+            ) : (
+              <>
+                <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados (por visita)</span>
+                <strong style={{ color: '#16a34a', fontSize: 18 }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -70,9 +81,9 @@ export default function HistorialOperadores() {
   const cargar = async (f = {}) => {
     setCargando(true);
     try {
-      setHistorial(await listarTransaccionesOperador(f));
+      setHistorial(await conMinimo(listarTransaccionesOperador(f)));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cargar el historial');
+      toast.error(mensajeError(err, 'Error al cargar el historial'));
     } finally {
       setCargando(false);
     }
@@ -116,7 +127,9 @@ export default function HistorialOperadores() {
       t.tipo || '—',
       t.correo || '—',
       String(t.num_personas),
-      `+${Number(t.puntos_otorgados).toFixed(2)}`,
+      Number(t.puntos_canjeados) > 0
+        ? `-${Number(t.puntos_canjeados).toFixed(2)}`
+        : `+${Number(t.puntos_otorgados).toFixed(2)}`,
       t.registrado_por,
       new Date(t.fecha).toLocaleDateString(),
     ]);
@@ -185,9 +198,7 @@ export default function HistorialOperadores() {
       </div>
 
       <div className="table-card">
-        {cargando ? (
-          <p className="table-empty">Cargando...</p>
-        ) : historial.length === 0 ? (
+        {!cargando && historial.length === 0 ? (
           <p className="table-empty">No hay registros con esos filtros</p>
         ) : (
           <table className="data-table">
@@ -204,13 +215,19 @@ export default function HistorialOperadores() {
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((t) => (
+              {cargando ? (
+                <SkeletonFilas columnas={8} filas={8} />
+              ) : pageItems.map((t) => (
                 <tr key={t.id_transaccion_op}>
                   <td><strong>{t.operador}</strong></td>
                   <td>{t.tipo || '—'}</td>
                   <td>{t.correo || '—'}</td>
                   <td>{t.num_personas}</td>
-                  <td><strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong></td>
+                  <td>
+                    {Number(t.puntos_canjeados) > 0
+                      ? <strong style={{ color: '#dc2626' }}>-{Number(t.puntos_canjeados).toFixed(2)}</strong>
+                      : <strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>}
+                  </td>
                   <td>{t.registrado_por}</td>
                   <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
                   <td>

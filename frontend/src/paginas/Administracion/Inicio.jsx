@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getResumen } from '../../servicios/servicioTransacciones';
+import Skeleton from '../../componentes/Skeleton/Skeleton';
+import { conMinimo } from '../../utilidades/carga';
 import './PaginasAdmin.css';
 import './Inicio.css';
 
@@ -57,6 +59,7 @@ const statColors = [
 ];
 
 function StatCard({ label, value, hint, icon, color, index }) {
+  const cargando = value === null || value === undefined;
   const animated = useCountUp(typeof value === 'number' ? value : null);
   const display  = typeof value === 'number' ? animated : (value ?? '—');
 
@@ -72,7 +75,9 @@ function StatCard({ label, value, hint, icon, color, index }) {
         <span style={{ color: color.icon }}>{icon}</span>
       </div>
       <div className="stat-body">
-        <span className="stat-value-v2" style={{ color: color.icon }}>{display}</span>
+        <span className="stat-value-v2" style={{ color: color.icon }}>
+          {cargando ? <Skeleton width={90} height={26} radius={7} /> : display}
+        </span>
         <span className="stat-label-v2">{label}</span>
         <span className="stat-hint-v2">{hint}</span>
       </div>
@@ -84,7 +89,7 @@ export default function Dashboard() {
   const [resumen, setResumen] = useState(null);
 
   useEffect(() => {
-    getResumen().then(setResumen).catch(() => {});
+    conMinimo(getResumen()).then(setResumen).catch(() => {});
   }, []);
 
   const stats = [
