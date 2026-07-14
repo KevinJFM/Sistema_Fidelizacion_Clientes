@@ -87,20 +87,18 @@
 }
 
 .hero-pill {
-  background: linear-gradient(135deg, rgba(229,56,138,0.82) 0%, rgba(170,20,95,0.88) 100%);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
-  padding: 9px 20px;
-  color: #ffffff;
+  padding: 7px 16px;
+  color: #FFD700;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  box-shadow:
-    0 4px 14px rgba(0,0,0,0.35),
-    0 1px 0 rgba(255,255,255,0.18) inset,
-    0 -2px 0 rgba(0,0,0,0.20) inset;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.45);
+  text-shadow:
+    0 1px 4px rgba(0,0,0,0.6),
+    0 2px 10px rgba(0,0,0,0.45);
 }
 
 /* ===== Panel derecho — formulario ===== */
