@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { buscarCliente } from '../../servicios/servicioClientes';
+import { buscarCliente, buscarClientesPorNombre } from '../../servicios/servicioClientes';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
 import { exportarPDFCliente } from '../../utilidades/pdf';
 import { formatDui } from '../../utilidades/formato';
@@ -11,8 +11,9 @@ import './Usuarios.css';
 import './Transacciones.css';
 
 const TIPOS = [
-  { id: 1, label: 'DUI' },
-  { id: 2, label: 'Pasaporte' },
+  { id: 1,    label: 'DUI' },
+  { id: 2,    label: 'Pasaporte' },
+  { id: 'nombre', label: 'Nombre' },
 ];
 
 const estiloModal = {
@@ -103,25 +104,25 @@ function ModalDetalle({ t, onClose }) {
 }
 
 export default function HistorialCliente() {
-  const [busqueda, setBusqueda]   = useState({ id_tipo_documento: 1, numero_documento: '' });
-  const [cliente, setCliente]     = useState(null);
-  const [historial, setHistorial] = useState([]);
-  const [buscando, setBuscando]   = useState(false);
-  const [detalle, setDetalle]     = useState(null);
-  const [page, setPage]           = useState(1);
+  const [busqueda, setBusqueda]       = useState({ id_tipo_documento: 1, numero_documento: '' });
+  const [cliente, setCliente]         = useState(null);
+  const [historial, setHistorial]     = useState([]);
+  const [buscando, setBuscando]       = useState(false);
+  const [detalle, setDetalle]         = useState(null);
+  const [page, setPage]               = useState(1);
+  const [resultados, setResultados]   = useState([]); // lista al buscar por nombre
 
-  const handleBuscar = async () => {
-    if (!busqueda.numero_documento.trim()) {
-      toast.error('Ingresa el número de documento');
-      return;
-    }
+  const esBusquedaNombre = busqueda.id_tipo_documento === 'nombre';
+
+  const cargarPerfil = async (idTipo, numDoc) => {
     setBuscando(true);
     setCliente(null);
     setHistorial([]);
+    setResultados([]);
     try {
       const [c, h] = await conMinimo(Promise.all([
-        buscarCliente(busqueda.id_tipo_documento, busqueda.numero_documento.trim()),
-        listarTransacciones({ numero_documento: busqueda.numero_documento.trim() }),
+        buscarCliente(idTipo, numDoc),
+        listarTransacciones({ numero_documento: numDoc }),
       ]));
       setCliente(c);
       setHistorial(h);
@@ -130,6 +131,28 @@ export default function HistorialCliente() {
     } finally {
       setBuscando(false);
     }
+  };
+
+  const handleBuscar = async () => {
+    if (esBusquedaNombre) {
+      if (!busqueda.numero_documento.trim()) { toast.error('Ingresa un nombre'); return; }
+      setBuscando(true);
+      setCliente(null);
+      setHistorial([]);
+      try {
+        const lista = await conMinimo(buscarClientesPorNombre(busqueda.numero_documento.trim()));
+        if (lista.length === 0) toast.error('No se encontraron clientes con ese nombre');
+        else if (lista.length === 1) cargarPerfil(lista[0].id_tipo_documento, lista[0].numero_documento);
+        else setResultados(lista);
+      } catch (err) {
+        toast.error(mensajeError(err, 'Error en la búsqueda'));
+      } finally {
+        setBuscando(false);
+      }
+      return;
+    }
+    if (!busqueda.numero_documento.trim()) { toast.error('Ingresa el número de documento'); return; }
+    cargarPerfil(busqueda.id_tipo_documento, busqueda.numero_documento.trim());
   };
 
   const totalGastado    = historial.reduce((s, t) => s + Number(t.monto), 0);
@@ -164,13 +187,13 @@ export default function HistorialCliente() {
             <label>Tipo de documento</label>
             <select
               value={busqueda.id_tipo_documento}
-              onChange={(e) => setBusqueda({ id_tipo_documento: Number(e.target.value), numero_documento: '' })}
+              onChange={(e) => { const v = e.target.value; setBusqueda({ id_tipo_documento: v === 'nombre' ? 'nombre' : Number(v), numero_documento: '' }); setResultados([]); setCliente(null); setHistorial([]); }}
             >
               {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
           <div className="form-field">
-            <label>N° de documento</label>
+            <label>{esBusquedaNombre ? 'Nombre o apellido' : 'N° de documento'}</label>
             <div className="busqueda-input-row">
               <input
                 value={busqueda.numero_documento}
@@ -179,7 +202,7 @@ export default function HistorialCliente() {
                   numero_documento: busqueda.id_tipo_documento === 1 ? formatDui(e.target.value) : e.target.value,
                 })}
                 onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
-                placeholder={busqueda.id_tipo_documento === 1 ? '12345678-9' : 'N° de pasaporte'}
+                placeholder={esBusquedaNombre ? 'Ej: García, Juan...' : busqueda.id_tipo_documento === 1 ? '12345678-9' : 'N° de pasaporte'}
               />
               <button type="button" className="btn-primary" onClick={handleBuscar} disabled={buscando}>
                 {buscando ? '...' : 'Buscar'}
@@ -188,6 +211,37 @@ export default function HistorialCliente() {
           </div>
         </div>
       </div>
+
+      {/* Lista de resultados al buscar por nombre */}
+      {resultados.length > 1 && (
+        <div className="table-card" style={{ maxWidth: 560, marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
+            Se encontraron <strong>{resultados.length}</strong> clientes — selecciona uno:
+          </p>
+          {resultados.map((r) => (
+            <button
+              key={r.id_cliente}
+              onClick={() => cargarPerfil(r.id_tipo_documento, r.numero_documento)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                background: 'none', border: '1px solid #e5e7eb', borderRadius: 12,
+                padding: '10px 14px', marginBottom: 8, cursor: 'pointer', textAlign: 'left',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#EEF0FC'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+            >
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#0D1BB8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                {r.nombres.charAt(0)}{r.apellidos.charAt(0)}
+              </div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, color: '#0A1259', fontSize: 14 }}>{r.nombres} {r.apellidos}</p>
+                <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{r.tipo_documento}: {r.numero_documento} · {r.puntos_acumulados} pts</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Perfil del cliente */}
       {cliente && (

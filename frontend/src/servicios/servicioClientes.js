@@ -12,6 +12,11 @@ export const buscarCliente = async (id_tipo_documento, numero_documento) => {
   return data;
 };
 
+export const buscarClientesPorNombre = async (nombre) => {
+  const { data } = await api.get('/clientes/buscar-nombre', { params: { nombre } });
+  return data;
+};
+
 export const createCliente = async (cliente) => {
   const { data } = await api.post('/clientes', cliente);
   return data;

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   obtenerClientes,
   buscarClientePorDocumento,
+  buscarClientesPorNombre,
   crearCliente,
   actualizarCliente,
   eliminarCliente,
@@ -15,6 +16,8 @@ router.use(verificarToken);
 
 // Buscar por documento: admin, recepcionista y empleado (para consultar el perfil)
 router.get('/buscar', autorizarRoles('admin', 'recepcionista', 'empleado'), buscarClientePorDocumento);
+// Buscar por nombre/apellido: devuelve lista de coincidencias
+router.get('/buscar-nombre', autorizarRoles('admin', 'recepcionista', 'empleado'), buscarClientesPorNombre);
 
 // Gestión de clientes: solo admin y recepcionista
 router.get('/', autorizarRoles('admin', 'recepcionista'), obtenerClientes);

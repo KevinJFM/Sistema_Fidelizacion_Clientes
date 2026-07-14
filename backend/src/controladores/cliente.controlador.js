@@ -25,6 +25,31 @@ export const obtenerClientes = async (req, res) => {
   }
 };
 
+// Buscar clientes por nombre o apellido (devuelve lista)
+export const buscarClientesPorNombre = async (req, res) => {
+  try {
+    const { nombre } = req.query;
+    if (!nombre || nombre.trim().length < 2) {
+      return res.status(400).json({ message: 'Ingresa al menos 2 caracteres' });
+    }
+    const t = `%${nombre.trim()}%`;
+    const [filas] = await pool.query(
+      `SELECT c.id_cliente, c.id_tipo_documento, c.numero_documento,
+              c.nombres, c.apellidos, c.telefono, c.puntos_acumulados,
+              td.nombre AS tipo_documento
+       FROM clientes c
+       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
+       WHERE c.nombres LIKE ? OR c.apellidos LIKE ? OR CONCAT(c.nombres,' ',c.apellidos) LIKE ?
+       ORDER BY c.nombres, c.apellidos
+       LIMIT 20`,
+      [t, t, t]
+    );
+    return res.status(200).json(filas);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Buscar cliente por tipo y número de documento (consulta rápida)
 export const buscarClientePorDocumento = async (req, res) => {
   try {
