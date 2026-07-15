@@ -98,9 +98,144 @@
   font-weight: 500;
 }
 
+/* ===== Layout filas inferiores ===== */
+.dash-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ===== Tarjeta genérica del dashboard ===== */
+.dash-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 22px 24px;
+  box-shadow: 0 8px 24px rgba(13,27,184,0.06), inset 0 -2px 0 rgba(0,0,0,0.03);
+}
+
+.dash-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.dash-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--pd-text-dark);
+}
+
+.dash-card-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #EEF0FC;
+  color: #0D1BB8;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.dash-card-badge.promo-badge {
+  background: #FCE8F3;
+  color: #E5388A;
+}
+
+.dash-empty {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* ===== Top clientes ===== */
+.top-list { display: flex; flex-direction: column; gap: 10px; }
+
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.top-item:last-child { border-bottom: none; }
+
+.top-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.top-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.top-info { flex: 1; min-width: 0; }
+.top-name { margin: 0; font-size: 13px; font-weight: 700; color: var(--pd-text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-doc  { margin: 0; font-size: 11px; color: #9ca3af; }
+
+.top-pts {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0D1BB8;
+  white-space: nowrap;
+}
+.top-pts small { font-size: 10px; font-weight: 600; color: #9ca3af; margin-left: 2px; }
+
+/* ===== Promociones activas ===== */
+.promo-list { display: flex; flex-direction: column; gap: 10px; }
+
+.promo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fafafa;
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid #f0f0f0;
+}
+
+.promo-icon { font-size: 22px; flex-shrink: 0; }
+
+.promo-info { flex: 1; min-width: 0; }
+.promo-name { margin: 0; font-size: 13px; font-weight: 700; color: var(--pd-text-dark); }
+.promo-desc { margin: 2px 0 0; font-size: 11px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.promo-mult {
+  font-size: 18px;
+  font-weight: 900;
+  color: #E5388A;
+  white-space: nowrap;
+}
+.promo-mult small { font-size: 10px; color: #9ca3af; margin-left: 2px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .dash-row-2 { grid-template-columns: 1fr; }
+}
+
 /* Dark mode */
-[data-theme="dark"] .stat-card-v2 { background: #11152e; }
+[data-theme="dark"] .stat-card-v2  { background: #11152e; }
 [data-theme="dark"] .stat-label-v2 { color: #e8ebff; }
+[data-theme="dark"] .dash-card     { background: #11152e; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+[data-theme="dark"] .dash-card-title { color: #e8ebff; }
+[data-theme="dark"] .top-item      { border-color: #1e244a; }
+[data-theme="dark"] .top-name      { color: #e8ebff; }
+[data-theme="dark"] .promo-item    { background: #1e244a; border-color: #272e58; }
+[data-theme="dark"] .promo-name    { color: #e8ebff; }
 [data-theme="dark"] .dashboard-hero-overlay {
   background: linear-gradient(
     135deg,

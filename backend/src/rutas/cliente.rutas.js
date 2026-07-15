@@ -3,6 +3,7 @@ import {
   obtenerClientes,
   buscarClientePorDocumento,
   buscarClientesPorNombre,
+  getTopClientes,
   crearCliente,
   actualizarCliente,
   eliminarCliente,
@@ -18,6 +19,8 @@ router.use(verificarToken);
 router.get('/buscar', autorizarRoles('admin', 'recepcionista', 'empleado'), buscarClientePorDocumento);
 // Buscar por nombre/apellido: devuelve lista de coincidencias
 router.get('/buscar-nombre', autorizarRoles('admin', 'recepcionista', 'empleado'), buscarClientesPorNombre);
+// Top 5 clientes con más puntos (dashboard)
+router.get('/top', autorizarRoles('admin', 'recepcionista'), getTopClientes);
 
 // Gestión de clientes: solo admin y recepcionista
 router.get('/', autorizarRoles('admin', 'recepcionista'), obtenerClientes);

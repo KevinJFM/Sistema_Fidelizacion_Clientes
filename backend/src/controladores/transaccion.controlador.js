@@ -240,6 +240,25 @@ export const listarTransacciones = async (req, res) => {
   }
 };
 
+// Actividad de los últimos 7 días (para el gráfico del dashboard)
+export const getResumenSemanal = async (req, res) => {
+  try {
+    const [filas] = await pool.query(
+      `SELECT DATE(fecha) AS dia,
+              COUNT(*)                             AS transacciones,
+              COALESCE(SUM(monto), 0)              AS ventas,
+              COALESCE(SUM(puntos_otorgados), 0)   AS puntos
+       FROM transacciones
+       WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+       GROUP BY DATE(fecha)
+       ORDER BY dia ASC`
+    );
+    return res.status(200).json(filas);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Resumen del día (para el dashboard)
 export const obtenerResumen = async (req, res) => {
   try {

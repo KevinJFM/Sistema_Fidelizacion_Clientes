@@ -19,3 +19,8 @@ export const getRecompensas = async () => {
   const { data } = await api.get('/transacciones/recompensas');
   return data;
 };
+
+export const getResumenSemanal = async () => {
+  const { data } = await api.get('/transacciones/resumen-semanal');
+  return data;
+};
