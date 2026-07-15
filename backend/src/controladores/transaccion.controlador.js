@@ -61,7 +61,22 @@ export const crearTransaccion = async (req, res) => {
                OR (fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL AND CURDATE() BETWEEN fecha_inicio AND fecha_fin) )
        LIMIT 1`
     );
-    const promocion = filasPromocion[0] || null;
+    let promocion = filasPromocion[0] || null;
+
+    // Respetar el máximo de usos por cliente: si el cliente ya usó esta promoción
+    // tantas veces como el máximo definido, ya no se le vuelve a aplicar.
+    if (promocion) {
+      const maxUsos = Number(promocion.max_usos_cliente) || 0;
+      if (maxUsos > 0) {
+        const [usos] = await pool.query(
+          'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ?',
+          [id_cliente, promocion.id_escenario]
+        );
+        if (usos[0].total >= maxUsos) {
+          promocion = null; // ya alcanzó el máximo de usos de esta promoción
+        }
+      }
+    }
 
     // ============================================================
     //  MOTOR DE REGLAS POR PRIORIDAD

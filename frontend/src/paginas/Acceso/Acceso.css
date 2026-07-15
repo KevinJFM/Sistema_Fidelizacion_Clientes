@@ -305,20 +305,20 @@
 @media (max-width: 820px) {
   .login-root { flex-direction: column; }
   .login-hero {
-    flex: 0 0 280px;
-    min-height: 280px;
+    flex: 0 0 auto;
+    min-height: 300px;
     clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%);
   }
   .login-hero-content {
-    padding: 40px 24px 60px;
-    justify-content: flex-end;
+    padding: 44px 24px 56px;
+    justify-content: center;
     text-align: center;
   }
   .hero-title { font-size: 26px; }
   .hero-subtitle { font-size: 13px; margin-bottom: 16px; }
   .hero-logo-wrap { width: 72px; height: 72px; margin-bottom: 16px; }
   .login-side { flex: 1; align-items: flex-start; padding-top: 28px; }
-  .card-logo-mobile { display: flex; }
+  /* El logo de arriba (banner) ya se ve en móvil, así que ocultamos el de la tarjeta para no duplicarlo */
 }
 
 @media (max-width: 480px) {
