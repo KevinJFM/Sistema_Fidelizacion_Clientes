@@ -140,7 +140,8 @@ export default function Operadores() {
         num_personas: personas,
       });
       setResultado(r);
-      toast.success('Consumo registrado');
+      if (r.otorga_puntos) toast.success('Consumo registrado');
+      else toast('Registrado sin puntos (mínimo 12 personas)', { icon: '⚠️' });
       cargar();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al registrar');
@@ -316,16 +317,26 @@ export default function Operadores() {
                 <label>Cantidad de personas</label>
                 <input type="number" min="0" value={grupo.num_personas}
                   onChange={(e) => setGrupo({ ...grupo, num_personas: e.target.value })} />
+                <small style={{ color: '#6b7280' }}>Se otorgan puntos a partir de 12 personas.</small>
               </div>
 
               {resultado ? (
-                <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
-                    <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados (por visita)</span>
-                    <strong style={{ color: '#16a34a' }}>+{Number(resultado.puntos_otorgados).toFixed(2)}</strong>
+                resultado.otorga_puntos ? (
+                  <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16 }}>
+                      <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados (por visita)</span>
+                      <strong style={{ color: '#16a34a' }}>+{Number(resultado.puntos_otorgados).toFixed(2)}</strong>
+                    </div>
+                    <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
                   </div>
-                  <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
-                </div>
+                ) : (
+                  <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                    <span style={{ fontWeight: 700, color: '#b45309' }}>
+                      Visita registrada sin puntos: se requieren mínimo {resultado.minimo_personas} personas.
+                    </span>
+                    <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
+                  </div>
+                )
               ) : null}
 
               <div className="modal-actions">

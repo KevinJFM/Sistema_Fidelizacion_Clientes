@@ -5,8 +5,10 @@ const ESTADO_ACTIVO = 1;
 const ESTADO_INACTIVO = 2;
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Regla FIJA del sistema (no editable): el operador gana puntos por VISITA registrada.
+// Regla FIJA del sistema (no editable): el operador gana puntos por VISITA registrada,
+// siempre que traiga el mínimo de personas. Si trae menos, la visita se registra pero sin puntos.
 const PUNTOS_POR_VISITA = 100;
+const MINIMO_PERSONAS = 12;
 
 // ===================== CRUD de operadores =====================
 
@@ -123,8 +125,10 @@ export const registrarConsumoOperador = async (req, res) => {
       return res.status(400).json({ message: 'El operador no está activo' });
     }
 
-    // Regla fija: 100 puntos por cada visita registrada
-    const puntosOtorgados = PUNTOS_POR_VISITA;
+    // Regla fija: 100 puntos por visita, SOLO si trae el mínimo de personas.
+    // Si trae menos, se registra la visita pero no se otorgan puntos.
+    const otorgaPuntos = personas >= MINIMO_PERSONAS;
+    const puntosOtorgados = otorgaPuntos ? PUNTOS_POR_VISITA : 0;
     const saldoFinal = Number(filasOp[0].puntos_acumulados) + puntosOtorgados;
 
     // Escritura atómica
@@ -144,9 +148,13 @@ export const registrarConsumoOperador = async (req, res) => {
       await conexion.commit();
 
       return res.status(201).json({
-        message: 'Visita registrada correctamente',
+        message: otorgaPuntos
+          ? 'Visita registrada correctamente'
+          : `Visita registrada. No se otorgaron puntos: se requieren mínimo ${MINIMO_PERSONAS} personas.`,
         id_transaccion_op: resultado.insertId,
         puntos_otorgados: puntosOtorgados,
+        otorga_puntos: otorgaPuntos,
+        minimo_personas: MINIMO_PERSONAS,
         saldo_puntos: Number(saldoFinal.toFixed(2)),
       });
     } catch (e) {
