@@ -25,6 +25,24 @@ export const obtenerClientes = async (req, res) => {
   }
 };
 
+// Top 5 clientes con más puntos (para el dashboard)
+export const getTopClientes = async (req, res) => {
+  try {
+    const [filas] = await pool.query(
+      `SELECT c.id_cliente, c.nombres, c.apellidos, c.puntos_acumulados,
+              td.nombre AS tipo_documento, c.numero_documento
+       FROM clientes c
+       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
+       WHERE c.id_estado = 1
+       ORDER BY c.puntos_acumulados DESC
+       LIMIT 5`
+    );
+    return res.status(200).json(filas);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Buscar clientes por nombre o apellido (devuelve lista)
 export const buscarClientesPorNombre = async (req, res) => {
   try {

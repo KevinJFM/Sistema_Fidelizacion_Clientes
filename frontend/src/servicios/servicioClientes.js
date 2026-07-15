@@ -17,6 +17,11 @@ export const buscarClientesPorNombre = async (nombre) => {
   return data;
 };
 
+export const getTopClientes = async () => {
+  const { data } = await api.get('/clientes/top');
+  return data;
+};
+
 export const createCliente = async (cliente) => {
   const { data } = await api.post('/clientes', cliente);
   return data;
