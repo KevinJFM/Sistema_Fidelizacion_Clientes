@@ -2,8 +2,27 @@ import pool from '../configuracion/bd.js';
 
 export const obtenerPromociones = async (req, res) => {
   try {
+    // El estado se calcula al momento (según el día de hoy y las fechas), así nunca queda desactualizado.
     const [rows] = await pool.query(
-      `SELECT * FROM promociones ORDER BY id_escenario DESC`
+      `SELECT *,
+              CASE
+                WHEN activo = 0 THEN 'inactivo'
+                WHEN fecha_especial IS NOT NULL THEN
+                  CASE
+                    WHEN fecha_especial = CURDATE() THEN 'activo-hoy'
+                    WHEN fecha_especial > CURDATE() THEN 'programada'
+                    ELSE 'finalizada'
+                  END
+                WHEN fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL THEN
+                  CASE
+                    WHEN CURDATE() < fecha_inicio THEN 'programada'
+                    WHEN CURDATE() > fecha_fin THEN 'finalizada'
+                    ELSE 'activo-hoy'
+                  END
+                ELSE 'programada'
+              END AS estado
+       FROM promociones
+       ORDER BY id_escenario DESC`
     );
     return res.status(200).json(rows);
   } catch {

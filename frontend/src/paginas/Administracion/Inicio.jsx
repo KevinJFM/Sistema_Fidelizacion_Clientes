@@ -78,7 +78,7 @@ export default function Dashboard() {
   useEffect(() => {
     conMinimo(getResumen()).then(setResumen).catch(() => {});
     getTopClientes().then(setTop).catch(() => {});
-    getPromociones().then((p) => setPromos(p.filter((x) => x.activo))).catch(() => {});
+    getPromociones().then((p) => setPromos(p.filter((x) => x.estado === 'activo-hoy'))).catch(() => {});
   }, []);
 
   const stats = [
@@ -160,13 +160,15 @@ export default function Dashboard() {
             : (
               <div className="promo-list">
                 {promociones.map((p) => (
-                  <div key={p.id_promocion} className="promo-item">
+                  <div key={p.id_escenario} className="promo-item">
                     <div className="promo-icon">🎁</div>
                     <div className="promo-info">
                       <p className="promo-name">{p.nombre}</p>
-                      <p className="promo-desc">{p.descripcion || 'Sin descripción'}</p>
+                      {Number(p.descuento_extra) > 0 && (
+                        <p className="promo-desc">{Number(p.descuento_extra)}% de descuento extra</p>
+                      )}
                     </div>
-                    <div className="promo-mult">x{p.multiplicador}<small>pts</small></div>
+                    <div className="promo-mult">+{p.puntos_extra}<small>pts</small></div>
                   </div>
                 ))}
               </div>

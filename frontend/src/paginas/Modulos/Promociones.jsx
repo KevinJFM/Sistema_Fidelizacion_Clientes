@@ -29,27 +29,6 @@ function formatFecha(fechaISO) {
   return new Date(fechaISO).toLocaleDateString('es-SV');
 }
 
-function estadoHoy(promo) {
-  const hoy = new Date().toISOString().slice(0, 10);
-  if (!promo.activo) return 'inactivo';
-
-  // Fecha única
-  if (promo.fecha_especial) {
-    const f = promo.fecha_especial.slice(0, 10);
-    if (f === hoy) return 'activo-hoy';
-    return f > hoy ? 'programada' : 'finalizada';
-  }
-  // Rango de fechas
-  if (promo.fecha_inicio && promo.fecha_fin) {
-    const ini = promo.fecha_inicio.slice(0, 10);
-    const fin = promo.fecha_fin.slice(0, 10);
-    if (hoy < ini) return 'programada';
-    if (hoy > fin) return 'finalizada';
-    return 'activo-hoy';
-  }
-  return 'programada';
-}
-
 function detectarTipo(promo) {
   return promo.fecha_especial ? 'unica' : 'rango';
 }
@@ -247,7 +226,7 @@ export default function Promociones() {
               {cargando ? (
                 <SkeletonFilas columnas={8} filas={8} />
               ) : pageItems.map((p) => {
-                const estado = estadoHoy(p);
+                const estado = p.estado;
                 return (
                   <tr key={p.id_escenario}>
                     <td><strong>{p.nombre}</strong></td>
