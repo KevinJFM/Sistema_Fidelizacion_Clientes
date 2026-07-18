@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { loginCliente, mensajeError } from '../servicios/servicioPortal';
+import Logo from '../componentes/Logo';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function Login() {
     <div className="pt-login">
       <div className="pt-login-card">
         <div className="pt-logo">
-          <img src="/icono.svg" alt="Punta Diamantes" width="64" height="64" />
+          <Logo size={120} color="#E5388A" />
         </div>
         <h1 className="pt-brand">Punta Diamantes</h1>
         <p className="pt-sub">Consulta tus puntos de fidelidad</p>
@@ -76,8 +77,24 @@ export default function Login() {
                 placeholder="••••"
                 autoComplete="off"
               />
-              <button type="button" className="pt-ver" onClick={() => setVerPin((v) => !v)} tabIndex={-1}>
-                {verPin ? 'Ocultar' : 'Ver'}
+              <button
+                type="button"
+                className="pt-ver"
+                onClick={() => setVerPin((v) => !v)}
+                tabIndex={-1}
+                aria-label={verPin ? 'Ocultar PIN' : 'Ver PIN'}
+              >
+                {verPin ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
               </button>
             </div>
           </label>
