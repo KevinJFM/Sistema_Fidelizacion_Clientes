@@ -10,6 +10,7 @@ import rutasUbicaciones from "./rutas/ubicacion.rutas.js";
 import rutasConfiguracion from "./rutas/configuracion.rutas.js";
 import rutasPromociones from "./rutas/promocion.rutas.js";
 import rutasOperadores from "./rutas/operador.rutas.js";
+import rutasPortalCliente from "./rutas/portalCliente.rutas.js";
 
 const app = express();
 
@@ -19,10 +20,23 @@ app.set("trust proxy", 1);
 // Seguridad de headers HTTP
 app.use(helmet());
 
-// CORS restringido al frontend + permite enviar cookies
+// Orígenes permitidos: el panel del personal y el portal del cliente.
+// CLIENT_URL puede traer varias URLs separadas por coma (ej: "https://app...,https://puntos...").
+const origenesPermitidos = (process.env.CLIENT_URL || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+// CORS restringido a esos orígenes + permite enviar cookies
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      // Permite herramientas sin origin (Postman, curl) y los orígenes de la lista
+      if (!origin || origenesPermitidos.length === 0 || origenesPermitidos.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Origen no permitido por CORS"));
+    },
     credentials: true,
   })
 );
@@ -45,5 +59,6 @@ app.use("/api/ubicaciones", rutasUbicaciones);
 app.use("/api/configuracion", rutasConfiguracion);
 app.use("/api/promociones", rutasPromociones);
 app.use("/api/operadores", rutasOperadores);
+app.use("/api/portal", rutasPortalCliente);
 
 export default app;
