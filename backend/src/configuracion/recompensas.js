@@ -7,12 +7,12 @@
 export const VALOR_PUNTO = 0.05;
 
 export const RECOMPENSAS = [
-  { id: 1, nombre: 'Pasanoche (Dom a Jue)',                puntos: 700 },
-  { id: 2, nombre: 'Pasadía (Dom a Jue)',                  puntos: 800 },
-  { id: 3, nombre: 'Estadía 24h · 2 personas (Dom a Jue)', puntos: 1000 },
-  { id: 4, nombre: 'Pasanoche (Vie o Sáb)',                puntos: 800 },
-  { id: 5, nombre: 'Pasadía (Vie o Sáb)',                  puntos: 800 },
-  { id: 6, nombre: 'Estadía 24h · 2 personas (Vie o Sáb)', puntos: 1200 },
+  { id: 1, nombre: 'Pasanoche (Dom a Jue)',                tipo: 'Estándar', puntos: 700 },
+  { id: 2, nombre: 'Pasadía (Dom a Jue)',                  tipo: 'Estándar', puntos: 800 },
+  { id: 3, nombre: 'Estadía 24h · 2 personas (Dom a Jue)', tipo: 'Estándar', puntos: 1000 },
+  { id: 4, nombre: 'Pasanoche (Vie o Sáb)',                tipo: 'Estándar', puntos: 800 },
+  { id: 5, nombre: 'Pasadía (Vie o Sáb)',                  tipo: 'Estándar', puntos: 800 },
+  { id: 6, nombre: 'Estadía 24h · 2 personas (Vie o Sáb)', tipo: 'Estándar', puntos: 1200 },
 ];
 
 // Devuelve la recompensa con su valor calculado ($0.05 por punto)

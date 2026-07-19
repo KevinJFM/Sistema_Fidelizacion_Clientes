@@ -129,6 +129,24 @@ export const misPuntos = async (req, res) => {
   }
 };
 
+// Promociones que están activas HOY (para mostrarlas al cliente)
+export const promocionesActivas = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id_escenario, nombre, puntos_extra, descuento_extra,
+              fecha_especial, fecha_inicio, fecha_fin
+       FROM promociones
+       WHERE activo = 1
+         AND ( fecha_especial = CURDATE()
+               OR (fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL AND CURDATE() BETWEEN fecha_inicio AND fecha_fin) )
+       ORDER BY id_escenario DESC`
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Historial de movimientos de puntos del cliente logueado
 export const misMovimientos = async (req, res) => {
   try {
