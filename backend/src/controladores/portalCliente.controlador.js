@@ -2,6 +2,19 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../configuracion/bd.js';
 import { RECOMPENSAS, conValor, VALOR_PUNTO } from '../configuracion/recompensas.js';
+import { enviarCodigoAcceso } from '../configuracion/correo.js';
+
+// Código de acceso (OTP) por correo
+const OTP_MINUTOS = 5;         // vigencia del código
+const OTP_MAX_INTENTOS = 5;    // intentos de verificación por código
+
+// Oculta el correo para mostrarlo: valeria@gmail.com -> va*****@gmail.com
+const enmascararCorreo = (correo) => {
+  if (!correo || !correo.includes('@')) return 'tu correo';
+  const [usuario, dominio] = correo.split('@');
+  const visible = usuario.slice(0, 2);
+  return `${visible}${'*'.repeat(Math.max(1, usuario.length - 2))}@${dominio}`;
+};
 
 // ============================================================
 //  Portal de autoservicio del cliente (Fase 2)
@@ -18,6 +31,119 @@ const firmarTokenCliente = (cliente) =>
     process.env.JWT_SECRET,
     { expiresIn: '1d' } // el portal no usa refresh; token de 1 día por comodidad
   );
+
+// ===== Acceso con código por correo (OTP) =====
+
+// Paso 1: el cliente ingresa su documento; se le envía un código de 6 dígitos al correo.
+export const solicitarCodigo = async (req, res) => {
+  try {
+    const { tipo_documento, numero_documento } = req.body;
+    if (!tipo_documento || !numero_documento) {
+      return res.status(400).json({ message: 'Ingresa tu documento' });
+    }
+
+    const [filas] = await pool.query(
+      `SELECT c.id_cliente, c.correo, c.id_estado
+       FROM clientes c
+       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
+       WHERE td.nombre = ? AND c.numero_documento = ?`,
+      [tipo_documento, numero_documento]
+    );
+
+    if (filas.length === 0) {
+      return res.status(404).json({ message: 'No encontramos ese documento. Contacta al hotel.' });
+    }
+    const cliente = filas[0];
+    if (cliente.id_estado !== ESTADO_ACTIVO) {
+      return res.status(403).json({ message: 'Tu cuenta no está activa. Contacta al hotel.' });
+    }
+    if (!cliente.correo) {
+      return res.status(400).json({ message: 'No tienes un correo registrado. Contacta al hotel.' });
+    }
+
+    // Código de 6 dígitos, guardado hasheado con vencimiento
+    const codigo = String(Math.floor(100000 + Math.random() * 900000));
+    const codigoHash = await bcrypt.hash(codigo, 10);
+    const expira = new Date(Date.now() + OTP_MINUTOS * 60 * 1000);
+
+    await pool.query(
+      'UPDATE clientes SET otp_hash = ?, otp_expira = ?, otp_intentos = 0 WHERE id_cliente = ?',
+      [codigoHash, expira, cliente.id_cliente]
+    );
+
+    const enviado = await enviarCodigoAcceso(cliente.correo, codigo, OTP_MINUTOS);
+    // En desarrollo, si el correo no está configurado, el código se ve en la consola del backend.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n[OTP] Código para ${cliente.correo}: ${codigo}  (vence en ${OTP_MINUTOS} min)\n`);
+    }
+
+    return res.status(200).json({
+      message: 'Código enviado',
+      destino: enmascararCorreo(cliente.correo),
+      minutos: OTP_MINUTOS,
+      modo_dev: !enviado && process.env.NODE_ENV !== 'production',
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// Paso 2: el cliente ingresa el código; si es correcto y no venció, se le da acceso.
+export const verificarCodigo = async (req, res) => {
+  try {
+    const { tipo_documento, numero_documento, codigo } = req.body;
+    if (!tipo_documento || !numero_documento || !codigo) {
+      return res.status(400).json({ message: 'Faltan datos' });
+    }
+
+    const [filas] = await pool.query(
+      `SELECT c.id_cliente, c.nombres, c.apellidos, c.numero_documento,
+              c.otp_hash, c.otp_expira, c.otp_intentos, c.id_estado
+       FROM clientes c
+       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
+       WHERE td.nombre = ? AND c.numero_documento = ?`,
+      [tipo_documento, numero_documento]
+    );
+
+    if (filas.length === 0) {
+      return res.status(404).json({ message: 'Documento no encontrado' });
+    }
+    const cliente = filas[0];
+    if (cliente.id_estado !== ESTADO_ACTIVO) {
+      return res.status(403).json({ message: 'Tu cuenta no está activa. Contacta al hotel.' });
+    }
+    if (!cliente.otp_hash || !cliente.otp_expira) {
+      return res.status(400).json({ message: 'Solicita un código primero.' });
+    }
+    if (new Date(cliente.otp_expira) < new Date()) {
+      return res.status(400).json({ message: 'El código venció. Solicita uno nuevo.' });
+    }
+    if (cliente.otp_intentos >= OTP_MAX_INTENTOS) {
+      return res.status(429).json({ message: 'Demasiados intentos. Solicita un código nuevo.' });
+    }
+
+    const valido = await bcrypt.compare(String(codigo), cliente.otp_hash);
+    if (!valido) {
+      await pool.query('UPDATE clientes SET otp_intentos = otp_intentos + 1 WHERE id_cliente = ?', [cliente.id_cliente]);
+      return res.status(401).json({ message: 'Código incorrecto' });
+    }
+
+    // Correcto: se limpia el código (un solo uso) y se emite el token
+    await pool.query(
+      'UPDATE clientes SET otp_hash = NULL, otp_expira = NULL, otp_intentos = 0 WHERE id_cliente = ?',
+      [cliente.id_cliente]
+    );
+    const token = firmarTokenCliente(cliente);
+
+    return res.status(200).json({
+      message: 'Bienvenido',
+      token,
+      cliente: { id_cliente: cliente.id_cliente, nombres: cliente.nombres, apellidos: cliente.apellidos },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
 
 // Login del cliente por tipo de documento (DUI/Pasaporte) + número + PIN.
 // Si el cliente aún no tiene PIN, el primero que ingrese queda guardado (primera vez).

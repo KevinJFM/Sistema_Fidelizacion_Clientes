@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import { loginCliente, misPuntos, misMovimientos, promocionesActivas } from '../controladores/portalCliente.controlador.js';
+import { loginCliente, solicitarCodigo, verificarCodigo, misPuntos, misMovimientos, promocionesActivas } from '../controladores/portalCliente.controlador.js';
 import { verificarToken, autorizarRoles } from '../middlewares/autenticacion.middleware.js';
 import { limitadorInicioSesion } from '../middlewares/limiteIntentos.middleware.js';
 
 const router = Router();
 
-// Público: login del cliente (con límite de intentos)
+// Público: acceso con código por correo (DUI + código de 6 dígitos)
+router.post('/solicitar-codigo', limitadorInicioSesion, solicitarCodigo);
+router.post('/verificar-codigo', limitadorInicioSesion, verificarCodigo);
+
+// Público: login del cliente por PIN (lo usa el portal web; con límite de intentos)
 router.post('/login', limitadorInicioSesion, loginCliente);
 
 // Protegido: solo el propio cliente (rol 'cliente')
