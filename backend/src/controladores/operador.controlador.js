@@ -1,5 +1,4 @@
 import pool from '../configuracion/bd.js';
-import { buscarRecompensa } from '../configuracion/recompensas.js';
 
 const ESTADO_ACTIVO = 1;
 const ESTADO_INACTIVO = 2;
@@ -180,10 +179,14 @@ export const canjearOperador = async (req, res) => {
       return res.status(400).json({ message: 'Operador y recompensa requeridos' });
     }
 
-    const recompensa = buscarRecompensa(id_recompensa);
-    if (!recompensa) {
+    const [filasR] = await pool.query(
+      'SELECT id, nombre, tipo, puntos FROM recompensas WHERE id = ? AND activo = 1',
+      [Number(id_recompensa)]
+    );
+    if (!filasR.length) {
       return res.status(400).json({ message: 'Recompensa no válida' });
     }
+    const recompensa = filasR[0];
 
     const [filasOp] = await pool.query(
       'SELECT * FROM operadores_turisticos WHERE id_operador = ?',

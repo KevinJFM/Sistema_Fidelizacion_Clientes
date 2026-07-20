@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../configuracion/bd.js';
-import { RECOMPENSAS, conValor, VALOR_PUNTO } from '../configuracion/recompensas.js';
+import { VALOR_PUNTO } from '../configuracion/recompensas.js';
 import { enviarCodigoAcceso } from '../configuracion/correo.js';
 
 // Código de acceso (OTP) por correo
@@ -231,9 +231,13 @@ export const misPuntos = async (req, res) => {
     const cliente = filas[0];
     const puntos = Number(cliente.puntos_acumulados);
 
-    // Catálogo con el valor en $ y si el cliente ya puede canjearlo
-    const recompensas = RECOMPENSAS.map((r) => ({
-      ...conValor(r),
+    // Catálogo desde BD con el valor en $ y si el cliente puede canjearlo
+    const [filasR] = await pool.query(
+      'SELECT id, nombre, tipo, puntos FROM recompensas WHERE activo = 1 ORDER BY puntos ASC'
+    );
+    const recompensas = filasR.map((r) => ({
+      ...r,
+      valor: Number((r.puntos * VALOR_PUNTO).toFixed(2)),
       alcanzable: puntos >= r.puntos,
       faltan: puntos >= r.puntos ? 0 : r.puntos - puntos,
     }));

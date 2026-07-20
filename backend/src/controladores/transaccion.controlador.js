@@ -1,5 +1,4 @@
 import pool from '../configuracion/bd.js';
-import { RECOMPENSAS, conValor, buscarRecompensa } from '../configuracion/recompensas.js';
 
 // Regla FIJA del sistema (no editable): ganar $1 de consumo = 1 punto.
 // (El valor del punto $0.05 y el catálogo de canje viven en recompensas.js)
@@ -11,9 +10,17 @@ const obtenerConfig = async (clave, porDefecto) => {
   return filas.length ? filas[0].valor : porDefecto;
 };
 
-// Listar el catálogo de recompensas (fijo) con su valor en $
-export const listarRecompensas = (req, res) => {
-  return res.status(200).json(RECOMPENSAS.map(conValor));
+// Listar recompensas activas desde la BD (ruta legacy mantenida por compatibilidad)
+export const listarRecompensas = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, nombre, tipo, puntos FROM recompensas WHERE activo = 1 ORDER BY puntos ASC'
+    );
+    const VALOR_PUNTO = 0.05;
+    return res.status(200).json(rows.map((r) => ({ ...r, valor: Number((r.puntos * VALOR_PUNTO).toFixed(2)) })));
+  } catch {
+    return res.status(500).json({ message: 'Error al listar recompensas' });
+  }
 };
 
 // Registrar una transacción (otorga/canjea puntos de forma atómica)
@@ -94,10 +101,15 @@ export const crearTransaccion = async (req, res) => {
     let descuento               = 0;
     let puntosCanjeados         = 0;
 
-    // Recompensa elegida para canjear (del catálogo fijo). Validaciones:
-    const recompensa = id_recompensa ? buscarRecompensa(id_recompensa) : null;
+    // Recompensa elegida para canjear (consultada desde la BD). Validaciones:
+    let recompensa = null;
     if (id_recompensa) {
-      if (!recompensa) return res.status(400).json({ message: 'Recompensa no válida' });
+      const [filasR] = await pool.query(
+        'SELECT id, nombre, tipo, puntos FROM recompensas WHERE id = ? AND activo = 1',
+        [Number(id_recompensa)]
+      );
+      if (!filasR.length) return res.status(400).json({ message: 'Recompensa no válida' });
+      recompensa = filasR[0];
       if (cliente.puntos_acumulados < recompensa.puntos) {
         return res.status(400).json({ message: 'El cliente no tiene puntos suficientes para esa recompensa' });
       }
