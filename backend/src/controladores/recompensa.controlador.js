@@ -29,13 +29,15 @@ export const listarTodasRecompensas = async (req, res) => {
 
 export const crearRecompensa = async (req, res) => {
   try {
-    const { nombre, tipo = 'Estándar', puntos } = req.body;
-    if (!nombre?.trim() || !puntos || Number(puntos) <= 0) {
-      return res.status(400).json({ message: 'Nombre y puntos (> 0) son requeridos' });
+    const { nombre, tipo, puntos } = req.body;
+    const tipoFinal = (tipo || 'Estándar').trim();
+    const puntosNum = Number(puntos);
+    if (!nombre?.trim() || !puntosNum || puntosNum <= 0 || puntosNum > 999999) {
+      return res.status(400).json({ message: 'Nombre y puntos válidos (1–999999) son requeridos' });
     }
     const [result] = await pool.query(
       'INSERT INTO recompensas (nombre, tipo, puntos) VALUES (?, ?, ?)',
-      [nombre.trim(), tipo.trim(), Number(puntos)]
+      [nombre.trim(), tipoFinal, puntosNum]
     );
     const [rows] = await pool.query('SELECT * FROM recompensas WHERE id = ?', [result.insertId]);
     return res.status(201).json(conValor(rows[0]));
@@ -47,16 +49,19 @@ export const crearRecompensa = async (req, res) => {
 export const actualizarRecompensa = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, tipo = 'Estándar', puntos, activo } = req.body;
-    if (!nombre?.trim() || !puntos || Number(puntos) <= 0) {
-      return res.status(400).json({ message: 'Nombre y puntos (> 0) son requeridos' });
+    const { nombre, tipo, puntos, activo } = req.body;
+    const tipoFinal = (tipo || 'Estándar').trim();
+    const puntosNum = Number(puntos);
+    if (!nombre?.trim() || !puntosNum || puntosNum <= 0 || puntosNum > 999999) {
+      return res.status(400).json({ message: 'Nombre y puntos válidos (1–999999) son requeridos' });
     }
+    const [existe] = await pool.query('SELECT id FROM recompensas WHERE id = ?', [id]);
+    if (!existe.length) return res.status(404).json({ message: 'Recompensa no encontrada' });
     await pool.query(
       'UPDATE recompensas SET nombre = ?, tipo = ?, puntos = ?, activo = ? WHERE id = ?',
-      [nombre.trim(), tipo.trim(), Number(puntos), activo !== undefined ? Number(activo) : 1, id]
+      [nombre.trim(), tipoFinal, puntosNum, activo !== undefined ? Number(activo) : 1, id]
     );
     const [rows] = await pool.query('SELECT * FROM recompensas WHERE id = ?', [id]);
-    if (!rows.length) return res.status(404).json({ message: 'Recompensa no encontrada' });
     return res.json(conValor(rows[0]));
   } catch {
     return res.status(500).json({ message: 'Error al actualizar recompensa' });

@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { iniciarSesion, registrarUsuario, renovarToken, cerrarSesion } from '../controladores/autenticacion.controlador.js';
 import { limitadorInicioSesion } from '../middlewares/limiteIntentos.middleware.js';
+import { verificarToken } from '../middlewares/autenticacion.middleware.js';
+import { autorizarRoles } from '../middlewares/rol.middleware.js';
 
 const router = Router();
 
 router.post('/login', limitadorInicioSesion, iniciarSesion);
-router.post('/register', registrarUsuario);
+router.post('/register', verificarToken, autorizarRoles('admin'), registrarUsuario);
 router.post('/refresh', renovarToken);
 router.post('/logout', cerrarSesion);
 
