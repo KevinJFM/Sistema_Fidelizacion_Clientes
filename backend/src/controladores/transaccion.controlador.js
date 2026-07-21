@@ -1,4 +1,5 @@
 import pool from '../configuracion/bd.js';
+import { enviarPush } from '../configuracion/push.js';
 
 // Regla FIJA del sistema (no editable): ganar $1 de consumo = 1 punto.
 // (El valor del punto $0.05 y el catálogo de canje viven en recompensas.js)
@@ -192,6 +193,15 @@ export const crearTransaccion = async (req, res) => {
       }
 
       await conexion.commit();
+
+      // Notificación push al cliente (si tiene la app instalada y token registrado)
+      if (cliente.push_token) {
+        if (puntosCanjeados > 0) {
+          enviarPush(cliente.push_token, 'Canje realizado', `Canjeaste ${recompensa.nombre}. Tu saldo es ${saldoFinal} pts.`);
+        } else if (puntosOtorgados > 0) {
+          enviarPush(cliente.push_token, `¡Ganaste ${puntosOtorgados} puntos!`, `Tu nuevo saldo es ${saldoFinal} pts.`);
+        }
+      }
 
       return res.status(201).json({
         message: 'Transacción registrada correctamente',
