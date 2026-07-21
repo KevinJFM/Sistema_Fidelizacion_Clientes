@@ -5,7 +5,6 @@ import {
   getTodasRecompensas,
   crearRecompensa,
   actualizarRecompensa,
-  eliminarRecompensa,
 } from '../../servicios/servicioRecompensas';
 import Skeleton from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
@@ -134,24 +133,16 @@ export default function Configuracion() {
     }
   };
 
-  const handleEliminar = async (id) => {
-    if (!window.confirm('¿Eliminar este tipo de canje? No afectará el historial existente.')) return;
+  const handleToggleActivo = async (r) => {
+    const nuevoEstado = r.activo ? 0 : 1;
+    const msg = nuevoEstado ? '¿Reactivar este tipo de canje?' : '¿Desactivar este tipo de canje? Seguirá guardado y podrás reactivarlo cuando quieras.';
+    if (!window.confirm(msg)) return;
     try {
-      await eliminarRecompensa(id);
-      setRecompensas((prev) => prev.map((r) => r.id === id ? { ...r, activo: 0 } : r));
-      toast.success('Tipo de canje eliminado');
-    } catch {
-      toast.error('Error al eliminar');
-    }
-  };
-
-  const handleReactivar = async (r) => {
-    try {
-      const actualizado = await actualizarRecompensa(r.id, { nombre: r.nombre, tipo: r.tipo, puntos: r.puntos, activo: 1 });
+      const actualizado = await actualizarRecompensa(r.id, { nombre: r.nombre, tipo: r.tipo, puntos: r.puntos, activo: nuevoEstado });
       setRecompensas((prev) => prev.map((x) => x.id === r.id ? actualizado : x));
-      toast.success('Tipo de canje reactivado');
+      toast.success(nuevoEstado ? 'Tipo de canje reactivado' : 'Tipo de canje desactivado');
     } catch {
-      toast.error('Error al reactivar');
+      toast.error('Error al cambiar el estado');
     }
   };
 
@@ -264,22 +255,27 @@ export default function Configuracion() {
             {recompensas.map((r) => (
               <div key={r.id} className={`recompensa-item ${r.activo ? '' : 'recompensa-inactiva'}`}>
                 <div className="recompensa-info">
-                  <span className="recompensa-nombre">{r.nombre}</span>
+                  <div className="recompensa-nombre-row">
+                    <span className="recompensa-nombre">{r.nombre}</span>
+                    {!r.activo && <span className="badge-inactivo">Inactivo</span>}
+                  </div>
                   <span className="recompensa-meta">{r.tipo} · {r.puntos} pts · ${r.valor?.toFixed(2)}</span>
                 </div>
                 <div className="recompensa-acciones">
-                  {r.activo ? (
-                    <>
-                      <button className="btn-icon" title="Editar" onClick={() => iniciarEdicion(r)}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      <button className="btn-icon btn-icon-danger" title="Eliminar" onClick={() => handleEliminar(r.id)}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                      </button>
-                    </>
-                  ) : (
-                    <button className="btn-ghost btn-sm" onClick={() => handleReactivar(r)}>Reactivar</button>
-                  )}
+                  <button className="btn-icon" title="Editar" onClick={() => iniciarEdicion(r)}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button
+                    className={`btn-icon ${r.activo ? 'btn-icon-warning' : 'btn-icon-success'}`}
+                    title={r.activo ? 'Desactivar' : 'Reactivar'}
+                    onClick={() => handleToggleActivo(r)}
+                  >
+                    {r.activo ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
                 </div>
               </div>
             ))}

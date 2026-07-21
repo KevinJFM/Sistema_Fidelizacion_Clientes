@@ -235,7 +235,25 @@
 }
 .btn-icon:hover { border-color: var(--pd-teal); color: var(--pd-teal); background: #f0fdfa; }
 
-.btn-icon-danger:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+.btn-icon-danger:hover  { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+.btn-icon-warning:hover { border-color: #f59e0b; color: #f59e0b; background: #fffbeb; }
+.btn-icon-success:hover { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+
+.recompensa-nombre-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-inactivo {
+  font-size: 10px;
+  font-weight: 700;
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-radius: 6px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
 
 /* Dark mode */
 [data-theme="dark"] .recompensa-item { background: #1e244a; border-color: #272e58; }
