@@ -104,6 +104,7 @@ CREATE TABLE `clientes` (
   `otp_hash` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `otp_expira` datetime DEFAULT NULL,
   `otp_intentos` int NOT NULL DEFAULT '0',
+  `push_token` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `id_estado` int NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
