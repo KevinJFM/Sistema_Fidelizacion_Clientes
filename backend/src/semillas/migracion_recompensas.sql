@@ -1,6 +1,8 @@
 -- Migración: tabla de recompensas editables desde configuración
 -- Reemplaza el catálogo fijo de recompensas.js por filas en BD.
 
+SET NAMES utf8mb4;
+
 CREATE TABLE IF NOT EXISTS recompensas (
   id        INT AUTO_INCREMENT PRIMARY KEY,
   nombre    VARCHAR(120) NOT NULL,
@@ -8,7 +10,7 @@ CREATE TABLE IF NOT EXISTS recompensas (
   puntos    INT          NOT NULL,
   activo    TINYINT(1)   NOT NULL DEFAULT 1,
   creado_en DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Semilla con los datos actuales del hotel
 INSERT INTO recompensas (nombre, tipo, puntos) VALUES
