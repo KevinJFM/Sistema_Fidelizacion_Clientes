@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { getConfiguracion, updateConfiguracion } from '../../servicios/servicioConfiguracion';
 import {
@@ -58,6 +58,7 @@ export default function Configuracion() {
   const [form, setForm]                 = useState(FORM_VACIO);
   const [editandoId, setEditandoId]     = useState(null);
   const [savingR, setSavingR]           = useState(false);
+  const enviandoR = useRef(false);
 
   const cargar = async () => {
     setLoading(true);
@@ -111,10 +112,12 @@ export default function Configuracion() {
 
   const handleGuardarR = async (e) => {
     e.preventDefault();
+    if (enviandoR.current) return;
     if (!form.nombre.trim() || !form.puntos || Number(form.puntos) <= 0) {
       toast.error('Nombre y puntos válidos son requeridos');
       return;
     }
+    enviandoR.current = true;
     setSavingR(true);
     try {
       if (editandoId) {
@@ -130,6 +133,7 @@ export default function Configuracion() {
     } catch {
       toast.error('Error al guardar el tipo de canje');
     } finally {
+      enviandoR.current = false;
       setSavingR(false);
     }
   };
