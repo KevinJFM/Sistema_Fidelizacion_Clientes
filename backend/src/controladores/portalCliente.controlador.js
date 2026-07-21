@@ -255,6 +255,20 @@ export const misPuntos = async (req, res) => {
   }
 };
 
+// Guarda el token de notificaciones push del dispositivo del cliente logueado
+export const registrarToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: 'Token requerido' });
+    }
+    await pool.query('UPDATE clientes SET push_token = ? WHERE id_cliente = ?', [token, req.usuario.id_cliente]);
+    return res.status(200).json({ message: 'Token registrado' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Promociones que están activas HOY (para mostrarlas al cliente)
 export const promocionesActivas = async (req, res) => {
   try {
