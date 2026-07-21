@@ -63,13 +63,13 @@ export const actualizarRecompensa = async (req, res) => {
   }
 };
 
-// Baja lógica (activo = 0) para no romper el historial de transacciones
+// Eliminación física de la recompensa
 export const eliminarRecompensa = async (req, res) => {
   try {
     const { id } = req.params;
     const [rows] = await pool.query('SELECT id FROM recompensas WHERE id = ?', [id]);
     if (!rows.length) return res.status(404).json({ message: 'Recompensa no encontrada' });
-    await pool.query('UPDATE recompensas SET activo = 0 WHERE id = ?', [id]);
+    await pool.query('DELETE FROM recompensas WHERE id = ?', [id]);
     return res.json({ message: 'Recompensa eliminada correctamente' });
   } catch {
     return res.status(500).json({ message: 'Error al eliminar recompensa' });

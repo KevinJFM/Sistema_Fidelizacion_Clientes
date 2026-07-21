@@ -5,6 +5,7 @@ import {
   getTodasRecompensas,
   crearRecompensa,
   actualizarRecompensa,
+  eliminarRecompensa,
 } from '../../servicios/servicioRecompensas';
 import Skeleton from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
@@ -130,6 +131,17 @@ export default function Configuracion() {
       toast.error('Error al guardar el tipo de canje');
     } finally {
       setSavingR(false);
+    }
+  };
+
+  const handleEliminar = async (id) => {
+    if (!window.confirm('¿Eliminar permanentemente este tipo de canje? Esta acción no se puede deshacer.')) return;
+    try {
+      await eliminarRecompensa(id);
+      setRecompensas((prev) => prev.filter((r) => r.id !== id));
+      toast.success('Tipo de canje eliminado');
+    } catch {
+      toast.error('Error al eliminar');
     }
   };
 
@@ -275,6 +287,9 @@ export default function Configuracion() {
                     ) : (
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     )}
+                  </button>
+                  <button className="btn-icon btn-icon-danger" title="Eliminar" onClick={() => handleEliminar(r.id)}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                   </button>
                 </div>
               </div>
