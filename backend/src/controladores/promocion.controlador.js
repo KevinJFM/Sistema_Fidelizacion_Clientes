@@ -1,4 +1,5 @@
 import pool from '../configuracion/bd.js';
+import { notificarPromosDeHoy } from '../tareas/promociones.tarea.js';
 
 export const obtenerPromociones = async (req, res) => {
   try {
@@ -65,6 +66,14 @@ export const crearPromocion = async (req, res) => {
         activo !== undefined ? (activo ? 1 : 0) : 1,
       ]
     );
+
+    // Si la promo arranca hoy y está activa, avisar en el momento a los clientes con la app.
+    // Va aparte para que un fallo de notificaciones nunca rompa la creación de la promoción.
+    try {
+      await notificarPromosDeHoy({ soloId: result.insertId });
+    } catch {
+      // Silencioso: si falla el envío de notificaciones, la promoción igual queda creada.
+    }
 
     return res.status(201).json({ message: 'Promoción creada correctamente', id_escenario: result.insertId });
   } catch {
