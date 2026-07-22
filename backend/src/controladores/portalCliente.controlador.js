@@ -273,6 +273,16 @@ export const registrarToken = async (req, res) => {
   }
 };
 
+// Borra el token de notificaciones del cliente (al cerrar sesión)
+export const borrarToken = async (req, res) => {
+  try {
+    await pool.query('UPDATE clientes SET push_token = NULL WHERE id_cliente = ?', [req.usuario.id_cliente]);
+    return res.status(200).json({ message: 'Token borrado' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Promociones que están activas HOY (para mostrarlas al cliente)
 export const promocionesActivas = async (req, res) => {
   try {

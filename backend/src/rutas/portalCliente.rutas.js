@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loginCliente, solicitarCodigo, verificarCodigo, misPuntos, misMovimientos, promocionesActivas, registrarToken } from '../controladores/portalCliente.controlador.js';
+import { loginCliente, solicitarCodigo, verificarCodigo, misPuntos, misMovimientos, promocionesActivas, registrarToken, borrarToken } from '../controladores/portalCliente.controlador.js';
 import { verificarToken, autorizarRoles } from '../middlewares/autenticacion.middleware.js';
 import { limitadorInicioSesion } from '../middlewares/limiteIntentos.middleware.js';
 
@@ -17,5 +17,6 @@ router.get('/mis-puntos', verificarToken, autorizarRoles('cliente'), misPuntos);
 router.get('/mis-movimientos', verificarToken, autorizarRoles('cliente'), misMovimientos);
 router.get('/promociones', verificarToken, autorizarRoles('cliente'), promocionesActivas);
 router.post('/registrar-token', verificarToken, autorizarRoles('cliente'), registrarToken);
+router.post('/borrar-token', verificarToken, autorizarRoles('cliente'), borrarToken);
 
 export default router;
