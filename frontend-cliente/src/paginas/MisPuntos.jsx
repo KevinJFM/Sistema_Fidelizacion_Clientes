@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
 import { getMisPuntos, getMisMovimientos, mensajeError } from '../servicios/servicioPortal';
+import { usarAvisos } from '../componentes/Avisos';
 
 const fmtFecha = (f) => {
   if (!f) return '';
@@ -10,95 +9,78 @@ const fmtFecha = (f) => {
 };
 
 export default function MisPuntos() {
-  const navigate = useNavigate();
+  const mostrarAviso = usarAvisos();
   const [datos, setDatos] = useState(null);
   const [movs, setMovs] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [tab, setTab] = useState('recompensas'); // 'recompensas' | 'historial'
 
-  useEffect(() => {
+  const cargar = () => {
+    setCargando(true);
     Promise.all([getMisPuntos(), getMisMovimientos()])
-      .then(([p, m]) => {
-        setDatos(p);
-        setMovs(m);
-      })
-      .catch((err) => toast.error(mensajeError(err, 'No se pudieron cargar tus puntos')))
+      .then(([p, m]) => { setDatos(p); setMovs(m); })
+      .catch((err) => mostrarAviso('error', 'No se pudo cargar', mensajeError(err, 'No se pudieron cargar tus puntos')))
       .finally(() => setCargando(false));
-  }, []);
-
-  const salir = () => {
-    localStorage.removeItem('portal_token');
-    navigate('/login', { replace: true });
   };
 
-  if (cargando) {
-    return (
-      <div className="pt-app">
-        <div className="pt-cargando">
-          <div className="pt-spinner" />
-          <p>Cargando tus puntos…</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => { cargar(); }, []);
 
+  if (cargando) {
+    return <div className="pt-centro"><div className="pt-spinner" /><p className="pt-tenue">Cargando tus puntos…</p></div>;
+  }
   if (!datos) {
     return (
-      <div className="pt-app">
-        <div className="pt-cargando">
-          <p>No se pudieron cargar tus datos.</p>
-          <button className="pt-btn" onClick={() => window.location.reload()}>Reintentar</button>
-        </div>
+      <div className="pt-centro">
+        <p className="pt-tenue">No se pudieron cargar tus datos.</p>
+        <button className="pt-btn pt-btn-corto" onClick={cargar}>Reintentar</button>
       </div>
     );
   }
 
   return (
-    <div className="pt-app">
-      <header className="pt-header">
-        <div>
-          <p className="pt-hola">Hola,</p>
-          <h2 className="pt-nombre">{datos.nombres} {datos.apellidos}</h2>
-        </div>
-        <button className="pt-salir" onClick={salir}>Salir</button>
-      </header>
+    <div className="pt-pagina">
+      <div className="pt-encabezado">
+        <p className="pt-hola">Hola,</p>
+        <h2 className="pt-nombre">{datos.nombres} {datos.apellidos}</h2>
+      </div>
 
       {/* Tarjeta de puntos */}
       <section className="pt-puntos-card">
         <p className="pt-puntos-label">Tus puntos</p>
         <p className="pt-puntos-num">{datos.puntos_acumulados}</p>
-        <p className="pt-puntos-valor">equivalen a <strong>${datos.valor_en_dinero.toFixed(2)}</strong></p>
+        <div className="pt-puntos-reglas">
+          <span className="pt-regla-ficha">$1 = 1 punto</span>
+        </div>
         <p className="pt-doc">{datos.tipo_documento}: {datos.numero_documento}</p>
       </section>
 
       {/* Tabs */}
       <div className="pt-tabs">
-        <button className={tab === 'recompensas' ? 'activo' : ''} onClick={() => setTab('recompensas')}>
-          Recompensas
-        </button>
-        <button className={tab === 'historial' ? 'activo' : ''} onClick={() => setTab('historial')}>
-          Historial
-        </button>
+        <button className={tab === 'recompensas' ? 'activo' : ''} onClick={() => setTab('recompensas')}>Recompensas</button>
+        <button className={tab === 'historial' ? 'activo' : ''} onClick={() => setTab('historial')}>Historial</button>
       </div>
 
       {tab === 'recompensas' && (
         <section className="pt-lista">
+          <div className="pt-banner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E5388A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l1-5h16l1 5" /><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" /><path d="M9 22V12h6v10" />
+            </svg>
+            <span>El canje de puntos se realiza en recepción del hotel.</span>
+          </div>
           {datos.recompensas.map((r) => (
             <div key={r.id} className={`pt-recompensa ${r.alcanzable ? 'ok' : ''}`}>
               <div className="pt-recompensa-info">
                 <p className="pt-recompensa-nombre">{r.nombre}</p>
                 <p className="pt-recompensa-sub">
-                  {r.puntos} pts · ${r.valor.toFixed(2)}
+                  {r.puntos} pts{r.tipo ? <span className="pt-recompensa-tipo"> · Habitación {r.tipo}</span> : null}
                 </p>
               </div>
-              {r.alcanzable ? (
-                <span className="pt-badge ok">¡Ya puedes!</span>
-              ) : (
-                <span className="pt-badge">Faltan {r.faltan}</span>
-              )}
+              {r.alcanzable
+                ? <span className="pt-badge ok">¡Ya puedes!</span>
+                : <span className="pt-badge">Faltan {r.faltan}</span>}
             </div>
           ))}
-          <p className="pt-aviso">El canje se realiza en recepción del hotel.</p>
         </section>
       )}
 

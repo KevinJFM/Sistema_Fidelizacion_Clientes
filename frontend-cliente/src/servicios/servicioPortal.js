@@ -1,10 +1,17 @@
 import api from '../api/api';
 
-export const loginCliente = async (datos) => {
-  const { data } = await api.post('/portal/login', datos);
+// ---------- Acceso con código por correo (OTP: DUI + código de 6 dígitos) ----------
+export const solicitarCodigo = async (datos) => {
+  const { data } = await api.post('/portal/solicitar-codigo', datos);
   return data;
 };
 
+export const verificarCodigo = async (datos) => {
+  const { data } = await api.post('/portal/verificar-codigo', datos);
+  return data;
+};
+
+// ---------- Consulta ----------
 export const getMisPuntos = async () => {
   const { data } = await api.get('/portal/mis-puntos');
   return data;
@@ -12,6 +19,11 @@ export const getMisPuntos = async () => {
 
 export const getMisMovimientos = async () => {
   const { data } = await api.get('/portal/mis-movimientos');
+  return data;
+};
+
+export const getPromociones = async () => {
+  const { data } = await api.get('/portal/promociones');
   return data;
 };
 

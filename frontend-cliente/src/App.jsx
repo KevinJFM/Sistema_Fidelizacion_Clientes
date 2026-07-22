@@ -1,6 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { ProveedorTema } from './tema/tema';
+import { ProveedorAvisos } from './componentes/Avisos';
 import Login from './paginas/Login.jsx';
-import MisPuntos from './paginas/MisPuntos.jsx';
+import Bienvenida from './paginas/Bienvenida.jsx';
+import Portal from './paginas/Portal.jsx';
 
 // Guard simple: si no hay token, manda al login
 function Privada({ children }) {
@@ -10,17 +13,15 @@ function Privada({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/"
-        element={
-          <Privada>
-            <MisPuntos />
-          </Privada>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ProveedorTema>
+      <ProveedorAvisos>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/bienvenida" element={<Privada><Bienvenida /></Privada>} />
+          <Route path="/" element={<Privada><Portal /></Privada>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ProveedorAvisos>
+    </ProveedorTema>
   );
 }

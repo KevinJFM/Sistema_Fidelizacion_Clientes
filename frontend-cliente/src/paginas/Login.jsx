@@ -1,113 +1,175 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { loginCliente, mensajeError } from '../servicios/servicioPortal';
+import { solicitarCodigo, verificarCodigo, mensajeError } from '../servicios/servicioPortal';
+import { usarAvisos } from '../componentes/Avisos';
+import { formatearDocumento, esDuiValido, esPasaporteValido } from '../utilidades/formato';
 import Logo from '../componentes/Logo';
+
+const SEGUNDOS_REENVIO = 60;
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ tipo_documento: 'DUI', numero_documento: '', pin: '' });
-  const [verPin, setVerPin] = useState(false);
+  const mostrarAviso = usarAvisos();
+  const [paso, setPaso] = useState('documento'); // 'documento' | 'codigo'
+  const [tipo, setTipo] = useState('DUI');
+  const [numero, setNumero] = useState('');
+  const [codigo, setCodigo] = useState('');
+  const [destino, setDestino] = useState('');
+  const [modoDev, setModoDev] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [segundos, setSegundos] = useState(0);
+  const refCodigo = useRef(null);
 
-  const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  // Cuenta regresiva para reenviar
+  useEffect(() => {
+    if (segundos <= 0) return;
+    const id = setInterval(() => setSegundos((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [segundos]);
 
-  const enviar = async (e) => {
-    e.preventDefault();
-    if (!form.numero_documento.trim()) return toast.error('Ingresa tu número de documento');
-    if (!/^\d{4,6}$/.test(form.pin)) return toast.error('El PIN debe tener entre 4 y 6 dígitos');
+  // Al pasar al paso del código, enfoca el campo
+  useEffect(() => {
+    if (paso === 'codigo') setTimeout(() => refCodigo.current?.focus(), 150);
+  }, [paso]);
 
+  const enviarCodigo = async () => {
+    if (tipo === 'DUI' && !esDuiValido(numero)) {
+      return mostrarAviso('error', 'DUI inválido', 'El DUI debe tener el formato 00000000-0');
+    }
+    if (tipo === 'Pasaporte' && !esPasaporteValido(numero)) {
+      return mostrarAviso('error', 'Pasaporte inválido', 'El pasaporte debe tener de 6 a 12 caracteres (letras y números)');
+    }
     setCargando(true);
     try {
-      const r = await loginCliente({
-        tipo_documento: form.tipo_documento,
-        numero_documento: form.numero_documento.trim(),
-        pin: form.pin,
-      });
-      localStorage.setItem('portal_token', r.token);
-      toast.success(r.message || 'Bienvenido');
-      navigate('/', { replace: true });
-    } catch (err) {
-      toast.error(mensajeError(err, 'No se pudo iniciar sesión'));
+      const r = await solicitarCodigo({ tipo_documento: tipo, numero_documento: numero.trim() });
+      setDestino(r.destino || 'tu correo');
+      setModoDev(!!r.modo_dev);
+      setCodigo('');
+      setSegundos(SEGUNDOS_REENVIO);
+      setPaso('codigo');
+    } catch (error) {
+      mostrarAviso('error', 'No se pudo enviar', mensajeError(error, 'No se pudo enviar el código'));
     } finally {
       setCargando(false);
     }
   };
 
+  const confirmar = async (valor) => {
+    const cod = valor ?? codigo;
+    if (cod.length !== 6 || cargando) return;
+    setCargando(true);
+    try {
+      const r = await verificarCodigo({ tipo_documento: tipo, numero_documento: numero.trim(), codigo: cod });
+      localStorage.setItem('portal_token', r.token);
+      // Primera vez de todas -> bienvenida; luego -> directo al portal
+      if (localStorage.getItem('bienvenida_vista')) navigate('/', { replace: true });
+      else navigate('/bienvenida', { replace: true });
+    } catch (error) {
+      setCodigo('');
+      mostrarAviso('error', 'Código incorrecto', mensajeError(error, 'No se pudo verificar el código'));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const alEscribirCodigo = (texto) => {
+    const limpio = texto.replace(/[^0-9]/g, '').slice(0, 6);
+    setCodigo(limpio);
+    if (limpio.length === 6) confirmar(limpio); // verifica automáticamente al completar
+  };
+
   return (
     <div className="pt-login">
       <div className="pt-login-card">
-        <div className="pt-logo">
-          <Logo size={120} color="#E5388A" />
-        </div>
+        <div className="pt-logo"><Logo size={116} color="#E5388A" /></div>
         <h1 className="pt-brand">Punta Diamantes</h1>
         <p className="pt-sub">Consulta tus puntos de fidelidad</p>
 
-        <form onSubmit={enviar} className="pt-form" noValidate>
-          <label className="pt-field">
-            <span>Tipo de documento</span>
-            <select name="tipo_documento" value={form.tipo_documento} onChange={cambiar}>
-              <option value="DUI">DUI</option>
-              <option value="Pasaporte">Pasaporte</option>
-            </select>
-          </label>
+        {paso === 'documento' ? (
+          <div className="pt-form">
+            <label className="pt-field">
+              <span>Tipo de documento</span>
+              <div className="pt-selector">
+                {['DUI', 'Pasaporte'].map((op) => (
+                  <button
+                    key={op}
+                    type="button"
+                    className={tipo === op ? 'activo' : ''}
+                    onClick={() => { setTipo(op); setNumero(''); }}
+                  >
+                    {op}
+                  </button>
+                ))}
+              </div>
+            </label>
 
-          <label className="pt-field">
-            <span>N° de documento</span>
-            <input
-              name="numero_documento"
-              value={form.numero_documento}
-              onChange={cambiar}
-              placeholder={form.tipo_documento === 'DUI' ? '00000000-0' : 'Ej. A1234567'}
-              autoComplete="off"
-              inputMode={form.tipo_documento === 'DUI' ? 'numeric' : 'text'}
-            />
-          </label>
-
-          <label className="pt-field">
-            <span>PIN (4 a 6 dígitos)</span>
-            <div className="pt-pin-wrap">
+            <label className="pt-field">
+              <span>N° de documento</span>
               <input
-                name="pin"
-                value={form.pin}
-                onChange={cambiar}
-                type={verPin ? 'text' : 'password'}
+                value={numero}
+                onChange={(e) => setNumero(formatearDocumento(tipo, e.target.value))}
+                onKeyDown={(e) => e.key === 'Enter' && enviarCodigo()}
+                placeholder={tipo === 'DUI' ? '00000000-0' : 'Ej. A1234567'}
+                inputMode={tipo === 'DUI' ? 'numeric' : 'text'}
+                autoComplete="off"
+                maxLength={tipo === 'DUI' ? 10 : 12}
+              />
+            </label>
+
+            <button className="pt-btn" onClick={enviarCodigo} disabled={cargando}>
+              {cargando ? 'Enviando…' : 'Enviar código'}
+            </button>
+
+            <p className="pt-nota">
+              Te enviaremos un código de verificación a tu correo registrado para un ingreso único y seguro.
+            </p>
+          </div>
+        ) : (
+          <div className="pt-form">
+            <h2 className="pt-codigo-titulo">Ingresa el código</h2>
+            <p className="pt-sub">Lo enviamos a {destino}</p>
+
+            {/* Casillas de código: input real transparente encima */}
+            <div className="pt-codigo-wrap" onClick={() => refCodigo.current?.focus()}>
+              <div className="pt-codigo-cajas">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className={`pt-codigo-caja ${codigo.length === i ? 'activa' : ''}`}>
+                    {codigo[i] ?? ''}
+                  </div>
+                ))}
+              </div>
+              <input
+                ref={refCodigo}
+                className="pt-codigo-input"
+                value={codigo}
+                onChange={(e) => alEscribirCodigo(e.target.value)}
                 inputMode="numeric"
                 maxLength={6}
-                placeholder="••••"
-                autoComplete="off"
+                autoFocus
               />
-              <button
-                type="button"
-                className="pt-ver"
-                onClick={() => setVerPin((v) => !v)}
-                tabIndex={-1}
-                aria-label={verPin ? 'Ocultar PIN' : 'Ver PIN'}
-              >
-                {verPin ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
             </div>
-          </label>
 
-          <button type="submit" className="pt-btn" disabled={cargando}>
-            {cargando ? 'Ingresando…' : 'Ingresar'}
-          </button>
-        </form>
+            {cargando && <div className="pt-spinner" style={{ margin: '16px auto 0' }} />}
 
-        <p className="pt-nota">
-          Si es tu primera vez, el PIN que ingreses quedará guardado como tu clave.
-          Si no reconoces tus datos, contacta al hotel.
-        </p>
+            {modoDev && (
+              <p className="pt-nota-dev">
+                Modo prueba: el código está en la consola del backend (no se configuró el correo).
+              </p>
+            )}
+
+            <button
+              className="pt-link"
+              onClick={() => segundos === 0 && enviarCodigo()}
+              disabled={segundos > 0}
+            >
+              {segundos > 0 ? `Reenviar código en ${segundos}s` : 'Reenviar código'}
+            </button>
+
+            <button className="pt-link tenue" onClick={() => { setPaso('documento'); setCodigo(''); }}>
+              ‹ Cambiar documento
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
