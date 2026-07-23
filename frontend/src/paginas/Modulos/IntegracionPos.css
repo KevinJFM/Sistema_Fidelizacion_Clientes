@@ -1,0 +1,135 @@
+/* ============================================================
+   Integración POS — botones secundarios con letras NOTORIAS
+   (negrita y color de marca, visibles en tema claro y oscuro)
+   Con !important para que ninguna regla del panel las pise.
+   ============================================================ */
+.btn-pos {
+  padding: 12px 20px;
+  border: 2px solid #0D1BB8 !important;
+  border-radius: 14px;
+  background: #ffffff !important;
+  color: #0D1BB8 !important;           /* azul de marca, como el badge del DUI */
+  font-size: 14px !important;
+  font-weight: 800 !important;         /* negrita, bien visible */
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 1 !important;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-pos:hover { background: #EEF0FC !important; }
+.btn-pos:disabled { opacity: 0.55 !important; cursor: not-allowed; }
+
+/* Tema oscuro: botón BLANCO con letra negra y borde azul (resalta sobre la tarjeta oscura) */
+[data-theme="dark"] .btn-pos {
+  background: #ffffff !important;
+  border-color: #0D1BB8 !important;
+  color: #111827 !important;
+}
+[data-theme="dark"] .btn-pos:hover { background: #e8ebff !important; }
+
+/* ============================================================
+   Campos deshabilitados cuando está CONECTADO
+   (letra gris y fondo apagado, como un control bloqueado)
+   ============================================================ */
+/* Mismo estilo en tema claro y oscuro (las tarjetas del panel son blancas en ambos) */
+.pos-page .config-input input:disabled,
+[data-theme="dark"] .pos-page .config-input input:disabled {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af;   /* fuerza el gris del texto en Chrome/Brave */
+  background: #eceef4 !important;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* ============================================================
+   Chip de estado de conexión (● Conectado / ● Desconectado)
+   ============================================================ */
+.pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.pos-chip.on  { background: rgba(22, 163, 74, 0.12);  color: #16a34a; }
+.pos-chip.off { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+[data-theme="dark"] .pos-chip.on  { background: rgba(22, 163, 74, 0.2);  color: #4ade80; }
+[data-theme="dark"] .pos-chip.off { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+
+/* ============================================================
+   Modal de conexión (Conectando… / Conexión exitosa / Error / Desconexión)
+   ============================================================ */
+.pos-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.pos-modal {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.pos-modal h3 { margin: 14px 0 6px; font-size: 18px; font-weight: 800; color: #0A1259; }
+.pos-modal p  { margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5; }
+.pos-modal .btn-primary {
+  display: block;
+  margin: 18px auto 0;      /* botón centrado en la modal */
+  min-width: 130px;
+  text-align: center;
+}
+
+.pos-spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 4px solid rgba(13, 27, 184, 0.2);
+  border-top-color: #0D1BB8;
+  margin: 0 auto;
+  animation: pos-girar 0.8s linear infinite;
+}
+@keyframes pos-girar { to { transform: rotate(360deg); } }
+
+.pos-modal-icono {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+}
+.pos-modal-icono.exito { background: #16a34a; }
+.pos-modal-icono.error { background: #dc2626; }
+.pos-modal-icono.info  { background: #6b7280; }
+
+/* Botones de las modales de confirmación (Cancelar / Confirmar) */
+.pos-modal-botones {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+.pos-modal-botones .btn-primary { display: inline-block; margin: 0; min-width: 0; }
+.pos-modal-botones .btn-pos { padding: 12px 18px; }
+
+/* Nota junto al botón Sincronizar cuando está en modo manual */
+.pos-nota-sync { font-size: 12.5px; color: #9ca3af; font-weight: 600; }
+
+[data-theme="dark"] .pos-modal    { background: #11152e; }
+[data-theme="dark"] .pos-modal h3 { color: #e8ebff; }
+[data-theme="dark"] .pos-modal p  { color: #c5cae8; }

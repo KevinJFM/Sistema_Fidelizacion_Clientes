@@ -17,6 +17,7 @@ import Promociones from './paginas/Modulos/Promociones';
 import Configuracion from './paginas/Modulos/Configuracion';
 import Operadores from './paginas/Modulos/Operadores';
 import HistorialOperadores from './paginas/Modulos/HistorialOperadores';
+import IntegracionPos from './paginas/Modulos/IntegracionPos';
 
 // Requiere sesión iniciada (cualquier rol)
 const RequireAuth = ({ children }) => {
@@ -98,6 +99,7 @@ function App() {
           <Route path="usuarios" element={<RequireRole roles={['admin']}><Usuarios /></RequireRole>} />
           <Route path="promociones" element={<RequireRole roles={['admin']}><Promociones /></RequireRole>} />
           <Route path="configuracion" element={<RequireRole roles={['admin']}><Configuracion /></RequireRole>} />
+          <Route path="integracion-pos" element={<RequireRole roles={['admin']}><IntegracionPos /></RequireRole>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />

@@ -12,6 +12,7 @@ import rutasPromociones from "./rutas/promocion.rutas.js";
 import rutasOperadores from "./rutas/operador.rutas.js";
 import rutasPortalCliente from "./rutas/portalCliente.rutas.js";
 import rutasRecompensas from "./rutas/recompensa.rutas.js";
+import rutasPos from "./integracion-pos/pos.rutas.js";
 
 const app = express();
 
@@ -62,5 +63,6 @@ app.use("/api/promociones", rutasPromociones);
 app.use("/api/operadores", rutasOperadores);
 app.use("/api/portal", rutasPortalCliente);
 app.use("/api/recompensas", rutasRecompensas);
+app.use("/api/pos", rutasPos);
 
 export default app;
