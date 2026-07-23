@@ -20,6 +20,14 @@ export default function Login() {
   const [segundos, setSegundos] = useState(0);
   const refCodigo = useRef(null);
 
+  // Si llegó aquí porque la sesión expiró, avísale (una sola vez)
+  useEffect(() => {
+    if (localStorage.getItem('sesion_expirada')) {
+      localStorage.removeItem('sesion_expirada');
+      mostrarAviso('info', 'Tu sesión expiró', 'Por tu seguridad, ingresa de nuevo.');
+    }
+  }, []);
+
   // Cuenta regresiva para reenviar
   useEffect(() => {
     if (segundos <= 0) return;

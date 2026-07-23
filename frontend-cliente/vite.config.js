@@ -7,5 +7,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174,
+    host: true, // expone el portal en la red local para probarlo desde el teléfono
   },
 });

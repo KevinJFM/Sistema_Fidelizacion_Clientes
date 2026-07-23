@@ -38,7 +38,8 @@ export default function MisPuntos() {
   }
 
   return (
-    <div className="pt-pagina">
+    <div className="pt-pagina pt-inicio">
+      <div className="pt-inicio-izq">
       <div className="pt-encabezado">
         <p className="pt-hola">Hola,</p>
         <h2 className="pt-nombre">{datos.nombres} {datos.apellidos}</h2>
@@ -53,7 +54,9 @@ export default function MisPuntos() {
         </div>
         <p className="pt-doc">{datos.tipo_documento}: {datos.numero_documento}</p>
       </section>
+      </div>
 
+      <div className="pt-inicio-der">
       {/* Tabs */}
       <div className="pt-tabs">
         <button className={tab === 'recompensas' ? 'activo' : ''} onClick={() => setTab('recompensas')}>Recompensas</button>
@@ -103,6 +106,7 @@ export default function MisPuntos() {
           )}
         </section>
       )}
+      </div>
     </div>
   );
 }

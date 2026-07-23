@@ -25,6 +25,7 @@ api.interceptors.response.use(
     const esRutaAcceso = RUTAS_ACCESO.some((r) => url.includes(r));
     if (error.response?.status === 401 && !esRutaAcceso) {
       localStorage.removeItem('portal_token');
+      localStorage.setItem('sesion_expirada', '1'); // el login mostrará el aviso
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

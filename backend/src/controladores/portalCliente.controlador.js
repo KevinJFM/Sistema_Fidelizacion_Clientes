@@ -25,11 +25,13 @@ const enmascararCorreo = (correo) => {
 const ESTADO_ACTIVO = 1;
 
 // Token del cliente: rol 'cliente' + su id, para reusar los middlewares existentes.
+// Sesión larga (1 año): el cliente solo consulta sus puntos, así que se queda logueado
+// hasta que él mismo cierre sesión. No usa refresh token (a diferencia del panel del personal).
 const firmarTokenCliente = (cliente) =>
   jwt.sign(
     { id_cliente: cliente.id_cliente, rol: 'cliente', documento: cliente.numero_documento },
     process.env.JWT_SECRET,
-    { expiresIn: '1d' } // el portal no usa refresh; token de 1 día por comodidad
+    { expiresIn: '365d' }
   );
 
 // ===== Acceso con código por correo (OTP) =====

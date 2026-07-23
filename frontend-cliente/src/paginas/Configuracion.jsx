@@ -1,15 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usarAvisos } from '../componentes/Avisos';
 import { usarTema } from '../tema/tema';
-
-const VERSION = '1.0.0';
 
 export default function Configuracion() {
   const navigate = useNavigate();
+  const mostrarAviso = usarAvisos();
   const { oscuro, alternarTema } = usarTema();
   const [cerrando, setCerrando] = useState(false);
+  const [enLinea, setEnLinea] = useState(navigator.onLine);
+
+  // Detecta si el dispositivo tiene o no conexión (para bloquear el cierre de sesión)
+  useEffect(() => {
+    const conectado = () => setEnLinea(true);
+    const desconectado = () => setEnLinea(false);
+    window.addEventListener('online', conectado);
+    window.addEventListener('offline', desconectado);
+    return () => {
+      window.removeEventListener('online', conectado);
+      window.removeEventListener('offline', desconectado);
+    };
+  }, []);
 
   const salir = () => {
+    // Cerrar sesión requiere internet: para volver a entrar se necesita un código nuevo.
+    if (!navigator.onLine) {
+      return mostrarAviso(
+        'error',
+        'Sin conexión',
+        'Necesitas internet para cerrar sesión, porque deberás ingresar de nuevo con un código.'
+      );
+    }
     setCerrando(true);
     localStorage.removeItem('portal_token');
     // Pequeña pausa para que se note el "Cerrando sesión…"
@@ -54,14 +75,16 @@ export default function Configuracion() {
         <p className="pt-salir-1">Presiona el botón</p>
         <p className="pt-salir-2">Deberás ingresar tus datos de nuevo</p>
       </div>
-      <button className="pt-btn-salir" onClick={salir}>
+      <button className="pt-btn-salir" onClick={salir} disabled={!enLinea}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
         Cerrar sesión
       </button>
+      {!enLinea && (
+        <p className="pt-salir-offline">Sin conexión: necesitas internet para cerrar sesión.</p>
+      )}
 
       <div className="pt-pie">
         <p>Punta Diamantes · Fidelización de Clientes</p>
-        <p>Versión {VERSION}</p>
       </div>
     </div>
   );
