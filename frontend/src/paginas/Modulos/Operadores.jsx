@@ -12,7 +12,7 @@ import {
 import { getRecompensas } from '../../servicios/servicioTransacciones';
 import { formatTelefono, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
-import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -27,6 +27,7 @@ export default function Operadores() {
   const navigate = useNavigate();
   const [operadores, setOperadores] = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [inicial, setInicial]       = useState(true);
   const [filtro, setFiltro]         = useState('');
   const [page, setPage]             = useState(1);
 
@@ -60,6 +61,7 @@ export default function Operadores() {
       toast.error(mensajeError(err, 'Error al cargar operadores'));
     } finally {
       setLoading(false);
+      setInicial(false);
     }
   };
 
@@ -168,6 +170,8 @@ export default function Operadores() {
       setCanjeando(false);
     }
   };
+
+  if (inicial) return <SkeletonListado columnas={7} />;
 
   return (
     <div className="admin-page">

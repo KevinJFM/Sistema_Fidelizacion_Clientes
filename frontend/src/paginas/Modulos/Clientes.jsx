@@ -10,7 +10,7 @@ import {
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
-import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -43,6 +43,7 @@ const emptyForm = {
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [inicial, setInicial]   = useState(true); // solo la PRIMERA carga muestra el skeleton de módulo completo
   const [filtro, setFiltro]     = useState('');
   const [page, setPage]         = useState(1);
 
@@ -66,12 +67,26 @@ export default function Clientes() {
       toast.error(mensajeError(err, 'Error al cargar clientes'));
     } finally {
       setLoading(false);
+      setInicial(false);
     }
   };
 
   useEffect(() => {
     cargar();
     getDepartamentos().then(setDepartamentos).catch(() => {});
+  }, []);
+
+  // Auto-refresco en segundo plano: ve lo que trae el POS (u otro cajero) sin
+  // recargar ni cambiar de módulo. Solo actualiza si los datos cambiaron, y se
+  // pausa si la pestaña no está visible.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      getClientes()
+        .then((datos) => setClientes((prev) => (JSON.stringify(prev) === JSON.stringify(datos) ? prev : datos)))
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
   }, []);
 
   const abrirCrear = () => {
@@ -213,6 +228,9 @@ export default function Clientes() {
   });
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
+
+  // Primera carga: TODA la pantalla se ve como esqueleto (no solo las filas).
+  if (inicial) return <SkeletonListado columnas={6} />;
 
   return (
     <div className="admin-page">

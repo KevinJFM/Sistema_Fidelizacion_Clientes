@@ -7,7 +7,7 @@ import {
   actualizarRecompensa,
   eliminarRecompensa,
 } from '../../servicios/servicioRecompensas';
-import Skeleton from '../../componentes/Skeleton/Skeleton';
+import Skeleton, { SkeletonConfig } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -97,6 +97,10 @@ export default function Configuracion() {
   };
 
   useEffect(() => { cargarRecompensas(); }, []);
+
+  // Primera carga: TODA la pantalla como esqueleto hasta que carguen ambas secciones.
+  const [inicial, setInicial] = useState(true);
+  useEffect(() => { if (!loading && !loadingR) setInicial(false); }, [loading, loadingR]);
 
   const handleFormR = (campo, valor) => setForm((p) => ({ ...p, [campo]: valor }));
 
@@ -192,6 +196,8 @@ export default function Configuracion() {
       setSaving(false);
     }
   };
+
+  if (inicial) return <SkeletonConfig tarjetas={3} filasPorTarjeta={3} />;
 
   return (
     <div className="admin-page">

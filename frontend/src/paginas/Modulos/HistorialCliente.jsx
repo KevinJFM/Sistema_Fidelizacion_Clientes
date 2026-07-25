@@ -6,6 +6,7 @@ import { exportarPDFCliente } from '../../utilidades/pdf';
 import { formatDui } from '../../utilidades/formato';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import { SkeletonPerfil } from '../../componentes/Skeleton/Skeleton';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -108,6 +109,7 @@ export default function HistorialCliente() {
   const [cliente, setCliente]         = useState(null);
   const [historial, setHistorial]     = useState([]);
   const [buscando, setBuscando]       = useState(false);
+  const [cargandoPerfil, setCargandoPerfil] = useState(false); // cargando el perfil de un cliente
   const [detalle, setDetalle]         = useState(null);
   const [page, setPage]               = useState(1);
   const [resultados, setResultados]   = useState([]); // lista al buscar por nombre
@@ -116,6 +118,7 @@ export default function HistorialCliente() {
 
   const cargarPerfil = async (idTipo, numDoc) => {
     setBuscando(true);
+    setCargandoPerfil(true);
     setCliente(null);
     setHistorial([]);
     setResultados([]);
@@ -130,6 +133,7 @@ export default function HistorialCliente() {
       toast.error(mensajeError(err, 'Cliente no encontrado'));
     } finally {
       setBuscando(false);
+      setCargandoPerfil(false);
     }
   };
 
@@ -242,6 +246,9 @@ export default function HistorialCliente() {
           ))}
         </div>
       )}
+
+      {/* Skeleton mientras carga el perfil del cliente */}
+      {cargandoPerfil && !cliente && <SkeletonPerfil columnas={11} />}
 
       {/* Perfil del cliente */}
       {cliente && (

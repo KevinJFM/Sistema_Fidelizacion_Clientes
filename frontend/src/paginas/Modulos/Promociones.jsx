@@ -8,7 +8,7 @@ import {
   deletePromocion,
 } from '../../servicios/servicioPromociones';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
-import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -36,6 +36,7 @@ function detectarTipo(promo) {
 export default function Promociones() {
   const [promociones, setPromociones]         = useState([]);
   const [cargando, setCargando]               = useState(true);
+  const [inicial, setInicial]                 = useState(true);
   const [filtro, setFiltro]                   = useState('');
   const [page, setPage]                       = useState(1);
   const [modalAbierto, setModalAbierto]       = useState(false);
@@ -55,6 +56,7 @@ export default function Promociones() {
       toast.error(mensajeError(err, 'Error al cargar promociones'));
     } finally {
       setCargando(false);
+      setInicial(false);
     }
   };
 
@@ -179,6 +181,8 @@ export default function Promociones() {
   );
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
+
+  if (inicial) return <SkeletonListado columnas={8} />;
 
   return (
     <div className="admin-page">
