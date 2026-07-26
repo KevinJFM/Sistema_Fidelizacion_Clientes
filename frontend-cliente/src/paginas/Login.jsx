@@ -20,11 +20,18 @@ export default function Login() {
   const [segundos, setSegundos] = useState(0);
   const refCodigo = useRef(null);
 
-  // Si llegó aquí porque la sesión expiró, avísale (una sola vez)
+  // Si llegó aquí porque la sesión expiró/se cerró, avísale (una sola vez)
   useEffect(() => {
     if (localStorage.getItem('sesion_expirada')) {
       localStorage.removeItem('sesion_expirada');
-      mostrarAviso('info', 'Tu sesión expiró', 'Por tu seguridad, ingresa de nuevo.');
+      const mensaje = localStorage.getItem('sesion_mensaje');
+      localStorage.removeItem('sesion_mensaje');
+      const otroDispositivo = mensaje?.includes('dispositivo');
+      mostrarAviso(
+        'info',
+        otroDispositivo ? 'Sesión cerrada' : 'Tu sesión expiró',
+        otroDispositivo ? mensaje : 'Por tu seguridad, ingresa de nuevo.'
+      );
     }
   }, []);
 

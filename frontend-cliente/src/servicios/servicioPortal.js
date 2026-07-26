@@ -7,7 +7,14 @@ export const solicitarCodigo = async (datos) => {
 };
 
 export const verificarCodigo = async (datos) => {
-  const { data } = await api.post('/portal/verificar-codigo', datos);
+  // origen 'portal': la sesión se guarda en la ranura del portal (independiente de la app)
+  const { data } = await api.post('/portal/verificar-codigo', { ...datos, origen: 'portal' });
+  return data;
+};
+
+// Cierra de forma remota la sesión de la APP (para usar desde el portal)
+export const cerrarSesionApp = async () => {
+  const { data } = await api.post('/portal/cerrar-sesion-remota', { objetivo: 'app' });
   return data;
 };
 

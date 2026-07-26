@@ -26,6 +26,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !esRutaAcceso) {
       localStorage.removeItem('portal_token');
       localStorage.setItem('sesion_expirada', '1'); // el login mostrará el aviso
+      // Mensaje específico del backend (ej. "iniciaste sesión en otro dispositivo")
+      localStorage.setItem('sesion_mensaje', error.response?.data?.message || '');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

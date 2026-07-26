@@ -136,6 +136,8 @@ CREATE TABLE clientes (
   otp_expira        DATETIME     NULL,            -- vencimiento del código
   otp_intentos      INT          NOT NULL DEFAULT 0,  -- intentos de verificación del código actual
   push_token        VARCHAR(255) NULL,            -- token de notificaciones push (app móvil)
+  sesion_app        VARCHAR(64)  NULL,            -- id de la sesión ACTIVA en la app (sesión única por superficie)
+  sesion_portal     VARCHAR(64)  NULL,            -- id de la sesión ACTIVA en el portal web
   id_estado         INT          NOT NULL,
   created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -295,7 +297,8 @@ CREATE TABLE refresh_tokens (
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_token),
   CONSTRAINT fk_rt_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-  INDEX idx_rt_usuario (id_usuario)
+  INDEX idx_rt_usuario (id_usuario),
+  INDEX idx_rt_token (token_hash)
 );
 
 -- ============================================================
