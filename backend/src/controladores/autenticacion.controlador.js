@@ -1,6 +1,9 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../configuracion/bd.js';
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 // ===== Helpers de tokens =====
 const firmarTokenAcceso = (usuario) =>
@@ -72,6 +75,13 @@ export const iniciarSesion = async (req, res) => {
     const tokenAcceso   = firmarTokenAcceso(usuario);
     const tokenRefresco = firmarTokenRefresco(usuario);
 
+    // Guardar el refresh token hasheado para permitir revocación
+    const expira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await pool.query(
+      'INSERT INTO refresh_tokens (id_usuario, token_hash, user_agent, ip, expira_en) VALUES (?, ?, ?, ?, ?)',
+      [usuario.id_usuario, hashToken(tokenRefresco), req.get('User-Agent') ?? null, req.ip ?? null, expira]
+    );
+
     res.cookie('refreshToken', tokenRefresco, opcionesCookieRefresco);
 
     return res.status(200).json({
@@ -99,6 +109,15 @@ export const renovarToken = async (req, res) => {
       return res.status(401).json({ message: 'Sesión expirada' });
     }
 
+    // Verificar que el token no esté revocado ni sea desconocido
+    const [filaToken] = await pool.query(
+      'SELECT id_token FROM refresh_tokens WHERE token_hash = ? AND revocado = 0 AND expira_en > NOW() LIMIT 1',
+      [hashToken(token)]
+    );
+    if (!filaToken.length) {
+      return res.status(401).json({ message: 'Sesión inválida o revocada' });
+    }
+
     // Re-consultamos el usuario para datos frescos y validar su estado actual
     const [filas] = await pool.query(
       `SELECT u.id_usuario, u.nombre, u.apellido, u.email, r.rol, e.estado
@@ -118,9 +137,17 @@ export const renovarToken = async (req, res) => {
       return res.status(403).json({ message: 'Usuario inactivo o suspendido' });
     }
 
-    // Rotación: emitimos un refresh token nuevo en cada renovación
-    const tokenAcceso       = firmarTokenAcceso(usuario);
+    // Rotación: revocar el token actual y emitir uno nuevo
+    const tokenAcceso        = firmarTokenAcceso(usuario);
     const nuevoTokenRefresco = firmarTokenRefresco(usuario);
+
+    await pool.query('UPDATE refresh_tokens SET revocado = 1 WHERE token_hash = ?', [hashToken(token)]);
+    const nuevaExpira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await pool.query(
+      'INSERT INTO refresh_tokens (id_usuario, token_hash, user_agent, ip, expira_en) VALUES (?, ?, ?, ?, ?)',
+      [usuario.id_usuario, hashToken(nuevoTokenRefresco), req.get('User-Agent') ?? null, req.ip ?? null, nuevaExpira]
+    );
+
     res.cookie('refreshToken', nuevoTokenRefresco, opcionesCookieRefresco);
 
     return res.status(200).json({
@@ -132,7 +159,14 @@ export const renovarToken = async (req, res) => {
   }
 };
 
-export const cerrarSesion = (req, res) => {
+export const cerrarSesion = async (req, res) => {
+  try {
+    const token = req.cookies?.refreshToken;
+    if (token) {
+      await pool.query('UPDATE refresh_tokens SET revocado = 1 WHERE token_hash = ?', [hashToken(token)]);
+    }
+  } catch { /* ignorar: el cookie se borra igual */ }
+
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: esProduccion,
@@ -148,6 +182,9 @@ export const registrarUsuario = async (req, res) => {
 
     if (!nombre || !apellido || !email || !contrasena || !telefono || !fecha_nacimiento) {
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
+    }
+    if ([nombre, apellido, email, telefono].some((v) => String(v).length > 200)) {
+      return res.status(400).json({ message: 'Uno o más campos exceden la longitud permitida' });
     }
 
     const [existe] = await pool.query(

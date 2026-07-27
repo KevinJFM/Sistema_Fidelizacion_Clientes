@@ -26,6 +26,12 @@ export const obtenerConfig = async (req, res) => {
 export const guardarConfig = async (req, res) => {
   try {
     const { host, puerto, usuario, password, base_datos } = req.body;
+    if (puerto !== undefined) {
+      const p = Number(puerto);
+      if (!Number.isInteger(p) || p < 1 || p > 65535) {
+        return res.status(400).json({ message: 'Puerto inválido (debe estar entre 1 y 65535)' });
+      }
+    }
     const guardado = await guardarConfigPos({ host, puerto, usuario, password, base_datos });
     return res.status(200).json({ message: 'Configuración guardada', usuario: guardado.usuario });
   } catch {

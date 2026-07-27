@@ -64,16 +64,22 @@ const derivarDocumento = (posCliente) => {
 };
 
 // Usuario (recepcionista/admin) al que se le atribuyen las transacciones automáticas
+// TTL de 5 min: si el admin es eliminado, el siguiente ciclo lo redescubre
 let idUsuarioCache = null;
+let idUsuarioCacheExpira = 0;
 const obtenerUsuarioRegistrador = async () => {
-  if (idUsuarioCache) return idUsuarioCache;
+  if (idUsuarioCache && Date.now() < idUsuarioCacheExpira) return idUsuarioCache;
   const [admin] = await pool.query(
     `SELECT u.id_usuario FROM usuarios u JOIN roles r ON u.id_rol = r.id_rol
      WHERE r.rol = 'admin' ORDER BY u.id_usuario LIMIT 1`
   );
-  if (admin.length) { idUsuarioCache = admin[0].id_usuario; return idUsuarioCache; }
-  const [cualquiera] = await pool.query('SELECT id_usuario FROM usuarios ORDER BY id_usuario LIMIT 1');
-  idUsuarioCache = cualquiera.length ? cualquiera[0].id_usuario : null;
+  if (admin.length) {
+    idUsuarioCache = admin[0].id_usuario;
+  } else {
+    const [cualquiera] = await pool.query('SELECT id_usuario FROM usuarios ORDER BY id_usuario LIMIT 1');
+    idUsuarioCache = cualquiera.length ? cualquiera[0].id_usuario : null;
+  }
+  idUsuarioCacheExpira = Date.now() + 5 * 60 * 1000;
   return idUsuarioCache;
 };
 
@@ -236,7 +242,8 @@ export const sincronizarPagos = async () => {
       });
       await marcarProcesado(ped.idPedido, idTx, idCliente, 'creada', null);
       creadas++;
-    } catch {
+    } catch (e) {
+      console.error(`[pos.servicio] Error al procesar pedido ${ped.idPedido}:`, e.message);
       // No lo marcamos: se reintenta en la próxima sincronización
     }
   }
@@ -255,7 +262,10 @@ export const aplicarModoPos = async () => {
     if (!temporizador) {
       // Solo arranca el ciclo (cada 2 min). NO sincroniza de inmediato al activar:
       // la primera corrida es del ciclo o del botón "Sincronizar ahora".
-      temporizador = setInterval(() => { sincronizarPagos().catch(() => {}); }, MINUTOS_POLL * 60 * 1000);
+      temporizador = setInterval(
+        () => { sincronizarPagos().catch((e) => console.error('[pos.servicio] Error en sincronización automática:', e.message)); },
+        MINUTOS_POLL * 60 * 1000
+      );
     }
   } else if (temporizador) {
     clearInterval(temporizador);

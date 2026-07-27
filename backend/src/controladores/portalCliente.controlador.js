@@ -52,15 +52,18 @@ export const solicitarCodigo = async (req, res) => {
       [tipo_documento, numero_documento]
     );
 
+    // Respuesta genérica siempre (no revela si el documento existe)
+    const RESPUESTA_GENERICA = {
+      message: 'Si el documento está registrado, recibirás un código en tu correo.',
+      minutos: OTP_MINUTOS,
+    };
+
     if (filas.length === 0) {
-      return res.status(404).json({ message: 'No encontramos ese documento. Contacta al hotel.' });
+      return res.status(200).json(RESPUESTA_GENERICA);
     }
     const cliente = filas[0];
-    if (cliente.id_estado !== ESTADO_ACTIVO) {
-      return res.status(403).json({ message: 'Tu cuenta no está activa. Contacta al hotel.' });
-    }
-    if (!cliente.correo) {
-      return res.status(400).json({ message: 'No tienes un correo registrado. Contacta al hotel.' });
+    if (cliente.id_estado !== ESTADO_ACTIVO || !cliente.correo) {
+      return res.status(200).json(RESPUESTA_GENERICA);
     }
 
     // Código de 6 dígitos, guardado hasheado con vencimiento
@@ -74,16 +77,16 @@ export const solicitarCodigo = async (req, res) => {
     );
 
     const enviado = await enviarCodigoAcceso(cliente.correo, codigo, OTP_MINUTOS);
-    // En desarrollo, si el correo no está configurado, el código se ve en la consola del backend.
-    if (process.env.NODE_ENV !== 'production') {
+    // Solo en desarrollo: muestra el código en consola cuando el correo no está configurado
+    if (process.env.NODE_ENV === 'development') {
       console.log(`\n[OTP] Código para ${cliente.correo}: ${codigo}  (vence en ${OTP_MINUTOS} min)\n`);
     }
 
     return res.status(200).json({
-      message: 'Código enviado',
+      message: 'Si el documento está registrado, recibirás un código en tu correo.',
       destino: enmascararCorreo(cliente.correo),
       minutos: OTP_MINUTOS,
-      modo_dev: !enviado && process.env.NODE_ENV !== 'production',
+      modo_dev: !enviado && process.env.NODE_ENV === 'development',
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -163,7 +166,8 @@ export const loginCliente = async (req, res) => {
     // Buscar el cliente por el nombre del tipo de documento y el número
     const [filas] = await pool.query(
       `SELECT c.id_cliente, c.nombres, c.apellidos, c.numero_documento,
-              c.puntos_acumulados, c.pin_hash, c.id_estado, td.nombre AS tipo_documento
+              c.puntos_acumulados, c.pin_hash, c.pin_intentos, c.pin_bloqueado_hasta,
+              c.id_estado, td.nombre AS tipo_documento
        FROM clientes c
        JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
        WHERE td.nombre = ? AND c.numero_documento = ?`,
@@ -180,18 +184,43 @@ export const loginCliente = async (req, res) => {
       return res.status(403).json({ message: 'Tu cuenta no está activa. Contacta al hotel.' });
     }
 
+    // Bloqueo por demasiados intentos fallidos (5 intentos → 15 min de espera)
+    const PIN_MAX_INTENTOS = 5;
+    const PIN_BLOQUEO_MIN = 15;
+    if (cliente.pin_bloqueado_hasta && new Date(cliente.pin_bloqueado_hasta) > new Date()) {
+      return res.status(429).json({ message: `PIN bloqueado temporalmente. Intenta en ${PIN_BLOQUEO_MIN} minutos.` });
+    }
+
     let primeraVez = false;
 
     if (!cliente.pin_hash) {
       // Primera vez: se guarda el PIN que ingresó
       const pinHash = await bcrypt.hash(String(pin), 10);
-      await pool.query('UPDATE clientes SET pin_hash = ? WHERE id_cliente = ?', [pinHash, cliente.id_cliente]);
+      await pool.query(
+        'UPDATE clientes SET pin_hash = ?, pin_intentos = 0, pin_bloqueado_hasta = NULL WHERE id_cliente = ?',
+        [pinHash, cliente.id_cliente]
+      );
       primeraVez = true;
     } else {
       const pinValido = await bcrypt.compare(String(pin), cliente.pin_hash);
       if (!pinValido) {
+        const intentos = (cliente.pin_intentos ?? 0) + 1;
+        if (intentos >= PIN_MAX_INTENTOS) {
+          const bloqueadoHasta = new Date(Date.now() + PIN_BLOQUEO_MIN * 60 * 1000);
+          await pool.query(
+            'UPDATE clientes SET pin_intentos = ?, pin_bloqueado_hasta = ? WHERE id_cliente = ?',
+            [intentos, bloqueadoHasta, cliente.id_cliente]
+          );
+          return res.status(429).json({ message: `Demasiados intentos. PIN bloqueado ${PIN_BLOQUEO_MIN} minutos.` });
+        }
+        await pool.query('UPDATE clientes SET pin_intentos = ? WHERE id_cliente = ?', [intentos, cliente.id_cliente]);
         return res.status(401).json({ message: 'Documento o PIN incorrectos' });
       }
+      // PIN correcto: resetear contador
+      await pool.query(
+        'UPDATE clientes SET pin_intentos = 0, pin_bloqueado_hasta = NULL WHERE id_cliente = ?',
+        [cliente.id_cliente]
+      );
     }
 
     const token = firmarTokenCliente(cliente);

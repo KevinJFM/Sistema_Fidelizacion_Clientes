@@ -8,11 +8,48 @@
 //    host: localhost | puerto: 3306 | usuario: root | password: (vacío) | base: eorderback
 //  Cámbialas desde la pantalla "Integración POS" o en esa tabla.
 // ============================================================
+import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import pool from '../configuracion/bd.js';
 
 let poolPos = null;
 let firmaActual = ''; // para reconstruir el pool solo si cambian las credenciales
+
+// ─── Cifrado AES-256-GCM de la contraseña del POS ────────────────────────────
+// Requiere POS_ENCRYPTION_KEY en .env: 32 bytes aleatorios en hex (64 chars).
+// Si la clave no está configurada, la contraseña se guarda sin cifrar (compat. hacia atrás).
+const _getKey = () => {
+  const raw = process.env.POS_ENCRYPTION_KEY;
+  if (!raw) return null;
+  const buf = Buffer.from(raw, 'hex');
+  return buf.length === 32 ? buf : null;
+};
+
+const cifrarPassword = (texto) => {
+  const key = _getKey();
+  if (!key || !texto) return texto;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const cifrado = Buffer.concat([cipher.update(texto, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `enc:${Buffer.concat([iv, tag, cifrado]).toString('base64')}`;
+};
+
+const descifrarPassword = (texto) => {
+  if (!texto || !String(texto).startsWith('enc:')) return texto; // texto plano o vacío
+  const key = _getKey();
+  if (!key) {
+    console.warn('[conexionPos] POS_ENCRYPTION_KEY no configurada; no se puede descifrar la contraseña del POS');
+    return '';
+  }
+  const buf = Buffer.from(String(texto).slice(4), 'base64');
+  const iv      = buf.subarray(0, 12);
+  const tag     = buf.subarray(12, 28);
+  const cifrado = buf.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(cifrado), decipher.final()]).toString('utf8');
+};
 
 // Lee la única fila de configuración del POS (crea el objeto por defecto si no existe)
 export const obtenerConfigPos = async () => {
@@ -28,8 +65,10 @@ export const guardarConfigPos = async ({ host, puerto, usuario, password, base_d
     host: host ?? actual.host,
     puerto: Number(puerto ?? actual.puerto),
     usuario: usuario ?? actual.usuario,
-    // Si viene vacío/undefined, se conserva la contraseña anterior (para no borrarla sin querer)
-    password: password === undefined || password === null ? actual.password : password,
+    // Si viene vacío/undefined, conservar la contraseña anterior; si viene nueva, cifrarla
+    password: password === undefined || password === null
+      ? actual.password
+      : cifrarPassword(password),
     base_datos: base_datos ?? actual.base_datos,
     modo: modo ?? actual.modo,
   };
@@ -60,7 +99,7 @@ export const obtenerPoolPos = async () => {
       host: cfg.host,
       port: Number(cfg.puerto),
       user: cfg.usuario,
-      password: cfg.password,
+      password: descifrarPassword(cfg.password),
       database: cfg.base_datos,
       waitForConnections: true,
       connectionLimit: 4,
@@ -76,7 +115,9 @@ export const probarConexionPos = async ({ host, puerto, usuario, password, base_
   let conexion;
   try {
     conexion = await mysql.createConnection({
-      host, port: Number(puerto), user: usuario, password, database: base_datos,
+      host, port: Number(puerto), user: usuario,
+      password: descifrarPassword(password), // descifra si viene cifrada de la BD
+      database: base_datos,
       connectTimeout: 6000,
     });
     await conexion.query('SELECT 1');

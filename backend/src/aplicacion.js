@@ -19,8 +19,24 @@ const app = express();
 // Detrás de un proxy/hosting (Nginx, Render, etc.) para que el rate-limit lea la IP real
 app.set("trust proxy", 1);
 
-// Seguridad de headers HTTP
-app.use(helmet());
+// Seguridad de headers HTTP + CSP explícita
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc:  ["'self'"],
+        styleSrc:   ["'self'", "'unsafe-inline'"],
+        imgSrc:     ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        fontSrc:    ["'self'"],
+        objectSrc:  ["'none'"],
+        frameSrc:   ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  })
+);
 
 // Orígenes permitidos: el panel del personal y el portal del cliente.
 // CLIENT_URL puede traer varias URLs separadas por coma (ej: "https://app...,https://puntos...").
@@ -33,10 +49,10 @@ const origenesPermitidos = (process.env.CLIENT_URL || "")
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permite herramientas sin origin (Postman, curl) y los orígenes de la lista
-      if (!origin || origenesPermitidos.length === 0 || origenesPermitidos.includes(origin)) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true); // Postman, curl
+      if (origenesPermitidos.length === 0)
+        return callback(new Error('CLIENT_URL no está configurado en el entorno'));
+      if (origenesPermitidos.includes(origin)) return callback(null, true);
       return callback(new Error("Origen no permitido por CORS"));
     },
     credentials: true,
