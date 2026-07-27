@@ -16,13 +16,16 @@ const admin = {
 
 async function crearAdmin() {
   try {
-    const [existe] = await pool.query(
-      'SELECT id_usuario FROM usuarios WHERE email = ?',
-      [admin.email]
+    // Solo sirve para crear el PRIMER admin. Si ya existe cualquier administrador,
+    // no se crea otro (evita una puerta trasera si el script corre en producción).
+    // Los siguientes admins se crean desde el panel (/register, solo admin).
+    const [admins] = await pool.query(
+      `SELECT u.id_usuario FROM usuarios u
+       JOIN roles r ON u.id_rol = r.id_rol
+       WHERE r.rol = 'admin' LIMIT 1`
     );
-
-    if (existe.length > 0) {
-      console.log(`ℹ  El usuario ${admin.email} ya existe. No se hizo nada.`);
+    if (admins.length > 0) {
+      console.log('ℹ  Ya existe un administrador. No se creó ninguno.');
       return;
     }
 

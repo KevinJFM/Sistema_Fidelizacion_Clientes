@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import {
   getPosConfig, savePosConfig, setPosModo, probarPos, sincronizarPos, getPosEstado,
 } from '../../servicios/servicioPos';
+import { SkeletonConfig } from '../../componentes/Skeleton/Skeleton';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Configuracion.css';
@@ -73,6 +74,11 @@ const MODAL_TEXTOS = {
     titulo: 'Sincronización completada',
     mensaje: 'Se revisaron los pagos del POS.',
   },
+  enCurso: {
+    icono: 'info',
+    titulo: 'Sincronización en curso',
+    mensaje: 'El sistema ya está sincronizando en este momento (lo hace solo cada 2 minutos). Espera unos segundos y los nuevos clientes aparecerán. No necesitas volver a presionar.',
+  },
   errorSincronizar: {
     icono: 'error',
     titulo: 'No se pudo sincronizar',
@@ -85,6 +91,9 @@ const MODAL_TEXTOS = {
   },
 };
 
+const COOLDOWN_SEG = 60;                        // segundos que el botón queda bloqueado tras sincronizar
+const COOLDOWN_KEY = 'posSyncCooldownHasta';    // guarda el fin del cooldown (sobrevive a recargas)
+
 export default function IntegracionPos() {
   const [form, setForm] = useState(FORM_VACIO);
   const [tienePassword, setTienePassword] = useState(false);
@@ -95,6 +104,8 @@ export default function IntegracionPos() {
 
   const [guardando, setGuardando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  const [cargandoPagina, setCargandoPagina] = useState(true); // primera carga: mostrar skeleton
+  const [esperaSync, setEsperaSync] = useState(0); // segundos de bloqueo tras sincronizar (anti-spam)
   const [modal, setModal] = useState(null); // { tipo: 'conectando'|'exito'|'error'|'desconectado', detalle? }
 
   const cargar = async () => {
@@ -110,9 +121,24 @@ export default function IntegracionPos() {
       toast.error('No se pudo cargar la configuración del POS');
     }
     try { setEstado(await getPosEstado()); } catch { /* opcional */ }
+    setCargandoPagina(false);
   };
 
   useEffect(() => { cargar(); }, []);
+
+  // Al cargar, restaura la espera si el cooldown aún no vence (sobrevive a recargas)
+  useEffect(() => {
+    const hasta = Number(localStorage.getItem(COOLDOWN_KEY) || 0);
+    const restante = Math.ceil((hasta - Date.now()) / 1000);
+    if (restante > 0) setEsperaSync(restante);
+  }, []);
+
+  // Cuenta regresiva del bloqueo del botón "Sincronizar" (anti-spam)
+  useEffect(() => {
+    if (esperaSync <= 0) return;
+    const t = setTimeout(() => setEsperaSync((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [esperaSync]);
 
   const handle = (campo, valor) => setForm((p) => ({ ...p, [campo]: valor }));
 
@@ -201,8 +227,17 @@ export default function IntegracionPos() {
     setSincronizando(true);
     try {
       const r = await sincronizarPos();
-      setModal({ tipo: 'sincronizado', mensaje: r.message });
-      getPosEstado().then(setEstado).catch(() => {});
+      if (r.enCurso) {
+        // El automático (o un clic previo) ya está corriendo: no se lanzó otra.
+        setModal({ tipo: 'enCurso' });
+      } else {
+        setModal({ tipo: 'sincronizado', mensaje: r.message });
+        getPosEstado().then(setEstado).catch(() => {});
+      }
+      // bloquea el botón: el sistema ya sincroniza solo cada 2 min. Se guarda el fin
+      // del cooldown para que la espera sobreviva si recargan la página.
+      localStorage.setItem(COOLDOWN_KEY, String(Date.now() + COOLDOWN_SEG * 1000));
+      setEsperaSync(COOLDOWN_SEG);
     } catch (err) {
       setModal({ tipo: 'errorSincronizar', mensaje: err.response?.data?.message });
     } finally {
@@ -212,6 +247,8 @@ export default function IntegracionPos() {
 
   const auto = modo === 'automatico';
   const textos = modal ? MODAL_TEXTOS[modal.tipo] : null;
+
+  if (cargandoPagina) return <SkeletonConfig tarjetas={3} filasPorTarjeta={4} />;
 
   return (
     <div className="admin-page pos-page">
@@ -313,8 +350,16 @@ export default function IntegracionPos() {
 
         <div className="config-actions" style={{ marginTop: 18, alignItems: 'center', gap: 12 }}>
           {!auto && <span className="pos-nota-sync">Cambia a Automático para poder sincronizar.</span>}
-          <button type="button" className="btn-pos" onClick={handleSincronizar} disabled={sincronizando || !auto}>
-            {sincronizando ? 'Sincronizando…' : 'Sincronizar ahora'}
+          {auto && esperaSync > 0 && (
+            <span className="pos-nota-sync">El sistema sincroniza solo cada 2 min. Espera para volver a sincronizar.</span>
+          )}
+          <button
+            type="button"
+            className="btn-pos"
+            onClick={handleSincronizar}
+            disabled={sincronizando || !auto || esperaSync > 0}
+          >
+            {sincronizando ? 'Sincronizando…' : esperaSync > 0 ? `Espera ${esperaSync}s` : 'Sincronizar ahora'}
           </button>
         </div>
       </div>
@@ -327,6 +372,10 @@ export default function IntegracionPos() {
             <div className="config-item">
               <label>Modo actual</label>
               <div className="config-input"><input type="text" value={estado.modo === 'automatico' ? 'Automático' : 'Manual'} readOnly /></div>
+            </div>
+            <div className="config-item">
+              <label>Clientes traídos desde el POS</label>
+              <div className="config-input"><input type="text" value={estado.clientes_creados ?? 0} readOnly /></div>
             </div>
             <div className="config-item">
               <label>Transacciones creadas desde el POS</label>

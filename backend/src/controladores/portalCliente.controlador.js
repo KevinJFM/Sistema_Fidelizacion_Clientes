@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import pool from '../configuracion/bd.js';
 import { VALOR_PUNTO } from '../configuracion/recompensas.js';
 import { enviarCodigoAcceso } from '../configuracion/correo.js';
@@ -7,14 +8,6 @@ import { enviarCodigoAcceso } from '../configuracion/correo.js';
 // Código de acceso (OTP) por correo
 const OTP_MINUTOS = 5;         // vigencia del código
 const OTP_MAX_INTENTOS = 5;    // intentos de verificación por código
-
-// Oculta el correo para mostrarlo: valeria@gmail.com -> va*****@gmail.com
-const enmascararCorreo = (correo) => {
-  if (!correo || !correo.includes('@')) return 'tu correo';
-  const [usuario, dominio] = correo.split('@');
-  const visible = usuario.slice(0, 2);
-  return `${visible}${'*'.repeat(Math.max(1, usuario.length - 2))}@${dominio}`;
-};
 
 // ============================================================
 //  Portal de autoservicio del cliente (Fase 2)
@@ -24,15 +17,25 @@ const enmascararCorreo = (correo) => {
 
 const ESTADO_ACTIVO = 1;
 
-// Token del cliente: rol 'cliente' + su id, para reusar los middlewares existentes.
-// Sesión larga (1 año): el cliente solo consulta sus puntos, así que se queda logueado
-// hasta que él mismo cierre sesión. No usa refresh token (a diferencia del panel del personal).
-const firmarTokenCliente = (cliente) =>
+// Duración del token según la superficie: la app (dispositivo personal) dura más;
+// el portal (a veces en computadoras compartidas) dura menos. Al expirar, el cliente
+// vuelve a entrar con un código OTP al correo.
+const DURACION_SESION = { app: '180d', portal: '30d' };
+
+// Token del cliente: rol 'cliente' + su id + origen + id de sesión (sid).
+// Sesión única por superficie: el 'sid' debe coincidir con la ranura de la BD
+// (sesion_app / sesion_portal). Al iniciar sesión en otro dispositivo de la MISMA
+// superficie se genera un sid nuevo y el anterior deja de valer (ver verificarSesionCliente).
+const firmarTokenCliente = (cliente, origen, sid) =>
   jwt.sign(
-    { id_cliente: cliente.id_cliente, rol: 'cliente', documento: cliente.numero_documento },
+    { id_cliente: cliente.id_cliente, rol: 'cliente', documento: cliente.numero_documento, origen, sid },
     process.env.JWT_SECRET,
-    { expiresIn: '365d' }
+    { expiresIn: DURACION_SESION[origen] || '30d' }
   );
+
+// Superficie de la sesión: 'app' o 'portal' (por defecto 'portal').
+const normalizarOrigen = (o) => (o === 'app' ? 'app' : 'portal');
+const columnaSesion = (origen) => (origen === 'app' ? 'sesion_app' : 'sesion_portal');
 
 // ===== Acceso con código por correo (OTP) =====
 
@@ -52,41 +55,30 @@ export const solicitarCodigo = async (req, res) => {
       [tipo_documento, numero_documento]
     );
 
-    // Respuesta genérica siempre (no revela si el documento existe)
-    const RESPUESTA_GENERICA = {
-      message: 'Si el documento está registrado, recibirás un código en tu correo.',
-      minutos: OTP_MINUTOS,
-    };
-
-    if (filas.length === 0) {
-      return res.status(200).json(RESPUESTA_GENERICA);
-    }
+    // Respuesta SIEMPRE genérica: no revelamos si el documento existe, si la cuenta
+    // está activa ni si tiene correo (evita enumerar clientes iterando documentos).
+    // El código solo se envía si el cliente existe, está activo y tiene correo.
     const cliente = filas[0];
-    if (cliente.id_estado !== ESTADO_ACTIVO || !cliente.correo) {
-      return res.status(200).json(RESPUESTA_GENERICA);
-    }
+    if (cliente && cliente.id_estado === ESTADO_ACTIVO && cliente.correo) {
+      const codigo = String(Math.floor(100000 + Math.random() * 900000));
+      const codigoHash = await bcrypt.hash(codigo, 10);
+      const expira = new Date(Date.now() + OTP_MINUTOS * 60 * 1000);
 
-    // Código de 6 dígitos, guardado hasheado con vencimiento
-    const codigo = String(Math.floor(100000 + Math.random() * 900000));
-    const codigoHash = await bcrypt.hash(codigo, 10);
-    const expira = new Date(Date.now() + OTP_MINUTOS * 60 * 1000);
+      await pool.query(
+        'UPDATE clientes SET otp_hash = ?, otp_expira = ?, otp_intentos = 0 WHERE id_cliente = ?',
+        [codigoHash, expira, cliente.id_cliente]
+      );
 
-    await pool.query(
-      'UPDATE clientes SET otp_hash = ?, otp_expira = ?, otp_intentos = 0 WHERE id_cliente = ?',
-      [codigoHash, expira, cliente.id_cliente]
-    );
-
-    const enviado = await enviarCodigoAcceso(cliente.correo, codigo, OTP_MINUTOS);
-    // Solo en desarrollo: muestra el código en consola cuando el correo no está configurado
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`\n[OTP] Código para ${cliente.correo}: ${codigo}  (vence en ${OTP_MINUTOS} min)\n`);
+      await enviarCodigoAcceso(cliente.correo, codigo, OTP_MINUTOS);
+      // En desarrollo, el código se ve en la consola del backend.
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`\n[OTP] Código para ${cliente.correo}: ${codigo}  (vence en ${OTP_MINUTOS} min)\n`);
+      }
     }
 
     return res.status(200).json({
-      message: 'Si el documento está registrado, recibirás un código en tu correo.',
-      destino: enmascararCorreo(cliente.correo),
+      message: 'Si el documento está registrado, te enviamos un código a tu correo.',
       minutos: OTP_MINUTOS,
-      modo_dev: !enviado && process.env.NODE_ENV === 'development',
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -133,12 +125,17 @@ export const verificarCodigo = async (req, res) => {
       return res.status(401).json({ message: 'Código incorrecto' });
     }
 
-    // Correcto: se limpia el código (un solo uso) y se emite el token
+    // Correcto: se limpia el código (un solo uso) y se emite el token.
+    // Sesión única por superficie: se genera un sid nuevo y se guarda en la ranura
+    // de esta superficie (app o portal). Eso invalida la sesión anterior de la MISMA
+    // superficie, sin tocar la de la otra.
+    const origen = normalizarOrigen(req.body.origen);
+    const sid = crypto.randomBytes(24).toString('hex');
     await pool.query(
-      'UPDATE clientes SET otp_hash = NULL, otp_expira = NULL, otp_intentos = 0 WHERE id_cliente = ?',
-      [cliente.id_cliente]
+      `UPDATE clientes SET otp_hash = NULL, otp_expira = NULL, otp_intentos = 0, ${columnaSesion(origen)} = ? WHERE id_cliente = ?`,
+      [sid, cliente.id_cliente]
     );
-    const token = firmarTokenCliente(cliente);
+    const token = firmarTokenCliente(cliente, origen, sid);
 
     return res.status(200).json({
       message: 'Bienvenido',
@@ -150,95 +147,9 @@ export const verificarCodigo = async (req, res) => {
   }
 };
 
-// Login del cliente por tipo de documento (DUI/Pasaporte) + número + PIN.
-// Si el cliente aún no tiene PIN, el primero que ingrese queda guardado (primera vez).
-export const loginCliente = async (req, res) => {
-  try {
-    const { tipo_documento, numero_documento, pin } = req.body;
-
-    if (!tipo_documento || !numero_documento || !pin) {
-      return res.status(400).json({ message: 'Documento y PIN son requeridos' });
-    }
-    if (!/^\d{4,6}$/.test(String(pin))) {
-      return res.status(400).json({ message: 'El PIN debe tener entre 4 y 6 dígitos' });
-    }
-
-    // Buscar el cliente por el nombre del tipo de documento y el número
-    const [filas] = await pool.query(
-      `SELECT c.id_cliente, c.nombres, c.apellidos, c.numero_documento,
-              c.puntos_acumulados, c.pin_hash, c.pin_intentos, c.pin_bloqueado_hasta,
-              c.id_estado, td.nombre AS tipo_documento
-       FROM clientes c
-       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
-       WHERE td.nombre = ? AND c.numero_documento = ?`,
-      [tipo_documento, numero_documento]
-    );
-
-    // Mensaje genérico para no revelar si el documento existe o no
-    if (filas.length === 0) {
-      return res.status(401).json({ message: 'Documento o PIN incorrectos' });
-    }
-
-    const cliente = filas[0];
-    if (cliente.id_estado !== ESTADO_ACTIVO) {
-      return res.status(403).json({ message: 'Tu cuenta no está activa. Contacta al hotel.' });
-    }
-
-    // Bloqueo por demasiados intentos fallidos (5 intentos → 15 min de espera)
-    const PIN_MAX_INTENTOS = 5;
-    const PIN_BLOQUEO_MIN = 15;
-    if (cliente.pin_bloqueado_hasta && new Date(cliente.pin_bloqueado_hasta) > new Date()) {
-      return res.status(429).json({ message: `PIN bloqueado temporalmente. Intenta en ${PIN_BLOQUEO_MIN} minutos.` });
-    }
-
-    let primeraVez = false;
-
-    if (!cliente.pin_hash) {
-      // Primera vez: se guarda el PIN que ingresó
-      const pinHash = await bcrypt.hash(String(pin), 10);
-      await pool.query(
-        'UPDATE clientes SET pin_hash = ?, pin_intentos = 0, pin_bloqueado_hasta = NULL WHERE id_cliente = ?',
-        [pinHash, cliente.id_cliente]
-      );
-      primeraVez = true;
-    } else {
-      const pinValido = await bcrypt.compare(String(pin), cliente.pin_hash);
-      if (!pinValido) {
-        const intentos = (cliente.pin_intentos ?? 0) + 1;
-        if (intentos >= PIN_MAX_INTENTOS) {
-          const bloqueadoHasta = new Date(Date.now() + PIN_BLOQUEO_MIN * 60 * 1000);
-          await pool.query(
-            'UPDATE clientes SET pin_intentos = ?, pin_bloqueado_hasta = ? WHERE id_cliente = ?',
-            [intentos, bloqueadoHasta, cliente.id_cliente]
-          );
-          return res.status(429).json({ message: `Demasiados intentos. PIN bloqueado ${PIN_BLOQUEO_MIN} minutos.` });
-        }
-        await pool.query('UPDATE clientes SET pin_intentos = ? WHERE id_cliente = ?', [intentos, cliente.id_cliente]);
-        return res.status(401).json({ message: 'Documento o PIN incorrectos' });
-      }
-      // PIN correcto: resetear contador
-      await pool.query(
-        'UPDATE clientes SET pin_intentos = 0, pin_bloqueado_hasta = NULL WHERE id_cliente = ?',
-        [cliente.id_cliente]
-      );
-    }
-
-    const token = firmarTokenCliente(cliente);
-
-    return res.status(200).json({
-      message: primeraVez ? 'PIN creado. ¡Bienvenido!' : 'Bienvenido',
-      token,
-      primera_vez: primeraVez,
-      cliente: {
-        id_cliente: cliente.id_cliente,
-        nombres: cliente.nombres,
-        apellidos: cliente.apellidos,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({ message: 'Error interno del servidor' });
-  }
-};
+// (El login por PIN se eliminó: el portal y la app usan solo el acceso por
+//  código OTP al correo — ver solicitarCodigo/verificarCodigo. El campo pin_hash
+//  ya no existe en la tabla clientes.)
 
 // Datos de puntos del cliente logueado (saldo, valor en $ y catálogo de recompensas)
 export const misPuntos = async (req, res) => {
@@ -347,6 +258,39 @@ export const misMovimientos = async (req, res) => {
     );
 
     return res.status(200).json(filas);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// Cierre remoto: cierra la sesión de la OTRA superficie.
+//   - Desde el PORTAL se cierra la sesión de la 'app' (ej. teléfono robado).
+//   - Desde la APP se cierra la sesión del 'portal'.
+// Idempotente: avisa si había una sesión abierta o si ya no había ninguna.
+export const cerrarSesionRemota = async (req, res) => {
+  try {
+    const objetivo = normalizarOrigen(req.body.objetivo);
+    const columna = columnaSesion(objetivo);
+    const idCliente = req.usuario.id_cliente;
+    const nombre = objetivo === 'app' ? 'de la app' : 'del portal';
+
+    const [filas] = await pool.query(
+      `SELECT ${columna} AS sesion FROM clientes WHERE id_cliente = ? LIMIT 1`,
+      [idCliente]
+    );
+    const habiaSesion = !!(filas.length && filas[0].sesion);
+
+    if (habiaSesion) {
+      await pool.query(`UPDATE clientes SET ${columna} = NULL WHERE id_cliente = ?`, [idCliente]);
+    }
+
+    return res.status(200).json({
+      cerrada: habiaSesion,
+      objetivo,
+      message: habiaSesion
+        ? `Listo. Cerramos la sesión ${nombre} en tus otros dispositivos.`
+        : `No hay ninguna sesión ${nombre} abierta en este momento.`,
+    });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
   }

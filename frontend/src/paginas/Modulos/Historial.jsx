@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
@@ -6,7 +6,7 @@ import { descargarCSV } from '../../utilidades/csv';
 import { exportarPDF } from '../../utilidades/pdf';
 import { formatDocumento } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
-import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -106,12 +106,15 @@ function ModalDetalle({ t, onClose }) {
 export default function Historial() {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando]   = useState(true);
+  const [inicial, setInicial]     = useState(true);
   const [filtros, setFiltros]     = useState({ numero_documento: '', tipo_documento: '', desde: '', hasta: '' });
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
   const [page, setPage] = useState(1);
   const [searchParams] = useSearchParams();
+  const ultimoFiltro = useRef({}); // último filtro aplicado (para el auto-refresco)
 
   const cargar = async (f = {}) => {
+    ultimoFiltro.current = f;
     setCargando(true);
     try {
       setHistorial(await conMinimo(listarTransacciones(f)));
@@ -119,6 +122,7 @@ export default function Historial() {
       toast.error(mensajeError(err, 'Error al cargar el historial'));
     } finally {
       setCargando(false);
+      setInicial(false);
     }
   };
 
@@ -131,6 +135,19 @@ export default function Historial() {
       cargar();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-refresco en segundo plano: ve las transacciones del POS sin recargar ni
+  // cambiar de módulo. Usa el filtro activo, solo actualiza si cambió (así no te
+  // saca de la página en la que estás), y se pausa si la pestaña no está visible.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      listarTransacciones(ultimoFiltro.current)
+        .then((datos) => setHistorial((prev) => (JSON.stringify(prev) === JSON.stringify(datos) ? prev : datos)))
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
   }, []);
 
   const aplicarFiltros = (e) => {
@@ -218,6 +235,8 @@ export default function Historial() {
   const totalPuntos = historial.reduce((s, t) => s + t.puntos_otorgados, 0);
   const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [historial]); // a la página 1 cuando cambia el resultado
+
+  if (inicial) return <SkeletonListado columnas={10} conBoton={false} conBusqueda={false} filtros={4} />;
 
   return (
     <div className="admin-page">

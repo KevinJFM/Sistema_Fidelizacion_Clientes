@@ -9,7 +9,7 @@ import {
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatTelefono, esTelefonoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
-import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -50,6 +50,7 @@ const emptyForm = {
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [inicial, setInicial]   = useState(true);
   const [error, setError]       = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -74,6 +75,7 @@ export default function Usuarios() {
       setError(mensajeError(err, 'Error al cargar usuarios'));
     } finally {
       setLoading(false);
+      setInicial(false);
     }
   };
 
@@ -234,6 +236,8 @@ export default function Usuarios() {
       setDeleting(false);
     }
   };
+
+  if (inicial) return <SkeletonListado columnas={6} conBusqueda={false} />;
 
   return (
     <div className="admin-page">

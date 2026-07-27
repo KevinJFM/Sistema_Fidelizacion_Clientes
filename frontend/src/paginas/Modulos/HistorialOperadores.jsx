@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { listarTransaccionesOperador } from '../../servicios/servicioOperadores';
 import { exportarPDF } from '../../utilidades/pdf';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
-import { SkeletonFilas } from '../../componentes/Skeleton/Skeleton';
+import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -74,6 +74,7 @@ export default function HistorialOperadores() {
   const [searchParams] = useSearchParams();
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando]   = useState(true);
+  const [inicial, setInicial]     = useState(true);
   const [filtros, setFiltros]     = useState({ tipo: '', desde: '', hasta: '' });
   const [detalle, setDetalle]     = useState(null);
   const [page, setPage]           = useState(1);
@@ -86,6 +87,7 @@ export default function HistorialOperadores() {
       toast.error(mensajeError(err, 'Error al cargar el historial'));
     } finally {
       setCargando(false);
+      setInicial(false);
     }
   };
 
@@ -156,6 +158,8 @@ export default function HistorialOperadores() {
     });
     toast.success('PDF generado');
   };
+
+  if (inicial) return <SkeletonListado columnas={8} conBoton={false} conBusqueda={false} filtros={2} />;
 
   return (
     <div className="admin-page">

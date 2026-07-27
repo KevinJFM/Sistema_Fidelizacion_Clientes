@@ -3,6 +3,19 @@ import pool from '../configuracion/bd.js';
 const ESTADO_INACTIVO = 2; // estados: 1=activo, 2=inactivo, 3=suspendido
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Longitud máxima de cada campo (igual que las columnas de la tabla clientes).
+// Evita que un cuerpo enorme llegue a la BD y frena entradas basura.
+const LIMITES_CLIENTE = { nombres: 100, apellidos: 100, numero_documento: 30, telefono: 20, correo: 150 };
+const validarLongitudes = (datos) => {
+  for (const [campo, max] of Object.entries(LIMITES_CLIENTE)) {
+    const v = datos[campo];
+    if (v != null && String(v).trim().length > max) {
+      return `El campo "${campo}" no puede superar ${max} caracteres`;
+    }
+  }
+  return null;
+};
+
 // Listar todos los clientes
 export const obtenerClientes = async (req, res) => {
   try {
@@ -114,6 +127,9 @@ export const crearCliente = async (req, res) => {
       return res.status(400).json({ message: 'Tipo de documento, número, nombres, apellidos, departamento y distrito son requeridos' });
     }
 
+    const errLongitud = validarLongitudes(req.body);
+    if (errLongitud) return res.status(400).json({ message: errLongitud });
+
     if (correo && !REGEX_CORREO.test(correo)) {
       return res.status(400).json({ message: 'El correo no tiene un formato válido' });
     }
@@ -160,6 +176,9 @@ export const actualizarCliente = async (req, res) => {
     if (existe.length === 0) {
       return res.status(404).json({ message: 'Cliente no encontrado' });
     }
+
+    const errLongitud = validarLongitudes(req.body);
+    if (errLongitud) return res.status(400).json({ message: errLongitud });
 
     if (correo && !REGEX_CORREO.test(correo)) {
       return res.status(400).json({ message: 'El correo no tiene un formato válido' });

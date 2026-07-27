@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { Router } from 'express';
 import { iniciarSesion, registrarUsuario, renovarToken, cerrarSesion } from '../controladores/autenticacion.controlador.js';
-import { limitadorInicioSesion } from '../middlewares/limiteIntentos.middleware.js';
+import { limitadorInicioSesion, limitadorRefresh } from '../middlewares/limiteIntentos.middleware.js';
 import { verificarToken } from '../middlewares/autenticacion.middleware.js';
 import { autorizarRoles } from '../middlewares/rol.middleware.js';
 

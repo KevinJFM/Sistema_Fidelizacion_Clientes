@@ -2,13 +2,31 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usarAvisos } from '../componentes/Avisos';
 import { usarTema } from '../tema/tema';
+import { cerrarSesionApp, mensajeError } from '../servicios/servicioPortal';
 
 export default function Configuracion() {
   const navigate = useNavigate();
   const mostrarAviso = usarAvisos();
   const { oscuro, alternarTema } = usarTema();
   const [cerrando, setCerrando] = useState(false);
+  const [cerrandoApp, setCerrandoApp] = useState(false);
   const [enLinea, setEnLinea] = useState(navigator.onLine);
+
+  // Cierra de forma remota la sesión de la APP (por si el teléfono se perdió/robó)
+  const cerrarApp = async () => {
+    if (!navigator.onLine) {
+      return mostrarAviso('error', 'Sin conexión', 'Necesitas internet para hacer esto.');
+    }
+    setCerrandoApp(true);
+    try {
+      const r = await cerrarSesionApp();
+      mostrarAviso('info', r.cerrada ? 'Sesión de la app cerrada' : 'Sin sesión de la app', r.message);
+    } catch (err) {
+      mostrarAviso('error', 'No se pudo', mensajeError(err, 'Inténtalo de nuevo.'));
+    } finally {
+      setCerrandoApp(false);
+    }
+  };
 
   // Detecta si el dispositivo tiene o no conexión (para bloquear el cierre de sesión)
   useEffect(() => {
@@ -68,6 +86,24 @@ export default function Configuracion() {
           </button>
         </div>
         <p className="pt-config-ayuda">Cambia entre tema claro y oscuro.</p>
+      </div>
+
+      {/* Seguridad: cerrar la sesión de la app de forma remota */}
+      <div className="pt-config-card">
+        <div className="pt-config-izq">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5388A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><polyline points="9 12 11 14 15 10" /></svg>
+          <span>Seguridad</span>
+        </div>
+        <p className="pt-config-ayuda">¿Perdiste o te robaron el teléfono con la app abierta? Cierra su sesión.</p>
+        <button
+          className="pt-btn-salir"
+          style={{ marginTop: 12 }}
+          onClick={cerrarApp}
+          disabled={!enLinea || cerrandoApp}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>
+          {cerrandoApp ? 'Cerrando…' : 'Cerrar sesión de la app'}
+        </button>
       </div>
 
       {/* Cerrar sesión */}

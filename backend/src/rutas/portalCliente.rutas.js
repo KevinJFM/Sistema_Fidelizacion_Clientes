@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { loginCliente, solicitarCodigo, verificarCodigo, misPuntos, misMovimientos, promocionesActivas, registrarToken, borrarToken } from '../controladores/portalCliente.controlador.js';
-import { verificarToken, autorizarRoles } from '../middlewares/autenticacion.middleware.js';
+import { solicitarCodigo, verificarCodigo, misPuntos, misMovimientos, promocionesActivas, registrarToken, borrarToken, cerrarSesionRemota } from '../controladores/portalCliente.controlador.js';
+import { verificarToken, autorizarRoles, verificarSesionCliente } from '../middlewares/autenticacion.middleware.js';
 import { limitadorInicioSesion } from '../middlewares/limiteIntentos.middleware.js';
 
 const router = Router();
@@ -9,14 +9,13 @@ const router = Router();
 router.post('/solicitar-codigo', limitadorInicioSesion, solicitarCodigo);
 router.post('/verificar-codigo', limitadorInicioSesion, verificarCodigo);
 
-// Público: login del cliente por PIN (lo usa el portal web; con límite de intentos)
-router.post('/login', limitadorInicioSesion, loginCliente);
-
-// Protegido: solo el propio cliente (rol 'cliente')
-router.get('/mis-puntos', verificarToken, autorizarRoles('cliente'), misPuntos);
-router.get('/mis-movimientos', verificarToken, autorizarRoles('cliente'), misMovimientos);
-router.get('/promociones', verificarToken, autorizarRoles('cliente'), promocionesActivas);
-router.post('/registrar-token', verificarToken, autorizarRoles('cliente'), registrarToken);
-router.post('/borrar-token', verificarToken, autorizarRoles('cliente'), borrarToken);
+// Protegido: solo el propio cliente (rol 'cliente') y con la sesión vigente de su superficie
+const soloCliente = [verificarToken, autorizarRoles('cliente'), verificarSesionCliente];
+router.get('/mis-puntos', ...soloCliente, misPuntos);
+router.get('/mis-movimientos', ...soloCliente, misMovimientos);
+router.get('/promociones', ...soloCliente, promocionesActivas);
+router.post('/registrar-token', ...soloCliente, registrarToken);
+router.post('/borrar-token', ...soloCliente, borrarToken);
+router.post('/cerrar-sesion-remota', ...soloCliente, cerrarSesionRemota);
 
 export default router;

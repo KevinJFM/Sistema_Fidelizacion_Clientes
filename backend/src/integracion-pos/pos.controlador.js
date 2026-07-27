@@ -3,7 +3,7 @@
 // ============================================================
 import pool from '../configuracion/bd.js';
 import { obtenerConfigPos, guardarConfigPos, probarConexionPos } from './conexionPos.js';
-import { sincronizarPagos, aplicarModoPos } from './pos.servicio.js';
+import { sincronizarTodo, aplicarModoPos } from './pos.servicio.js';
 
 // GET /api/pos/config  -> configuración actual SIN la contraseña
 export const obtenerConfig = async (req, res) => {
@@ -72,13 +72,23 @@ export const probarConexion = async (req, res) => {
   }
 };
 
-// POST /api/pos/sincronizar  -> corre la sincronización ahora mismo
+// POST /api/pos/sincronizar  -> corre la sincronización ahora mismo (clientes + pagos)
 export const sincronizarAhora = async (req, res) => {
   try {
-    const r = await sincronizarPagos();
+    const resultado = await sincronizarTodo();
+
+    // Ya hay una sincronización corriendo (candado): no se lanza otra.
+    if (resultado.enCurso) {
+      return res.status(200).json({ message: 'Ya hay una sincronización en curso. Espera a que termine.', enCurso: true });
+    }
+
+    const cli = resultado.clientes;
+    const r = resultado.pagos;
     if (r.error) return res.status(400).json({ message: r.error });
     return res.status(200).json({
-      message: `Listo: ${r.creadas} transacción(es) creada(s), ${r.sinCliente} sin cliente identificado.`,
+      message: `Listo: ${cli.creados} cliente(s) nuevo(s), ` +
+               `${r.creadas} transacción(es) creada(s), ${r.sinCliente} sin cliente identificado.`,
+      clientes: cli,
       ...r,
     });
   } catch {
@@ -98,10 +108,20 @@ export const obtenerEstado = async (req, res) => {
     );
     const conteo = { creada: 0, sin_cliente: 0 };
     for (const r of porResultado) conteo[r.resultado] = r.total;
+
+    // Clientes traídos por el "Sync de clientes"
+    const [porResultadoCli] = await pool.query(
+      'SELECT resultado, COUNT(*) AS total FROM pos_cliente_procesado GROUP BY resultado'
+    );
+    const conteoCli = { creado: 0, emparejado: 0, sin_documento: 0 };
+    for (const r of porResultadoCli) conteoCli[r.resultado] = r.total;
+
     return res.status(200).json({
       modo: cfg.modo,
       transacciones_creadas: conteo.creada || 0,
       sin_cliente: conteo.sin_cliente || 0,
+      clientes_creados: conteoCli.creado || 0,
+      clientes_emparejados: conteoCli.emparejado || 0,
       ultima_sincronizacion: ultima[0].ultima,
     });
   } catch {

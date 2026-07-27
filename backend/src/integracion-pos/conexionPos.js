@@ -4,8 +4,9 @@
 //  de NUESTRA base y se pueden editar desde la pantalla del sistema.
 //
 //  >>> CREDENCIALES POR DEFECTO <<<
-//  Se siembran en la migración (migracion_integracion_pos.sql):
-//    host: localhost | puerto: 3306 | usuario: root | password: (vacío) | base: eorderback
+//  La tabla pos_configuracion nace con una fila por defecto (ver el .sql de
+//  creación de la BD, semilla_empresa/db_fidelizacion_merasopa.sql):
+//    servidor: localhost | puerto: 3306 | usuario: root | contrasena: (vacío) | base: eorderback
 //  Cámbialas desde la pantalla "Integración POS" o en esa tabla.
 // ============================================================
 import crypto from 'crypto';
@@ -53,7 +54,12 @@ const descifrarPassword = (texto) => {
 
 // Lee la única fila de configuración del POS (crea el objeto por defecto si no existe)
 export const obtenerConfigPos = async () => {
-  const [filas] = await pool.query('SELECT * FROM pos_configuracion ORDER BY id LIMIT 1');
+  // Las columnas se llaman servidor/contrasena (host y password son palabras reservadas
+  // en MySQL). Con alias, el resto del código sigue usando .host y .password.
+  const [filas] = await pool.query(
+    `SELECT id, servidor AS host, puerto, usuario, contrasena AS password, base_datos, modo
+       FROM pos_configuracion ORDER BY id LIMIT 1`
+  );
   if (filas.length) return filas[0];
   return { host: 'localhost', puerto: 3306, usuario: 'root', password: '', base_datos: 'eorderback', modo: 'manual' };
 };
@@ -76,12 +82,12 @@ export const guardarConfigPos = async ({ host, puerto, usuario, password, base_d
   const [filas] = await pool.query('SELECT id FROM pos_configuracion ORDER BY id LIMIT 1');
   if (filas.length) {
     await pool.query(
-      'UPDATE pos_configuracion SET host=?, puerto=?, usuario=?, password=?, base_datos=?, modo=? WHERE id=?',
+      'UPDATE pos_configuracion SET servidor=?, puerto=?, usuario=?, contrasena=?, base_datos=?, modo=? WHERE id=?',
       [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, filas[0].id]
     );
   } else {
     await pool.query(
-      'INSERT INTO pos_configuracion (host, puerto, usuario, password, base_datos, modo) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo) VALUES (?, ?, ?, ?, ?, ?)',
       [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo]
     );
   }

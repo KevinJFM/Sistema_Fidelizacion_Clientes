@@ -1,4 +1,18 @@
 -- ============================================================
+--  db_fidelizacion_merasopa.sql — BASE COMPLETA DE LA EMPRESA (crear a mano)
+--  Sistema de fidelización + integración POS, TODO en un solo archivo.
+--  Es igual a la de Punta Diamantes pero con nombre propio y con las
+--  3 tablas del POS ya incluidas.
+--
+--  CÓMO CORRERLO
+--  En MySQL Workbench: abre este archivo y ejecútalo COMPLETO.
+--  Crea "db_fidelizacion_merasopa" con todas las tablas + catálogos + las 3 tablas del
+--  POS + un admin (admin@empresa.com / Admin123).
+--
+--  Para OTRA empresa: reemplaza "db_fidelizacion_merasopa" por el nombre que quieras.
+-- ============================================================
+
+-- ============================================================
 --  BASE DE DATOS COMPLETA — Sistema de Fidelización (Punta Diamante)
 --  Incluye: catálogos, ubicaciones (depto/municipio/distrito),
 --  usuarios y clientes con ubicación, fidelización y auditoría.
@@ -6,11 +20,11 @@
 --  Acceso del cliente al portal/app: por CÓDIGO (OTP) enviado al correo.
 --  (El antiguo PIN se eliminó; ver migracion_cliente_quitar_pin.sql)
 -- ============================================================
-CREATE DATABASE IF NOT EXISTS db_fidelizacion
+CREATE DATABASE IF NOT EXISTS db_fidelizacion_merasopa
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE db_fidelizacion;
+USE db_fidelizacion_merasopa;
 
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
@@ -136,8 +150,6 @@ CREATE TABLE clientes (
   otp_expira        DATETIME     NULL,            -- vencimiento del código
   otp_intentos      INT          NOT NULL DEFAULT 0,  -- intentos de verificación del código actual
   push_token        VARCHAR(255) NULL,            -- token de notificaciones push (app móvil)
-  sesion_app        VARCHAR(64)  NULL,            -- id de la sesión ACTIVA en la app (sesión única por superficie)
-  sesion_portal     VARCHAR(64)  NULL,            -- id de la sesión ACTIVA en el portal web
   id_estado         INT          NOT NULL,
   created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -297,8 +309,7 @@ CREATE TABLE refresh_tokens (
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_token),
   CONSTRAINT fk_rt_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-  INDEX idx_rt_usuario (id_usuario),
-  INDEX idx_rt_token (token_hash)
+  INDEX idx_rt_usuario (id_usuario)
 );
 
 -- ============================================================
@@ -499,3 +510,64 @@ INSERT INTO distritos (nombre, id_municipio) VALUES
 -- La Unión Sur (44)
 ('Conchagua',44),('El Carmen',44),('Intipucá',44),('La Unión',44),('Meanguera del Golfo',44),
 ('San Alejo',44),('Yayantique',44),('Yucuaiquín',44);
+
+
+-- ============================================================
+--  TABLAS DE LA INTEGRACIÓN POS (las 3 tablas NUEVAS)
+--  Aditivas: no tocan ninguna tabla del sistema base.
+-- ============================================================
+-- Nota: se usan "servidor" y "contrasena" en vez de host/password
+-- porque esas dos son palabras reservadas en MySQL.
+CREATE TABLE IF NOT EXISTS pos_configuracion (
+  id          INT NOT NULL AUTO_INCREMENT,
+  servidor    VARCHAR(120) NOT NULL DEFAULT 'localhost',
+  puerto      INT          NOT NULL DEFAULT 3306,
+  usuario     VARCHAR(120) NOT NULL DEFAULT 'root',
+  contrasena  VARCHAR(255) NOT NULL DEFAULT '',        -- OJO: texto plano (uso local/tesis). Recomendado: usuario MySQL de solo lectura.
+  base_datos  VARCHAR(120) NOT NULL DEFAULT 'eorderback',
+  modo        ENUM('automatico','manual') NOT NULL DEFAULT 'manual',
+  PRIMARY KEY (id)
+);
+
+-- Fila inicial con las credenciales por defecto.
+-- CAMBIA servidor/puerto/usuario/contrasena/base por los tuyos (o desde la pantalla del sistema).
+INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo)
+SELECT 'localhost', 3306, 'root', '', 'eorderback', 'manual' FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM pos_configuracion);
+
+-- Control de pedidos del POS ya convertidos en transacción (evita duplicados).
+CREATE TABLE IF NOT EXISTS pos_pedido_procesado (
+  id              INT NOT NULL AUTO_INCREMENT,
+  id_pedido_pos   INT NOT NULL,                 -- idPedido en la base del POS
+  id_transaccion  INT NULL,                     -- transacción creada en nuestra base
+  id_cliente      INT NULL,                     -- cliente de fidelización al que se otorgó
+  resultado       VARCHAR(30) NOT NULL DEFAULT 'creada',  -- creada | sin_cliente
+  detalle         VARCHAR(200) NULL,
+  fecha_procesado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_pos_pedido (id_pedido_pos)
+);
+
+-- Control de clientes del POS ya traídos al módulo (evita duplicados y re-escaneo).
+-- Lo usa el "Sync de clientes": al conectar la BD trae TODOS los clientes
+-- identificables (por lotes), aunque no hayan consumido todavía.
+CREATE TABLE IF NOT EXISTS pos_cliente_procesado (
+  id              INT NOT NULL AUTO_INCREMENT,
+  id_cliente_pos  INT NOT NULL,                 -- idCliente en la base del POS
+  id_cliente      INT NULL,                     -- cliente creado/emparejado en nuestra base
+  resultado       VARCHAR(30) NOT NULL DEFAULT 'creado',  -- creado | emparejado | sin_documento
+  detalle         VARCHAR(200) NULL,
+  fecha_procesado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_pos_cliente (id_cliente_pos)
+);
+
+
+-- ============================================================
+--  USUARIO ADMIN DE ARRANQUE (para iniciar sesión al panel)
+--  Correo: admin@empresa.com   Contraseña: Admin123  (cámbiala luego)
+-- ============================================================
+INSERT INTO usuarios (nombre, apellido, email, contrasena_hash, telefono, id_rol, id_estado)
+VALUES ('Admin', 'Empresa', 'admin@empresa.com', '$2a$10$ts0FfQJEVaVhWns0GtKMS.5m56V/Zi3ZVhjOyuOQTnvTkOwqUDq46', '00000000',
+        (SELECT id_rol    FROM roles   WHERE rol    = 'admin'   LIMIT 1),
+        (SELECT id_estado FROM estados WHERE estado = 'activo' LIMIT 1));
