@@ -72,8 +72,16 @@ export default function Configuracion() {
     setValores((prev) => ({ ...prev, [clave]: valor }));
   };
 
-  const handleToggle = (clave) => {
-    setValores((prev) => ({ ...prev, [clave]: prev[clave] === '1' ? '0' : '1' }));
+  const handleToggle = async (clave) => {
+    const anterior = valores[clave];
+    const nuevoValor = anterior === '1' ? '0' : '1';
+    setValores((prev) => ({ ...prev, [clave]: nuevoValor }));
+    try {
+      await updateConfiguracion({ [clave]: nuevoValor });
+    } catch {
+      setValores((prev) => ({ ...prev, [clave]: anterior }));
+      toast.error('Error al guardar el cambio');
+    }
   };
 
   const activo = (grupo) => !grupo.toggle || valores[grupo.toggle] === '1';
