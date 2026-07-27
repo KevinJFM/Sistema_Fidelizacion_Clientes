@@ -4,6 +4,16 @@ import { iniciarTareasProgramadas } from "./tareas/promociones.tarea.js";
 import { iniciarTareasClientes } from "./tareas/clientes.tarea.js";
 import { iniciarIntegracionPos } from "./integracion-pos/pos.servicio.js";
 
+// Falla al arrancar si faltan variables de entorno críticas de seguridad.
+// Mejor fallar aquí con un mensaje claro que en producción en el primer request.
+const VARS_REQUERIDAS = ['JWT_SECRET', 'JWT_EXPIRES_IN', 'REFRESH_SECRET', 'REFRESH_EXPIRES_IN', 'DB_HOST', 'DB_USER', 'DB_NAME'];
+const faltantes = VARS_REQUERIDAS.filter((v) => !process.env[v]);
+if (faltantes.length > 0) {
+  console.error(`[ERROR] Variables de entorno requeridas no configuradas: ${faltantes.join(', ')}`);
+  console.error('        Revisa tu archivo .env y el .env.example como guía.');
+  process.exit(1);
+}
+
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {

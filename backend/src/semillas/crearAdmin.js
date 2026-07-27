@@ -54,10 +54,10 @@ async function crearAdmin() {
 
     console.log('✓ Usuario admin creado correctamente:');
     console.log(`   Email:        ${admin.email}`);
-    console.log(`   Contraseña:   ${admin.contrasena}`);
+    console.log(`   Contraseña:   (la que configuraste en .env o el valor por defecto en crearAdmin.js)`);
     console.log(`   Departamento: ${admin.departamento} (id ${idDepartamento})`);
     console.log(`   Distrito:     ${admin.distrito} (id ${idDistrito})`);
-    console.log('   ⚠  Cámbiala después de iniciar sesión.');
+    console.log('   ⚠  Cámbiala desde el panel después de iniciar sesión.');
   } catch (err) {
     console.error('✗ Error al crear el admin:', err.message);
   } finally {

@@ -28,7 +28,11 @@ const _getKey = () => {
 
 const cifrarPassword = (texto) => {
   const key = _getKey();
-  if (!key || !texto) return texto;
+  if (!key) {
+    if (texto) console.warn('[conexionPos] POS_ENCRYPTION_KEY no configurada: la contraseña del POS se guardará sin cifrar.');
+    return texto;
+  }
+  if (!texto) return texto;
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const cifrado = Buffer.concat([cipher.update(texto, 'utf8'), cipher.final()]);

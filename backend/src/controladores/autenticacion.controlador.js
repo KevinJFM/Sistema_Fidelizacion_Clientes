@@ -125,7 +125,7 @@ export const renovarToken = async (req, res) => {
 
     let datosToken;
     try {
-      datosToken = jwt.verify(token, process.env.REFRESH_SECRET);
+      datosToken = jwt.verify(token, process.env.REFRESH_SECRET, { algorithms: ['HS256'] });
     } catch {
       return res.status(401).json({ message: 'Sesión expirada' });
     }

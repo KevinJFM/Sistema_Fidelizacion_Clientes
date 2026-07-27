@@ -11,7 +11,7 @@ export const verificarToken = (req, res, next) => {
     }
 
     const token = encabezadoAuth.split(' ')[1].trim();
-    const datosToken = jwt.verify(token, process.env.JWT_SECRET);
+    const datosToken = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.usuario = datosToken;
     next();
   } catch (error) {
