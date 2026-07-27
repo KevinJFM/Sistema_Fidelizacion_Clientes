@@ -1,0 +1,17 @@
+{
+  "name": "Mis Puntos · Punta Diamantes",
+  "short_name": "Mis Puntos",
+  "description": "Consulta tus puntos de fidelidad del Hotel Punta Diamantes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A1259",
+  "theme_color": "#E5388A",
+  "icons": [
+    {
+      "src": "/icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
