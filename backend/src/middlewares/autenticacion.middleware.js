@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import pool from '../configuracion/bd.js';
 
 // Verifica el token de acceso y carga el usuario en req.usuario
 export const verificarToken = (req, res, next) => {
@@ -10,11 +11,32 @@ export const verificarToken = (req, res, next) => {
     }
 
     const token = encabezadoAuth.split(' ')[1].trim();
-    const datosToken = jwt.verify(token, process.env.JWT_SECRET);
+    const datosToken = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.usuario = datosToken;
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Token inválido o expirado' });
+  }
+};
+
+// Sesión única por superficie (solo clientes): el 'sid' del token debe coincidir
+// con la ranura guardada en BD. Si no coincide, el cliente inició sesión en otro dispositivo.
+export const verificarSesionCliente = async (req, res, next) => {
+  try {
+    const { id_cliente, origen, sid } = req.usuario || {};
+    if (!id_cliente) return res.status(401).json({ message: 'No autenticado' });
+
+    const columna = origen === 'app' ? 'sesion_app' : 'sesion_portal';
+    const [filas] = await pool.query(
+      `SELECT ${columna} AS sesion FROM clientes WHERE id_cliente = ? LIMIT 1`,
+      [id_cliente]
+    );
+    if (!filas.length || !sid || filas[0].sesion !== sid) {
+      return res.status(401).json({ message: 'Tu sesión se cerró porque iniciaste sesión en otro dispositivo.' });
+    }
+    next();
+  } catch {
+    return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 

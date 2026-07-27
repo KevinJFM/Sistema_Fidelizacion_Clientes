@@ -10,6 +10,7 @@ import rutasUbicaciones from "./rutas/ubicacion.rutas.js";
 import rutasConfiguracion from "./rutas/configuracion.rutas.js";
 import rutasPromociones from "./rutas/promocion.rutas.js";
 import rutasOperadores from "./rutas/operador.rutas.js";
+import rutasPortalCliente from "./rutas/portalCliente.rutas.js";
 
 const app = express();
 
@@ -73,5 +74,6 @@ app.use("/api/ubicaciones", rutasUbicaciones);
 app.use("/api/configuracion", rutasConfiguracion);
 app.use("/api/promociones", rutasPromociones);
 app.use("/api/operadores", rutasOperadores);
+app.use("/api/portal", rutasPortalCliente);
 
 export default app;
