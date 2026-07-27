@@ -7,5 +7,5 @@ USE db_fidelizacion;
 
 INSERT IGNORE INTO configuracion (clave, valor, descripcion) VALUES
   ('canje_activo',           '1', 'Permite canjear puntos por descuento'),
-  ('bienvenida_activo',      '1', 'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '1', 'Activa el descuento por compra alta');
+  ('bienvenida_activo',      '0', 'Activa el beneficio de bienvenida (primera compra)'),
+  ('descuento_monto_activo', '0', 'Activa el descuento por compra alta');
