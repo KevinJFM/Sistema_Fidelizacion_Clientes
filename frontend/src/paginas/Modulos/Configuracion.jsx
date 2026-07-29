@@ -58,6 +58,11 @@ export default function Configuracion() {
   const [form, setForm]                 = useState(FORM_VACIO);
   const [editandoId, setEditandoId]     = useState(null);
   const [savingR, setSavingR]           = useState(false);
+  const [modalR, setModalR]             = useState(false);
+  const [confirmEliminarR, setConfirmEliminarR] = useState(null);
+  const [eliminandoR, setEliminandoR]           = useState(false);
+  const [confirmToggleR, setConfirmToggleR]     = useState(null);
+  const [cambiandoEstadoR, setCambiandoEstadoR] = useState(false);
   const enviandoR = useRef(false);
 
   const cargar = async () => {
@@ -104,14 +109,22 @@ export default function Configuracion() {
 
   const handleFormR = (campo, valor) => setForm((p) => ({ ...p, [campo]: valor }));
 
+  const abrirCrear = () => {
+    setEditandoId(null);
+    setForm(FORM_VACIO);
+    setModalR(true);
+  };
+
   const iniciarEdicion = (r) => {
     setEditandoId(r.id);
     setForm({ nombre: r.nombre, tipo: r.tipo, puntos: r.puntos });
+    setModalR(true);
   };
 
   const cancelarEdicion = () => {
     setEditandoId(null);
     setForm(FORM_VACIO);
+    setModalR(false);
   };
 
   const handleGuardarR = async (e) => {
@@ -142,27 +155,35 @@ export default function Configuracion() {
     }
   };
 
-  const handleEliminar = async (id) => {
-    if (!window.confirm('¿Eliminar permanentemente este tipo de canje? Esta acción no se puede deshacer.')) return;
+  const confirmarEliminar = async () => {
+    if (!confirmEliminarR) return;
+    setEliminandoR(true);
     try {
-      await eliminarRecompensa(id);
-      setRecompensas((prev) => prev.filter((r) => r.id !== id));
+      await eliminarRecompensa(confirmEliminarR.id);
+      setRecompensas((prev) => prev.filter((r) => r.id !== confirmEliminarR.id));
       toast.success('Tipo de canje eliminado');
+      setConfirmEliminarR(null);
     } catch {
       toast.error('Error al eliminar');
+    } finally {
+      setEliminandoR(false);
     }
   };
 
-  const handleToggleActivo = async (r) => {
+  const confirmarToggleActivo = async () => {
+    if (!confirmToggleR) return;
+    const r = confirmToggleR;
     const nuevoEstado = r.activo ? 0 : 1;
-    const msg = nuevoEstado ? '¿Reactivar este tipo de canje?' : '¿Desactivar este tipo de canje? Seguirá guardado y podrás reactivarlo cuando quieras.';
-    if (!window.confirm(msg)) return;
+    setCambiandoEstadoR(true);
     try {
       const actualizado = await actualizarRecompensa(r.id, { nombre: r.nombre, tipo: r.tipo, puntos: r.puntos, activo: nuevoEstado });
       setRecompensas((prev) => prev.map((x) => x.id === r.id ? actualizado : x));
       toast.success(nuevoEstado ? 'Tipo de canje reactivado' : 'Tipo de canje desactivado');
+      setConfirmToggleR(null);
     } catch {
       toast.error('Error al cambiar el estado');
+    } finally {
+      setCambiandoEstadoR(false);
     }
   };
 
@@ -219,58 +240,14 @@ export default function Configuracion() {
             <h3>Tipos de canje</h3>
             <p>Define qué pueden obtener los clientes al canjear sus puntos</p>
           </div>
+          <button type="button" className="btn-primary" onClick={abrirCrear}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nuevo canje
+          </button>
         </div>
-
-        {/* Formulario crear / editar */}
-        <form className="recompensa-form" onSubmit={handleGuardarR}>
-          <div className="recompensa-form-fields">
-            <div className="config-item">
-              <label>Nombre</label>
-              <div className="config-input">
-                <input
-                  type="text"
-                  placeholder="Ej: Pasanoche fin de semana"
-                  value={form.nombre}
-                  onChange={(e) => handleFormR('nombre', e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="config-item">
-              <label>Categoría</label>
-              <div className="config-input">
-                <input
-                  type="text"
-                  placeholder="Ej: Estándar, Premium"
-                  value={form.tipo}
-                  onChange={(e) => handleFormR('tipo', e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="config-item">
-              <label>Puntos requeridos</label>
-              <div className="config-input">
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="Ej: 700"
-                  value={form.puntos}
-                  onChange={(e) => handleFormR('puntos', e.target.value)}
-                />
-                <span className="config-sufijo">pts</span>
-              </div>
-            </div>
-          </div>
-          <div className="recompensa-form-actions">
-            <button type="submit" className="btn-primary btn-sm" disabled={savingR}>
-              {savingR ? 'Guardando...' : editandoId ? 'Actualizar' : '+ Agregar'}
-            </button>
-            {editandoId && (
-              <button type="button" className="btn-ghost btn-sm" onClick={cancelarEdicion}>
-                Cancelar
-              </button>
-            )}
-          </div>
-        </form>
 
         {/* Lista de tipos de canje */}
         {loadingR ? (
@@ -287,26 +264,26 @@ export default function Configuracion() {
                 <div className="recompensa-info">
                   <div className="recompensa-nombre-row">
                     <span className="recompensa-nombre">{r.nombre}</span>
-                    {!r.activo && <span className="badge-inactivo">Inactivo</span>}
                   </div>
                   <span className="recompensa-meta">{r.tipo} · {r.puntos} pts · ${r.valor?.toFixed(2)}</span>
                 </div>
                 <div className="recompensa-acciones">
-                  <button className="btn-icon" title="Editar" onClick={() => iniciarEdicion(r)}>
+                  {!r.activo && <span className="badge-inactivo">Inactivo</span>}
+                  <button className="icon-btn edit" title="Editar" onClick={() => iniciarEdicion(r)}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
                   <button
-                    className={`btn-icon ${r.activo ? 'btn-icon-warning' : 'btn-icon-success'}`}
+                    className={`icon-btn ${r.activo ? 'activate' : 'warning'}`}
                     title={r.activo ? 'Desactivar' : 'Reactivar'}
-                    onClick={() => handleToggleActivo(r)}
+                    onClick={() => setConfirmToggleR(r)}
                   >
                     {r.activo ? (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    ) : (
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    ) : (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     )}
                   </button>
-                  <button className="btn-icon btn-icon-danger" title="Eliminar" onClick={() => handleEliminar(r.id)}>
+                  <button className="icon-btn delete" title="Eliminar" onClick={() => setConfirmEliminarR(r)}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                   </button>
                 </div>
@@ -400,6 +377,118 @@ export default function Configuracion() {
             </button>
           </div>
         </form>
+      )}
+
+      {/* ── Modal crear / editar tipo de canje ── */}
+      {modalR && (
+        <div className="modal-overlay" onClick={cancelarEdicion}>
+          <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">{editandoId ? 'Editar canje' : 'Nuevo canje'}</h3>
+
+            <form className="modal-form" onSubmit={handleGuardarR} noValidate>
+              <div className="form-field">
+                <label>Nombre</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Pasanoche fin de semana"
+                  value={form.nombre}
+                  onChange={(e) => handleFormR('nombre', e.target.value)}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Categoría</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Estándar, Premium"
+                    value={form.tipo}
+                    onChange={(e) => handleFormR('tipo', e.target.value)}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>Puntos requeridos</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Ej: 700"
+                    value={form.puntos}
+                    onChange={(e) => handleFormR('puntos', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={cancelarEdicion}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={savingR}>
+                  {savingR ? 'Guardando...' : editandoId ? 'Guardar cambios' : 'Crear canje'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal activar / desactivar tipo de canje ── */}
+      {confirmToggleR && (
+        <div className="modal-overlay" onClick={() => setConfirmToggleR(null)}>
+          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className={`confirm-icon ${confirmToggleR.activo ? 'confirm-icon-warn' : 'confirm-icon-ok'}`}>
+              {confirmToggleR.activo ? (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              ) : (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              )}
+            </div>
+            <h3 className="confirm-title">
+              {confirmToggleR.activo ? '¿Desactivar tipo de canje?' : '¿Reactivar tipo de canje?'}
+            </h3>
+            <p className="confirm-text">
+              <strong>{confirmToggleR.nombre}</strong>{' '}
+              {confirmToggleR.activo
+                ? 'quedará oculto para los clientes. Seguirá guardado y podrás reactivarlo cuando quieras.'
+                : 'volverá a estar disponible para los clientes.'}
+            </p>
+            <div className="modal-actions confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setConfirmToggleR(null)}>Cancelar</button>
+              <button type="button" className="btn-primary" onClick={confirmarToggleActivo} disabled={cambiandoEstadoR}>
+                {cambiandoEstadoR
+                  ? 'Guardando...'
+                  : confirmToggleR.activo ? 'Sí, desactivar' : 'Sí, reactivar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal eliminar tipo de canje ── */}
+      {confirmEliminarR && (
+        <div className="modal-overlay" onClick={() => setConfirmEliminarR(null)}>
+          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h3 className="confirm-title">¿Eliminar tipo de canje?</h3>
+            <p className="confirm-text">
+              <strong>{confirmEliminarR.nombre}</strong> será eliminado permanentemente.
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="modal-actions confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setConfirmEliminarR(null)}>Cancelar</button>
+              <button type="button" className="btn-danger" onClick={confirmarEliminar} disabled={eliminandoR}>
+                {eliminandoR ? 'Eliminando...' : 'Sí, eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

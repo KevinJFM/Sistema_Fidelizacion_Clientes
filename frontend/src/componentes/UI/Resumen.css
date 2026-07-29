@@ -1,0 +1,21 @@
+/* ============================================================
+   Resumen reutilizable del panel (componente UI/Resumen).
+   Etiquetas en negrita; valores destacados en verde.
+   ============================================================ */
+.ui-resumen {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: #374151;      /* etiqueta oscura y marcada en modo claro */
+  font-weight: 700;    /* negrita en claro */
+}
+.ui-resumen-item strong {
+  color: #16a34a;      /* número en verde de marca */
+  font-weight: 800;
+}
+
+/* Tema oscuro: etiquetas más blancas, verde más luminoso */
+[data-theme="dark"] .ui-resumen { color: #e8ebff; }
+[data-theme="dark"] .ui-resumen-item strong { color: #4ade80; }

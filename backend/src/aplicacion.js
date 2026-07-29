@@ -59,6 +59,9 @@ app.use(
       return callback(new Error("Origen no permitido por CORS"));
     },
     credentials: true,
+    // Cabeceras propias que el navegador SÍ puede leer desde el JS del panel
+    // (ej. aviso de que el historial se recortó por el tope de seguridad).
+    exposedHeaders: ["X-Historial-Truncado", "X-Historial-Limite"],
   })
 );
 

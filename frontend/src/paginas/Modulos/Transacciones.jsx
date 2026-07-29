@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { buscarCliente } from '../../servicios/servicioClientes';
 import { crearTransaccion, getRecompensas } from '../../servicios/servicioTransacciones';
 import { formatDui, formatPasaporte } from '../../utilidades/formato';
+import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -144,13 +145,23 @@ export default function Transacciones() {
               <div className="form-row">
                 <div className="form-field">
                   <label>Fecha de ingreso</label>
-                  <input type="date" value={form.fecha_ingreso}
-                    onChange={(e) => setForm({ ...form, fecha_ingreso: e.target.value })} />
+                  <DatePicker
+                    size="compacto"
+                    className="dp--bloque"
+                    value={isoAFecha(form.fecha_ingreso)}
+                    onChange={(d) => setForm({ ...form, fecha_ingreso: fechaAISO(d) })}
+                    placeholder="Elegir fecha"
+                  />
                 </div>
                 <div className="form-field">
                   <label>Fecha de salida</label>
-                  <input type="date" value={form.fecha_salida}
-                    onChange={(e) => setForm({ ...form, fecha_salida: e.target.value })} />
+                  <DatePicker
+                    size="compacto"
+                    className="dp--bloque"
+                    value={isoAFecha(form.fecha_salida)}
+                    onChange={(d) => setForm({ ...form, fecha_salida: fechaAISO(d) })}
+                    placeholder="Elegir fecha"
+                  />
                 </div>
               </div>
 

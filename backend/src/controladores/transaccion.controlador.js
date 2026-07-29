@@ -5,10 +5,20 @@ import { enviarPush } from '../configuracion/push.js';
 // (El valor del punto $0.05 y el catálogo de canje viven en recompensas.js)
 const DOLARES_POR_PUNTO = 1;    // 1 punto por cada $1
 
-// Lee un valor de la tabla configuracion (con valor por defecto)
-const obtenerConfig = async (clave, porDefecto) => {
-  const [filas] = await pool.query('SELECT valor FROM configuracion WHERE clave = ?', [clave]);
-  return filas.length ? filas[0].valor : porDefecto;
+// Lee VARIAS claves de la tabla configuracion en UNA sola consulta (evita N queries
+// en serie). `defaults` es un objeto { clave: valorPorDefecto }; devuelve { clave: valor }
+// con lo que hay en la BD y, si falta alguna clave, su valor por defecto.
+const obtenerConfigs = async (defaults) => {
+  const claves = Object.keys(defaults);
+  if (claves.length === 0) return {};
+  const marcadores = claves.map(() => '?').join(', ');
+  const [filas] = await pool.query(
+    `SELECT clave, valor FROM configuracion WHERE clave IN (${marcadores})`,
+    claves
+  );
+  const mapa = { ...defaults };
+  for (const f of filas) mapa[f.clave] = f.valor;
+  return mapa;
 };
 
 // Listar recompensas activas desde la BD (ruta legacy mantenida por compatibilidad)
@@ -44,15 +54,23 @@ export const crearTransaccion = async (req, res) => {
     }
 
     // ===== Reglas configurables (se pueden ajustar en la tabla configuracion) =====
-    const bienvenidaPuntos     = Number(await obtenerConfig('bienvenida_puntos', '20'));
-    const bienvenidaDescuento  = Number(await obtenerConfig('bienvenida_descuento', '2'));
-    const descuentoMontoMinimo = Number(await obtenerConfig('descuento_monto_minimo', '30'));
-    const descuentoMontoValor  = Number(await obtenerConfig('descuento_monto_valor', '1'));
-
-    // Interruptores ON/OFF de cada regla (1 = activo). Si no existe la clave, se asume activo.
+    // Se leen TODAS en una sola consulta (antes eran 6 queries en serie).
+    // Los interruptores ON/OFF valen 1 = activo; si no existe la clave, se asume activo.
     // El canje SIEMPRE está activo (no es configurable).
-    const bienvenidaActivo     = Number(await obtenerConfig('bienvenida_activo', '1')) === 1;
-    const descuentoMontoActivo = Number(await obtenerConfig('descuento_monto_activo', '1')) === 1;
+    const cfg = await obtenerConfigs({
+      bienvenida_puntos: '20',
+      bienvenida_descuento: '2',
+      descuento_monto_minimo: '30',
+      descuento_monto_valor: '1',
+      bienvenida_activo: '1',
+      descuento_monto_activo: '1',
+    });
+    const bienvenidaPuntos     = Number(cfg.bienvenida_puntos);
+    const bienvenidaDescuento  = Number(cfg.bienvenida_descuento);
+    const descuentoMontoMinimo = Number(cfg.descuento_monto_minimo);
+    const descuentoMontoValor  = Number(cfg.descuento_monto_valor);
+    const bienvenidaActivo     = Number(cfg.bienvenida_activo) === 1;
+    const descuentoMontoActivo = Number(cfg.descuento_monto_activo) === 1;
 
     // ¿Es la primera compra registrada del cliente?
     const [filasConteo] = await pool.query(
@@ -152,12 +170,30 @@ export const crearTransaccion = async (req, res) => {
 
     if (descuento > montoNumerico) descuento = montoNumerico;
 
-    const saldoFinal = cliente.puntos_acumulados + puntosOtorgados - puntosCanjeados;
-
-    // Escritura atómica (transacción de BD)
+    // Escritura atómica (transacción de BD). Bloqueamos la fila del cliente con
+    // SELECT ... FOR UPDATE y actualizamos el saldo de forma RELATIVA (no absoluta),
+    // para que dos registros simultáneos del mismo cliente (doble clic, o registro
+    // manual coincidiendo con el poller del POS) no se pisen: la segunda escritura
+    // suma/resta sobre el valor real, en vez de sobrescribir con un saldo ya obsoleto.
     const conexion = await pool.getConnection();
     try {
       await conexion.beginTransaction();
+
+      // Saldo actual bloqueado hasta el commit (nadie más lo modifica mientras tanto).
+      const [filasSaldo] = await conexion.query(
+        'SELECT puntos_acumulados FROM clientes WHERE id_cliente = ? FOR UPDATE',
+        [id_cliente]
+      );
+      const puntosActuales = Number(filasSaldo[0].puntos_acumulados);
+
+      // Re-validación autoritativa del canje contra el saldo bloqueado: evita el doble
+      // gasto si otra transacción restó puntos entre la lectura inicial y este bloqueo.
+      if (quiereCanjear && puntosActuales < recompensa.puntos) {
+        await conexion.rollback();
+        return res.status(400).json({ message: 'El cliente no tiene puntos suficientes para esa recompensa' });
+      }
+
+      const saldoFinal = puntosActuales + puntosOtorgados - puntosCanjeados;
 
       const [resultado] = await conexion.query(
         `INSERT INTO transacciones
@@ -172,9 +208,10 @@ export const crearTransaccion = async (req, res) => {
       );
       const idTransaccion = resultado.insertId;
 
+      // Actualización RELATIVA: suma/resta sobre el valor real de la BD (fila bloqueada).
       await conexion.query(
-        'UPDATE clientes SET puntos_acumulados = ? WHERE id_cliente = ?',
-        [saldoFinal, id_cliente]
+        'UPDATE clientes SET puntos_acumulados = puntos_acumulados + ? WHERE id_cliente = ?',
+        [puntosOtorgados - puntosCanjeados, id_cliente]
       );
 
       // Solo se registra "ganado" cuando realmente se otorgan puntos (en un canje no se ganan)
@@ -270,7 +307,25 @@ export const listarTransacciones = async (req, res) => {
 
     sql += ' ORDER BY t.id_transaccion DESC';
 
+    // Tope solo defensivo (evita traer un resultado sin límite si algún día la tabla
+    // fuera gigantesca). El panel pagina y EXPORTA del lado del cliente sobre esta misma
+    // lista, así que el tope se deja MUY alto para que la descarga (CSV/PDF) salga
+    // completa —desde la primera hasta la última— filtrando por DUI, Pasaporte o todos.
+    // Un hotel tardaría años en acercarse a 50 000 filas por filtro. Override: ?limite=N.
+    const limite = Math.min(Math.max(parseInt(req.query.limite, 10) || 50000, 1), 100000);
+    sql += ' LIMIT ?';
+    // Pedimos UNA fila de más que el tope: si vuelve, es señal de que había más y se recortó.
+    parametros.push(limite + 1);
+
     const [filas] = await pool.query(sql, parametros);
+
+    // ¿Se alcanzó el tope? Avisamos por cabecera (el cuerpo sigue siendo el arreglo de
+    // siempre, no se rompe nada). El panel lee esto para mostrar un aviso al usuario.
+    const truncado = filas.length > limite;
+    if (truncado) filas.length = limite; // descartamos la fila extra que pedimos de sonda
+    res.set('X-Historial-Truncado', truncado ? '1' : '0');
+    res.set('X-Historial-Limite', String(limite));
+
     return res.status(200).json(filas);
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });

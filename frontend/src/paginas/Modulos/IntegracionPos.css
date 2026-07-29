@@ -36,9 +36,28 @@
 [data-theme="dark"] .pos-page .config-input input:disabled {
   color: #9ca3af !important;
   -webkit-text-fill-color: #9ca3af;   /* fuerza el gris del texto en Chrome/Brave */
-  background: #eceef4 !important;
+  background: transparent !important;  /* sin relleno: se ve blanco como la tarjeta */
   cursor: not-allowed;
   opacity: 1;
+}
+
+/* Neutraliza el resaltado AZUL del autocompletado del navegador
+   (Chrome/Brave lo pintan con un color interno que 'background' no vence;
+   el único modo de taparlo es un box-shadow interno del color deseado). */
+.pos-page .config-input input:-webkit-autofill,
+.pos-page .config-input input:-webkit-autofill:hover,
+.pos-page .config-input input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827;
+  transition: background-color 9999s ease-in-out 0s;   /* evita el parpadeo azul al enfocar */
+}
+/* Cuando ya está conectado (campo bloqueado): fondo blanco, solo texto gris */
+.pos-page .config-input input:-webkit-autofill:disabled {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #9ca3af !important;
 }
 
 /* ============================================================

@@ -5,11 +5,11 @@ import {
   getClientes,
   createCliente,
   updateCliente,
-  deleteCliente,
 } from '../../servicios/servicioClientes';
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
@@ -52,8 +52,6 @@ export default function Clientes() {
   const [form, setForm]           = useState(emptyForm);
   const [saving, setSaving]       = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [confirmCliente, setConfirmCliente] = useState(null);
-  const [deleting, setDeleting]   = useState(false);
   const [departamentos, setDepartamentos] = useState([]);
   const [distritos, setDistritos]         = useState([]);
 
@@ -204,21 +202,6 @@ export default function Clientes() {
     }
   };
 
-  const confirmarDesactivar = async () => {
-    if (!confirmCliente) return;
-    setDeleting(true);
-    try {
-      await deleteCliente(confirmCliente.id_cliente);
-      toast.success('Cliente desactivado');
-      setConfirmCliente(null);
-      await cargar();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al desactivar');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   const filtrados = clientes.filter((c) => {
     const t = filtro.toLowerCase();
     return (
@@ -250,13 +233,22 @@ export default function Clientes() {
 
       <div className="table-card">
         <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6' }}>
-          <input
-            className="filtro-input"
-            placeholder="Buscar por documento o nombre..."
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            style={{ width: '100%', maxWidth: 360, padding: '10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
-          />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
+            <input
+              className="filtro-input"
+              placeholder="Buscar por documento o nombre..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
+            />
+            <svg
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
         </div>
 
         {!loading && filtrados.length === 0 ? (
@@ -278,7 +270,7 @@ export default function Clientes() {
                 <SkeletonFilas columnas={6} filas={8} />
               ) : pageItems.map((c) => (
                 <tr key={c.id_cliente}>
-                  <td><span className="badge-rol">{c.tipo_documento}</span> {c.numero_documento}</td>
+                  <td><span className="badge-rol badge-doc">{c.tipo_documento}</span> {c.numero_documento}</td>
                   <td>{c.nombres} {c.apellidos}</td>
                   <td>{c.telefono || '—'}</td>
                   <td><strong>{c.puntos_acumulados}</strong></td>
@@ -302,17 +294,6 @@ export default function Clientes() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </button>
-                      <button
-                        className="icon-btn delete"
-                        onClick={() => setConfirmCliente(c)}
-                        disabled={c.id_estado === ESTADO_INACTIVO}
-                        title={c.id_estado === ESTADO_INACTIVO ? 'Ya está inactivo' : 'Desactivar'}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
                       </button>
                     </div>
@@ -414,7 +395,13 @@ export default function Clientes() {
               <div className="form-row">
                 <div className="form-field">
                   <label>Fecha de nacimiento <span className="optional">(opcional)</span></label>
-                  <input type="date" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={handleChange} />
+                  <DatePicker
+                    size="compacto"
+                    className="dp--bloque"
+                    value={isoAFecha(form.fecha_nacimiento)}
+                    onChange={(d) => handleChange({ target: { name: 'fecha_nacimiento', value: fechaAISO(d) } })}
+                    placeholder="Elegir fecha"
+                  />
                 </div>
                 {editingId && (
                   <div className="form-field">
@@ -434,31 +421,6 @@ export default function Clientes() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal confirmar desactivar */}
-      {confirmCliente && (
-        <div className="modal-overlay" onClick={() => setConfirmCliente(null)}>
-          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </div>
-            <h3 className="confirm-title">¿Desactivar cliente?</h3>
-            <p className="confirm-text">
-              <strong>{confirmCliente.nombres} {confirmCliente.apellidos}</strong> pasará a estado inactivo.
-            </p>
-            <div className="modal-actions confirm-actions">
-              <button type="button" className="btn-ghost" onClick={() => setConfirmCliente(null)}>Cancelar</button>
-              <button type="button" className="btn-danger" onClick={confirmarDesactivar} disabled={deleting}>
-                {deleting ? 'Desactivando...' : 'Sí, desactivar'}
-              </button>
-            </div>
           </div>
         </div>
       )}

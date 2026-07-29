@@ -1,0 +1,252 @@
+/* ============================================================
+   DatePicker reutilizable (componente UI/DatePicker).
+   Look "premium": trigger con gradiente azul + calendario flotante.
+   Los colores salen de variables para poder re-marcar fácil.
+   ============================================================ */
+.dp {
+  --dp-azul-1: #3B82F6;
+  --dp-azul-2: #2563EB;
+  --dp-azul-3: #1d4ed8;
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 340px;
+  font-family: inherit;
+}
+/* Variante compacta: se ajusta al contenido (para filas de filtros) */
+.dp--compacto { width: auto; max-width: none; }
+/* Compacta a lo ancho del contenedor (dentro de formularios/modales, para que
+   el botón mida igual que los <input>/<select> de al lado) */
+.dp--bloque { width: 100%; max-width: none; }
+.dp--bloque .dp-trigger--compacto { width: 100%; min-width: 0; }
+
+/* Campo con etiqueta arriba (mismo layout que UI/Campo) */
+.dp-grupo { display: flex; flex-direction: column; gap: 4px; }
+.dp-etiqueta { font-size: 11px; color: #6b7280; font-weight: 700; }
+[data-theme="dark"] .dp-etiqueta { color: #c5cae8; }
+
+/* ---- Botón trigger (base común) ---- */
+.dp-trigger {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.dp-trigger-icono { display: flex; }
+.dp-trigger-texto {
+  flex: 1;
+  text-align: left;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dp-trigger-flecha { display: flex; transition: transform 0.25s; }
+.dp-trigger-flecha--abierto { transform: rotate(180deg); }
+
+/* ---- Variante GRANDE (botón azul con gradiente) ---- */
+.dp-trigger--grande {
+  gap: 12px;
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--dp-azul-1), var(--dp-azul-2));
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.dp-trigger--grande:hover { box-shadow: 0 10px 24px rgba(37, 99, 235, 0.38); }
+.dp-trigger--grande:active { transform: translateY(1px); }
+.dp-trigger--grande:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.dp-trigger--grande .dp-trigger-icono svg { width: 22px; height: 22px; }
+.dp-trigger--grande .dp-trigger-texto { font-size: 16px; }
+.dp-trigger--grande .dp-trigger-texto--placeholder { opacity: 0.92; }
+.dp-trigger--grande .dp-trigger-flecha svg { width: 18px; height: 18px; }
+
+/* ---- Variante COMPACTA (igual a UI/Campo: blanco, borde azul, 42px) ---- */
+.dp-trigger--compacto {
+  gap: 8px;
+  min-width: 152px;
+  height: 42px;
+  padding: 10px 12px;
+  border: 2px solid #0D1BB8;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.15s;
+}
+.dp-trigger--compacto.dp-trigger--abierto,
+.dp-trigger--compacto:hover { border-color: #0a15a0; }
+.dp-trigger--compacto:disabled { opacity: 0.55; cursor: not-allowed; }
+.dp-trigger--compacto .dp-trigger-icono { color: #0D1BB8; }
+.dp-trigger--compacto .dp-trigger-icono svg { width: 17px; height: 17px; }
+.dp-trigger--compacto .dp-trigger-texto { font-size: 14px; }
+.dp-trigger--compacto .dp-trigger-texto--placeholder { color: #9ca3af; font-weight: 600; }
+.dp-trigger--compacto .dp-trigger-flecha { color: #0D1BB8; }
+.dp-trigger--compacto .dp-trigger-flecha svg { width: 14px; height: 14px; }
+/* En oscuro conserva fondo blanco + borde azul de marca (igual que UI/Campo) */
+[data-theme="dark"] .dp-trigger--compacto { background: #fff; border-color: #0D1BB8; color: #111827; }
+
+/* ---- Panel desplegable (portal, posición fija) ---- */
+.dp-panel {
+  /* Reafirma la paleta: el panel vive en document.body, fuera del .dp */
+  --dp-azul-1: #3B82F6;
+  --dp-azul-2: #2563EB;
+  position: fixed;
+  z-index: 1000;
+  width: 300px;
+  max-width: calc(100vw - 16px);
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: dpAparecer 0.18s ease;
+  font-family: inherit;
+}
+@keyframes dpAparecer {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Flechita que apunta al trigger (arriba si abre hacia abajo) */
+.dp-panel::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 32px;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, var(--dp-azul-1), var(--dp-azul-2));
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+/* Cuando abre hacia arriba, la flechita va abajo (y es blanca, sobre el cuerpo) */
+.dp-panel--arriba::before {
+  top: auto;
+  bottom: -7px;
+  background: #fff;
+}
+
+/* ---- Modo CENTRADO (dentro de modales): flota en el centro de la pantalla ---- */
+.dp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.35);
+  animation: dpFundido 0.18s ease;
+}
+@keyframes dpFundido { from { opacity: 0; } to { opacity: 1; } }
+.dp-panel--centrado {
+  transform: translate(-50%, -50%);
+  animation: dpAparecerCentro 0.18s ease;
+}
+.dp-panel--centrado::before { display: none; } /* sin flechita: no apunta al botón */
+@keyframes dpAparecerCentro {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ---- Cabecera azul (título + flechas) ---- */
+.dp-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+  background: linear-gradient(135deg, var(--dp-azul-1), var(--dp-azul-2));
+}
+.dp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dp-nav:hover { background: rgba(255, 255, 255, 0.2); }
+.dp-nav svg { width: 18px; height: 18px; }
+
+.dp-titulo {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.dp-titulo:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
+.dp-titulo:disabled { cursor: default; }
+
+/* ---- Cuerpo ---- */
+.dp-dias { padding: 12px; }
+.dp-semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 6px;
+}
+.dp-semana-dia {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--dp-azul-2);
+}
+
+.dp-grid { display: grid; }
+.dp-grid--dias  { grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dp-grid--meses { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 16px; }
+.dp-grid--anios { grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 16px; }
+
+/* ---- Celda (día / mes / año) ---- */
+.dp-celda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #374151;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.dp-grid--dias  .dp-celda { aspect-ratio: 1 / 1; }
+.dp-grid--meses .dp-celda,
+.dp-grid--anios .dp-celda { padding: 14px 0; }
+
+.dp-celda:hover:not(:disabled):not(.dp-celda--sel) { background: #eff4ff; color: var(--dp-azul-2); }
+.dp-celda--otro { color: #cbd5e1; }               /* día/año fuera del mes/década */
+.dp-celda--sel  { border-color: var(--dp-azul-2); color: var(--dp-azul-2); font-weight: 800; }
+.dp-celda--off  { color: #d1d5db; cursor: not-allowed; }
+.dp-celda--off:hover { background: transparent; }
+
+/* Día/mes/año de HOY: se resalta igual que una fecha seleccionada (borde azul) */
+.dp-celda--hoy { border-color: var(--dp-azul-2); color: var(--dp-azul-2); font-weight: 800; }
+
+/* ============================================================
+   MODO OSCURO
+   ============================================================ */
+[data-theme="dark"] .dp-panel {
+  background: #1a1f40;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+[data-theme="dark"] .dp-panel--arriba::before { background: #1a1f40; }
+[data-theme="dark"] .dp-celda { color: #c5cae8; }
+[data-theme="dark"] .dp-celda:hover:not(:disabled):not(.dp-celda--sel) { background: #272e58; color: #fff; }
+[data-theme="dark"] .dp-celda--otro { color: #4b5273; }
+[data-theme="dark"] .dp-celda--sel  { border-color: #8b95f0; color: #aab2f7; }
+[data-theme="dark"] .dp-celda--off  { color: #3a4275; }
+[data-theme="dark"] .dp-semana-dia  { color: #8b95f0; }
+[data-theme="dark"] .dp-celda--hoy { border-color: #8b95f0; color: #aab2f7; }

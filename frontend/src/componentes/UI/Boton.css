@@ -1,0 +1,36 @@
+/* ============================================================
+   Botón reutilizable del panel (componente UI/Boton).
+   ============================================================ */
+.ui-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 14px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ui-boton:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Variante "marco" — borde y letra azul de marca (como "Conectar" de Integración POS) */
+.ui-boton--marco {
+  border: 2px solid #0D1BB8;
+  background: #EEF0FC;
+  color: #0D1BB8;
+}
+.ui-boton--marco:hover:not(:disabled) { background: #dde2fa; }
+
+/* Tema oscuro: mantiene el mismo azul del modo claro (fondo azul suave, borde y letra azul)
+   para que no cambie de aspecto al alternar de tema. */
+
+/* Variante "primario" — relleno azul de marca */
+.ui-boton--primario {
+  border: 2px solid transparent;
+  background: #0D1BB8;
+  color: #ffffff;
+}
+.ui-boton--primario:hover:not(:disabled) { background: #0a15a0; }

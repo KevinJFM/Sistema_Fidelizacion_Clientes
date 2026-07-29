@@ -14,6 +14,7 @@ USE db_fidelizacion;
 
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
+DROP TABLE IF EXISTS alertas_enviadas;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
@@ -302,6 +303,21 @@ CREATE TABLE refresh_tokens (
 );
 
 -- ============================================================
+--  ALERTAS DE CORREO ENVIADAS (retención)
+--  Rastrea qué alertas ya se mandaron (cerca del canje / reactivación)
+--  para no repetirlas hasta que pase el cooldown.
+-- ============================================================
+CREATE TABLE alertas_enviadas (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  id_cliente    INT          NOT NULL,
+  tipo          VARCHAR(40)  NOT NULL,       -- 'cerca_canje' | 'reactivacion'
+  referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; NULL para reactivacion
+  fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
+);
+
+-- ============================================================
 --  BITÁCORA / AUDITORÍA (historial de acciones del sistema)
 -- ============================================================
 CREATE TABLE bitacora (
@@ -314,7 +330,7 @@ CREATE TABLE bitacora (
   ip            VARCHAR(45) NULL,
   fecha         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_bitacora),
-  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
+  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_bitacora_fecha (fecha)
 );
 
@@ -345,9 +361,10 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
   ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
-  -- El canje siempre está activo (no configurable), por eso no está aquí.
-  ('bienvenida_activo',      '1',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta');
+  -- Bienvenida y descuento nacen APAGADOS; el admin los activa cuando quiera.
+  ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
+  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
+  ('descuento_monto_activo', '0',   'Activa el descuento por compra alta');
 
 -- ============================================================
 --  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)

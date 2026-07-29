@@ -1,14 +1,27 @@
 import bcrypt from 'bcryptjs';
 import pool from '../configuracion/bd.js';
 
-const ESTADO_INACTIVO = 2; // estados: 1=activo, 2=inactivo, 3=suspendido
-
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Valida longitudes máximas según las columnas de la tabla usuarios.
+// Solo revisa los campos presentes (útil tanto al crear como al actualizar).
+// Devuelve un mensaje de error o null si todo está dentro de límite.
+const validarLongitudes = ({ nombre, apellido, email, telefono }) => {
+  if (nombre != null && String(nombre).length > 100) return 'El nombre es demasiado largo (máx. 100)';
+  if (apellido != null && String(apellido).length > 100) return 'El apellido es demasiado largo (máx. 100)';
+  if (email != null && String(email).length > 150) return 'El correo es demasiado largo (máx. 150)';
+  if (telefono != null && String(telefono).length > 20) return 'El teléfono es demasiado largo (máx. 20)';
+  return null;
+};
 
 // Valida la política de contraseñas. Devuelve null si es válida, o un mensaje de error.
 const validarContrasena = (contrasena) => {
   if (contrasena.length < 8) {
     return 'La contraseña debe tener al menos 8 caracteres';
+  }
+  // bcrypt ignora los bytes después del 72, así que no tiene sentido permitir más.
+  if (contrasena.length > 72) {
+    return 'La contraseña es demasiado larga (máx. 72 caracteres)';
   }
   if (!/[A-Z]/.test(contrasena)) {
     return 'La contraseña debe incluir al menos una letra mayúscula';
@@ -85,6 +98,11 @@ export const crearUsuario = async (req, res) => {
       return res.status(400).json({ message: 'El email no tiene un formato válido' });
     }
 
+    const errorLongitud = validarLongitudes(req.body);
+    if (errorLongitud) {
+      return res.status(400).json({ message: errorLongitud });
+    }
+
     const errorContrasena = validarContrasena(contrasena);
     if (errorContrasena) {
       return res.status(400).json({ message: errorContrasena });
@@ -142,6 +160,12 @@ export const actualizarUsuario = async (req, res) => {
       return res.status(400).json({ message: 'El email no tiene un formato válido' });
     }
 
+    // Validar longitudes máximas de los campos presentes
+    const errorLongitud = validarLongitudes(req.body);
+    if (errorLongitud) {
+      return res.status(400).json({ message: errorLongitud });
+    }
+
     // Verificar que el email no esté en uso por otro usuario
     if (email) {
       const [duplicado] = await pool.query(
@@ -183,12 +207,15 @@ export const actualizarUsuario = async (req, res) => {
   }
 };
 
-// Borrado lógico (cambia el estado a inactivo)
+// Borrado físico: elimina el usuario por completo de la base de datos.
+// Los refresh_tokens caen solos (ON DELETE CASCADE) y la bitácora se desliga
+// (id_usuario = NULL) para conservar el historial de auditoría. Si el usuario
+// tiene transacciones registradas, la FK lo impide y se avisa al front.
 export const eliminarUsuario = async (req, res) => {
+  const { id } = req.params;
+  const conexion = await pool.getConnection();
   try {
-    const { id } = req.params;
-
-    const [existe] = await pool.query(
+    const [existe] = await conexion.query(
       'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
       [id]
     );
@@ -196,13 +223,23 @@ export const eliminarUsuario = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    await pool.query(
-      'UPDATE usuarios SET id_estado = ? WHERE id_usuario = ?',
-      [ESTADO_INACTIVO, id]
-    );
+    await conexion.beginTransaction();
+    // Conservar la auditoría pero desligarla del usuario que se elimina
+    await conexion.query('UPDATE bitacora SET id_usuario = NULL WHERE id_usuario = ?', [id]);
+    await conexion.query('DELETE FROM usuarios WHERE id_usuario = ?', [id]);
+    await conexion.commit();
 
-    return res.status(200).json({ message: 'Usuario desactivado correctamente' });
+    return res.status(200).json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
+    await conexion.rollback();
+    // El usuario tiene transacciones asociadas (RESTRICT): no se puede borrar
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.errno === 1451) {
+      return res.status(409).json({
+        message: 'No se puede eliminar: el usuario tiene transacciones registradas. Desactívalo en su lugar.',
+      });
+    }
     return res.status(500).json({ message: 'Error interno del servidor' });
+  } finally {
+    conexion.release();
   }
 };

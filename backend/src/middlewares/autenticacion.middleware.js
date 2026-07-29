@@ -10,7 +10,14 @@ export const verificarToken = (req, res, next) => {
       return res.status(401).json({ message: 'Token no proporcionado' });
     }
 
-    const token = encabezadoAuth.split(' ')[1].trim();
+    // Formato esperado: "Bearer <token>". Se valida explícitamente para no depender de
+    // que exista el espacio (un header mal formado da 401 claro, no un error de split).
+    const partes = encabezadoAuth.split(' ');
+    if (partes.length !== 2 || partes[0] !== 'Bearer' || !partes[1].trim()) {
+      return res.status(401).json({ message: 'Formato de autorización inválido' });
+    }
+    const token = partes[1].trim();
+
     const datosToken = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.usuario = datosToken;
     next();
