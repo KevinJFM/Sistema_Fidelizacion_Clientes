@@ -84,7 +84,7 @@ export default function Dashboard() {
   const stats = [
     { label: 'Clientes registrados', value: resumen?.clientes_total ?? null,   hint: 'Total en el sistema' },
     { label: 'Transacciones de hoy', value: resumen?.transacciones_hoy ?? null, hint: 'Registradas hoy' },
-    { label: 'Ventas de hoy',        value: resumen ? `$${Number(resumen.ventas_hoy).toFixed(2)}` : null, hint: 'Total vendido hoy' },
+    { label: 'Ingresos de hoy',      value: resumen ? `$${Number(resumen.ventas_hoy).toFixed(2)}` : null, hint: 'Total facturado' },
     { label: 'Puntos otorgados hoy', value: resumen?.puntos_hoy ?? null,        hint: 'Generados hoy' },
   ];
 

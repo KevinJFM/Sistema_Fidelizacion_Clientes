@@ -41,11 +41,21 @@ function dibujarEncabezado(doc, logoPng, ancho) {
   doc.setFillColor(...AZUL);
   doc.rect(0, 0, ancho, 72, 'F');
 
-  // Insignia blanca con el logo rosado (como en el sistema)
+  // Ícono igual al del sistema: cuadro rosado con el diamante/letras en blanco.
+  // El SVG rellena todo el cuadro de rosado y deja el diamante y el texto como
+  // huecos; el fondo blanco se ve a través de ellos.
   if (logoPng) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(30, 13, 48, 48, 9, 9, 'F');
-    doc.addImage(logoPng, 'PNG', 34, 17, 40, 40);
+    doc.roundedRect(30, 13, 48, 48, 12, 12, 'F');
+    // El logo rosado llena toda la insignia, recortado a las esquinas redondeadas.
+    // El estilo null hace que roundedRect solo genere el trazo (sin pintarlo),
+    // para que clip() pueda usarlo como máscara.
+    doc.saveGraphicsState();
+    doc.roundedRect(30, 13, 48, 48, 12, 12, null);
+    doc.clip();
+    doc.discardPath();
+    doc.addImage(logoPng, 'PNG', 30, 13, 48, 48);
+    doc.restoreGraphicsState();
   }
 
   const x = logoPng ? 92 : 40;
@@ -76,9 +86,9 @@ export async function exportarPDF({ titulo, subtitulo, head, body, resumen, arch
   doc.text(titulo, 40, 96);
 
   if (subtitulo) {
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(110);
+    doc.setTextColor(80);
     doc.text(subtitulo, 40, 112);
   }
 
@@ -99,13 +109,36 @@ export async function exportarPDF({ titulo, subtitulo, head, body, resumen, arch
     },
   });
 
-  // ---- Resumen ----
+  // ---- Resumen (tarjeta, mismo estilo que el perfil del cliente) ----
   if (resumen) {
     const y = doc.lastAutoTable.finalY + 22;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...AZUL);
-    doc.text(resumen, 40, y);
+    doc.setFillColor(238, 240, 252);
+    doc.setDrawColor(197, 206, 245);
+    doc.setLineWidth(1.5);
+    doc.roundedRect(40, y, ancho - 80, 40, 8, 8, 'FD');
+
+    // Divide "Etiqueta: valor    Etiqueta: valor" en segmentos {eti, val}.
+    const segmentos = resumen.split(/\s{2,}/).map((p) => {
+      const i = p.indexOf(': ');
+      return i === -1
+        ? { eti: '', val: p }
+        : { eti: p.slice(0, i + 2), val: p.slice(i + 2) };
+    });
+
+    // Etiqueta en oscuro + valor en azul, centrado en cx.
+    const linea = (eti, val, cx, ly) => {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      let x = cx - (doc.getTextWidth(eti) + doc.getTextWidth(val)) / 2;
+      doc.setTextColor(17, 24, 39);
+      doc.text(eti, x, ly);
+      x += doc.getTextWidth(eti);
+      doc.setTextColor(...AZUL);
+      doc.text(val, x, ly);
+    };
+
+    const celda = (ancho - 80) / segmentos.length;
+    segmentos.forEach((s, i) => linea(s.eti, s.val, 40 + celda * (i + 0.5), y + 25));
   }
 
   doc.save(archivo);
@@ -127,41 +160,51 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
 
   // Tarjeta del cliente
   doc.setFillColor(238, 240, 252);
-  doc.roundedRect(30, 86, ancho - 60, 90, 8, 8, 'F');
+  doc.setDrawColor(197, 206, 245);
+  doc.setLineWidth(1.5);
+  doc.roundedRect(30, 86, ancho - 60, 108, 8, 8, 'FD');
 
   doc.setTextColor(10, 18, 89);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text(`${cliente.nombres} ${cliente.apellidos}`, 46, 112);
+  doc.text(`${cliente.nombres} ${cliente.apellidos}`, 46, 114);
+
+  // Documento: etiqueta normal + número en negrita
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(55, 65, 81);
+  const etiquetaDoc = `${cliente.tipo_documento}: `;
+  doc.text(etiquetaDoc, 46, 133);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(17, 24, 39);
+  doc.text(`${cliente.numero_documento}`, 46 + doc.getTextWidth(etiquetaDoc), 133);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(80);
-  doc.text(`${cliente.tipo_documento}: ${cliente.numero_documento}`, 46, 129);
-  if (cliente.telefono) doc.text(`Tel: ${cliente.telefono}`, 46, 144);
-  if (cliente.correo)   doc.text(`Correo: ${cliente.correo}`, 46, 159);
+  doc.setTextColor(55, 65, 81);
+  if (cliente.telefono) doc.text(`Tel: ${cliente.telefono}`, 46, 150);
+  if (cliente.correo)   doc.text(`Correo: ${cliente.correo}`, 46, 167);
 
   // Stats en la derecha de la tarjeta
-  const statsX = ancho - 180;
+  const statsX = ancho - 235;
   const { totalGastado, totalDescuentos, totalPuntos, totalCanjeados } = totales;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(...AZUL);
-  doc.text(`${cliente.puntos_acumulados}`, statsX, 112);
+  doc.text(`${cliente.puntos_acumulados}`, statsX, 114);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text('puntos actuales', statsX, 126);
+  doc.setTextColor(75, 85, 99);
+  doc.text('puntos actuales', statsX, 130);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(...VERDE);
-  doc.text(`+${totalPuntos} ganados`, statsX, 148);
+  doc.text(`+${totalPuntos} ganados`, statsX, 154);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text(`${historial.length} transacciones  |  $${totalGastado.toFixed(2)} gastados`, statsX, 164);
+  doc.setTextColor(75, 85, 99);
+  doc.text(`${historial.length} transacciones  |  $${totalGastado.toFixed(2)} gastados`, statsX, 170);
 
   // Tabla de transacciones
   const head = ['#', 'Fecha', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Total', 'Puntos'];
@@ -178,7 +221,7 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   ]);
 
   autoTable(doc, {
-    startY: 190,
+    startY: 208,
     head: [head],
     body,
     styles: { fontSize: 8, cellPadding: 4, textColor: 40 },
@@ -196,15 +239,36 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   // Resumen final
   const y = doc.lastAutoTable.finalY + 20;
   doc.setFillColor(238, 240, 252);
-  doc.roundedRect(30, y, ancho - 60, 48, 6, 6, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...AZUL);
-  doc.text(`Total gastado: $${totalGastado.toFixed(2)}`, 46, y + 16);
-  doc.text(`Total ahorrado en descuentos: $${totalDescuentos.toFixed(2)}`, 46, y + 30);
-  doc.text(`Puntos totales ganados: ${totalPuntos}${totalCanjeados > 0 ? `  |  Canjeados: ${totalCanjeados}` : ''}`, ancho / 2, y + 16, { align: 'center' });
-  doc.text(`Puntos actuales: ${cliente.puntos_acumulados}`, ancho - 46, y + 16, { align: 'right' });
-  doc.text(`Transacciones: ${historial.length}`, ancho - 46, y + 30, { align: 'right' });
+  doc.setDrawColor(197, 206, 245);
+  doc.setLineWidth(1.5);
+  doc.roundedRect(30, y, ancho - 60, 56, 8, 8, 'FD');
+
+  // Dibuja una línea con segmentos: etiquetas en negrita oscura y valores en
+  // negrita azul. segmentos = [{ eti, val }, ...]  (permite "|  Canjeados: 900")
+  const linea = (segmentos, x, ly, align = 'left') => {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const total = segmentos.reduce(
+      (s, { eti, val }) => s + doc.getTextWidth(eti) + doc.getTextWidth(val), 0);
+    let cx = align === 'right' ? x - total : align === 'center' ? x - total / 2 : x;
+    segmentos.forEach(({ eti, val }) => {
+      doc.setTextColor(17, 24, 39);
+      doc.text(eti, cx, ly);
+      cx += doc.getTextWidth(eti);
+      doc.setTextColor(...AZUL);
+      doc.text(val, cx, ly);
+      cx += doc.getTextWidth(val);
+    });
+  };
+
+  linea([{ eti: 'Total gastado: ', val: `$${totalGastado.toFixed(2)}` }], 46, y + 22);
+  linea([{ eti: 'Total ahorrado en descuentos: ', val: `$${totalDescuentos.toFixed(2)}` }], 46, y + 40);
+  linea([
+    { eti: 'Puntos totales ganados: ', val: `${totalPuntos}` },
+    ...(totalCanjeados > 0 ? [{ eti: '  |  Canjeados: ', val: `${totalCanjeados}` }] : []),
+  ], ancho / 2, y + 22, 'center');
+  linea([{ eti: 'Puntos actuales: ', val: `${cliente.puntos_acumulados}` }], ancho - 46, y + 22, 'right');
+  linea([{ eti: 'Transacciones: ', val: `${historial.length}` }], ancho - 46, y + 40, 'right');
 
   const nombreArchivo = `perfil_${cliente.numero_documento}_${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(nombreArchivo);

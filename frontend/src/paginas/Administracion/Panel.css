@@ -191,6 +191,9 @@
   text-transform: capitalize;
   font-weight: 600;
 }
+[data-theme="dark"] .user-role {
+  color: #ffffff;
+}
 
 .admin-content {
   flex: 1;

@@ -1,0 +1,47 @@
+/* ============================================================
+   Campo reutilizable del panel (componente UI/Campo).
+   Input y select que combinan con UI/Boton (borde azul de marca).
+   Nota: se usa doble clase (.ui-campo.ui-campo) a propósito, para
+   ganarle en especificidad a la regla heredada de
+   ".filtros-row input/select" (Transacciones.css) que comparten
+   otras páginas todavía sin migrar.
+   ============================================================ */
+.ui-campo.ui-campo {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #0D1BB8;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background-color: #fff;
+  color: #111827;
+  font-weight: 700;
+  height: 42px;
+  box-sizing: border-box;
+}
+.ui-campo.ui-campo:focus { border-color: #0a15a0; }
+.ui-campo.ui-campo:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Variante select — flecha propia y espacio a la derecha */
+.ui-campo--select.ui-campo--select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230D1BB8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* Campo con etiqueta arriba (como los filtros de fecha) */
+.ui-campo-grupo { display: flex; flex-direction: column; gap: 4px; }
+.ui-campo-label { font-size: 11px; color: #6b7280; font-weight: 700; }
+[data-theme="dark"] .ui-campo-label { color: #c5cae8; }
+
+/* Tema oscuro: fondo blanco, letra oscura, borde azul de marca (igual que UI/Boton) */
+[data-theme="dark"] .ui-campo.ui-campo {
+  background-color: #fff;
+  border-color: #0D1BB8;
+  color: #111827;
+}
+[data-theme="dark"] .ui-campo.ui-campo:focus { border-color: #0a15a0; }

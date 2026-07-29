@@ -8,6 +8,7 @@ import {
   deletePromocion,
 } from '../../servicios/servicioPromociones';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
@@ -47,6 +48,8 @@ export default function Promociones() {
   const [erroresCampo, setErroresCampo]       = useState({});
   const [confirmEliminar, setConfirmEliminar] = useState(null);
   const [eliminando, setEliminando]           = useState(false);
+  const [confirmToggle, setConfirmToggle]     = useState(null);
+  const [alternando, setAlternando]           = useState(false);
 
   const cargar = async () => {
     setCargando(true);
@@ -151,13 +154,18 @@ export default function Promociones() {
     }
   };
 
-  const handleToggle = async (promo) => {
+  const confirmarToggle = async () => {
+    if (!confirmToggle) return;
+    setAlternando(true);
     try {
-      const res = await togglePromocion(promo.id_escenario);
+      const res = await togglePromocion(confirmToggle.id_escenario);
       toast.success(res.message);
+      setConfirmToggle(null);
       await cargar();
     } catch {
       toast.error('Error al cambiar estado');
+    } finally {
+      setAlternando(false);
     }
   };
 
@@ -202,12 +210,21 @@ export default function Promociones() {
 
       <div className="table-card">
         <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6' }}>
-          <input
-            placeholder="Buscar por nombre..."
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            style={{ width: '100%', maxWidth: 360, padding: '10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
-          />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
+            <input
+              placeholder="Buscar por nombre..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
+            />
+            <svg
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
         </div>
 
         {!cargando && filtrados.length === 0 ? (
@@ -248,22 +265,20 @@ export default function Promociones() {
                         <span className="badge-estado estado-activo">Activo hoy</span>
                       )}
                       {estado === 'programada' && (
-                        <span className="badge-estado" style={{ background: '#fef9c3', color: '#854d0e', border: '1px solid #fde047' }}>
-                          Programada
-                        </span>
+                        <span className="badge-estado estado-programada">Programada</span>
                       )}
                       {estado === 'finalizada' && (
-                        <span className="badge-estado estado-inactivo">Finalizada</span>
+                        <span className="badge-estado estado-finalizada">Finalizada</span>
                       )}
                       {estado === 'inactivo' && (
-                        <span className="badge-estado estado-inactivo">Inactivo</span>
+                        <span className="badge-estado estado-promo-inactivo">Inactivo</span>
                       )}
                     </td>
                     <td>
                       <div className="row-actions">
                         <button
-                          className={`icon-btn ${p.activo ? 'delete' : 'historial'}`}
-                          onClick={() => handleToggle(p)}
+                          className={`icon-btn ${p.activo ? 'warning' : 'activate'}`}
+                          onClick={() => setConfirmToggle(p)}
                           title={p.activo ? 'Desactivar' : 'Activar'}
                         >
                           {p.activo ? (
@@ -326,10 +341,10 @@ export default function Promociones() {
                     onClick={() => handleTipoFecha('unica')}
                     style={{
                       flex: 1, padding: '9px 0', borderRadius: 10, border: '1.5px solid',
-                      borderColor: tipoFecha === 'unica' ? '#6366f1' : '#e5e7eb',
-                      background: tipoFecha === 'unica' ? '#eef2ff' : '#fff',
-                      color: tipoFecha === 'unica' ? '#4f46e5' : '#6b7280',
-                      fontWeight: tipoFecha === 'unica' ? 600 : 400,
+                      borderColor: tipoFecha === 'unica' ? 'transparent' : '#cbd5e1',
+                      background: tipoFecha === 'unica' ? 'linear-gradient(135deg, #0A1259, #0D1BB8)' : '#fff',
+                      color: tipoFecha === 'unica' ? '#ffffff' : '#374151',
+                      fontWeight: tipoFecha === 'unica' ? 700 : 600,
                       fontSize: 14, cursor: 'pointer',
                     }}
                   >
@@ -340,10 +355,10 @@ export default function Promociones() {
                     onClick={() => handleTipoFecha('rango')}
                     style={{
                       flex: 1, padding: '9px 0', borderRadius: 10, border: '1.5px solid',
-                      borderColor: tipoFecha === 'rango' ? '#6366f1' : '#e5e7eb',
-                      background: tipoFecha === 'rango' ? '#eef2ff' : '#fff',
-                      color: tipoFecha === 'rango' ? '#4f46e5' : '#6b7280',
-                      fontWeight: tipoFecha === 'rango' ? 600 : 400,
+                      borderColor: tipoFecha === 'rango' ? 'transparent' : '#cbd5e1',
+                      background: tipoFecha === 'rango' ? 'linear-gradient(135deg, #0A1259, #0D1BB8)' : '#fff',
+                      color: tipoFecha === 'rango' ? '#ffffff' : '#374151',
+                      fontWeight: tipoFecha === 'rango' ? 700 : 600,
                       fontSize: 14, cursor: 'pointer',
                     }}
                   >
@@ -359,20 +374,38 @@ export default function Promociones() {
                     Fecha especial
                     {erroresCampo.fecha_especial && <span className="req-tag">{erroresCampo.fecha_especial}</span>}
                   </label>
-                  <input type="date" name="fecha_especial" value={form.fecha_especial} onChange={handleChange} />
+                  <DatePicker
+                    size="compacto"
+                    className="dp--bloque"
+                    value={isoAFecha(form.fecha_especial)}
+                    onChange={(d) => handleChange({ target: { name: 'fecha_especial', value: fechaAISO(d) } })}
+                    placeholder="Elegir fecha"
+                  />
                 </div>
               ) : (
                 <div className="form-row">
                   <div className="form-field">
                     <label>Fecha inicio</label>
-                    <input type="date" name="fecha_inicio" value={form.fecha_inicio} onChange={handleChange} />
+                    <DatePicker
+                      size="compacto"
+                      className="dp--bloque"
+                      value={isoAFecha(form.fecha_inicio)}
+                      onChange={(d) => handleChange({ target: { name: 'fecha_inicio', value: fechaAISO(d) } })}
+                      placeholder="Elegir fecha"
+                    />
                   </div>
                   <div className={`form-field ${erroresCampo.fecha_fin ? 'has-error' : ''}`}>
                     <label>
                       Fecha fin
                       {erroresCampo.fecha_fin && <span className="req-tag">{erroresCampo.fecha_fin}</span>}
                     </label>
-                    <input type="date" name="fecha_fin" value={form.fecha_fin} onChange={handleChange} />
+                    <DatePicker
+                      size="compacto"
+                      className="dp--bloque"
+                      value={isoAFecha(form.fecha_fin)}
+                      onChange={(d) => handleChange({ target: { name: 'fecha_fin', value: fechaAISO(d) } })}
+                      placeholder="Elegir fecha"
+                    />
                   </div>
                 </div>
               )}
@@ -418,6 +451,55 @@ export default function Promociones() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal confirmar activar / desactivar ── */}
+      {confirmToggle && (
+        <div className="modal-overlay" onClick={() => setConfirmToggle(null)}>
+          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon" style={confirmToggle.activo ? undefined : { background: '#dcfce7', color: '#16a34a' }}>
+              {confirmToggle.activo ? (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+              ) : (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              )}
+            </div>
+            <h3 className="confirm-title">
+              {confirmToggle.activo ? '¿Desactivar promoción?' : '¿Activar promoción?'}
+            </h3>
+            <p className="confirm-text">
+              {confirmToggle.activo ? (
+                <>
+                  <strong>{confirmToggle.nombre}</strong> dejará de aplicar los puntos y descuentos
+                  extra, aunque esté dentro de sus fechas configuradas.
+                </>
+              ) : (
+                <>
+                  <strong>{confirmToggle.nombre}</strong> volverá a aplicar automáticamente sus puntos
+                  y descuentos extra en las fechas configuradas.
+                </>
+              )}
+            </p>
+            <div className="modal-actions confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setConfirmToggle(null)}>Cancelar</button>
+              <button
+                type="button"
+                className={confirmToggle.activo ? 'btn-danger' : 'btn-primary'}
+                onClick={confirmarToggle}
+                disabled={alternando}
+              >
+                {alternando
+                  ? 'Procesando...'
+                  : (confirmToggle.activo ? 'Sí, desactivar' : 'Sí, activar')}
+              </button>
+            </div>
           </div>
         </div>
       )}

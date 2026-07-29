@@ -41,11 +41,11 @@ function ModalDetalle({ t, onClose }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#9ca3af', lineHeight: 1 }}>×</button>
         </div>
 
-        <div style={{ background: '#EEF0FC', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
+        <div style={{ background: '#EEF0FC', border: '1px solid #D6DBF5', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
           <p style={{ margin: 0, fontWeight: 800, color: '#0A1259', fontSize: 15 }}>{t.nombres} {t.apellidos}</p>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#4b5563' }}>
+          <p style={{ margin: '6px 0 0', fontSize: 13, color: '#4b5563', display: 'flex', alignItems: 'center' }}>
             <span style={{ background: '#0D1BB8', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, marginRight: 6 }}>{t.tipo_documento}</span>
-            {t.numero_documento}
+            <strong style={{ color: '#111827', fontWeight: 700 }}>{t.numero_documento}</strong>
           </p>
         </div>
 
@@ -59,25 +59,25 @@ function ModalDetalle({ t, onClose }) {
           { label: 'Folio', valor: t.referencia_venta || '—' },
         ].filter(Boolean).map(({ label, valor }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #e5e7eb', fontSize: 14 }}>
-            <span style={{ color: '#6b7280', fontWeight: 500 }}>{label}</span>
+            <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
             <span style={{ color: '#111827', fontWeight: 600 }}>{valor}</span>
           </div>
         ))}
 
         {t.nombre_promocion && (
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #e5e7eb', fontSize: 14 }}>
-            <span style={{ color: '#6b7280', fontWeight: 500 }}>Promoción</span>
+            <span style={{ color: '#374151', fontWeight: 600 }}>Promoción</span>
             <span style={{ background: '#EEF0FC', color: '#0A1259', fontSize: 12, fontWeight: 700, padding: '3px 12px', borderRadius: 20 }}>{t.nombre_promocion}</span>
           </div>
         )}
 
-        <div style={{ background: '#f9fafb', borderRadius: 14, padding: '14px 16px', margin: '16px 0' }}>
+        <div style={{ background: '#F5F6FE', border: '1.5px solid #D6DBF5', borderRadius: 14, padding: '14px 16px', margin: '16px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8 }}>
-            <span style={{ color: '#6b7280' }}>Monto consumido</span>
+            <span style={{ color: '#374151', fontWeight: 500 }}>Monto consumido</span>
             <span style={{ fontWeight: 600, color: '#111827' }}>${Number(t.monto).toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 12 }}>
-            <span style={{ color: '#6b7280' }}>Descuento aplicado</span>
+            <span style={{ color: '#374151', fontWeight: 500 }}>Descuento aplicado</span>
             <span style={{ fontWeight: 600, color: '#16a34a' }}>-${Number(t.descuento_aplicado).toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 10 }}>
@@ -87,14 +87,14 @@ function ModalDetalle({ t, onClose }) {
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
+          <div style={{ flex: 1, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{t.puntos_otorgados}</p>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>Puntos otorgados</p>
+            <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos otorgados</p>
           </div>
           {t.puntos_canjeados > 0 && (
-            <div style={{ flex: 1, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
+            <div style={{ flex: 1, background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{t.puntos_canjeados}</p>
-              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>Puntos canjeados</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos canjeados</p>
             </div>
           )}
         </div>
@@ -186,7 +186,7 @@ export default function HistorialCliente() {
 
       {/* Buscador */}
       <div className="trans-card" style={{ maxWidth: 560, marginBottom: 24 }}>
-        <div className="form-row">
+        <div className="form-row busqueda-row">
           <div className="form-field">
             <label>Tipo de documento</label>
             <select
@@ -263,8 +263,8 @@ export default function HistorialCliente() {
                 <span className="badge-rol" style={{ marginRight: 6, background: '#0D1BB8', color: '#fff' }}>{cliente.tipo_documento}</span>
                 <strong style={{ color: '#111827' }}>{cliente.numero_documento}</strong>
               </p>
-              {cliente.telefono && <p style={{ color: '#6b7280', fontSize: 13 }}>Tel: {cliente.telefono}</p>}
-              {cliente.correo && <p style={{ color: '#6b7280', fontSize: 13 }}>Correo: {cliente.correo}</p>}
+              {cliente.telefono && <p style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>Tel: {cliente.telefono}</p>}
+              {cliente.correo && <p style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>Correo: {cliente.correo}</p>}
             </div>
             <div className="perfil-stats">
               <div className="perfil-stat">
@@ -332,10 +332,10 @@ export default function HistorialCliente() {
                           : <span style={{ color: '#9ca3af' }}>—</span>}
                       </td>
                       <td>${Number(t.monto).toFixed(2)}</td>
-                      <td style={{ color: '#16a34a' }}>-${Number(t.descuento_aplicado).toFixed(2)}</td>
+                      <td>-${Number(t.descuento_aplicado).toFixed(2)}</td>
                       <td><strong>${(Number(t.monto) - Number(t.descuento_aplicado)).toFixed(2)}</strong></td>
                       <td>
-                        <strong style={{ color: '#0D1BB8' }}>+{t.puntos_otorgados}</strong>
+                        <strong className="puntos-pos">+{t.puntos_otorgados}</strong>
                         {t.puntos_canjeados > 0 && <span style={{ color: '#dc2626' }}> / -{t.puntos_canjeados}</span>}
                       </td>
                       <td>

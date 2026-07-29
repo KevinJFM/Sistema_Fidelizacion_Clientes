@@ -44,6 +44,14 @@ export default function Operadores() {
   const [resultado, setResultado]   = useState(null);
   const [registrando, setRegistrando] = useState(false);
 
+  // Modal confirmar desactivar
+  const [confirmOp, setConfirmOp]   = useState(null); // operador a desactivar
+  const [desactivando, setDesactivando] = useState(false);
+
+  // Modal confirmar activar
+  const [activarOp, setActivarOp]   = useState(null); // operador a activar
+  const [activando, setActivando]   = useState(false);
+
   // Modal canje de puntos
   const [canjeOp, setCanjeOp]       = useState(null); // operador seleccionado
   const [recompensas, setRecompensas] = useState([]);
@@ -115,13 +123,33 @@ export default function Operadores() {
     }
   };
 
-  const toggleEstado = async (o) => {
+  const confirmarDesactivar = async () => {
+    if (!confirmOp) return;
+    setDesactivando(true);
     try {
-      await toggleEstadoOperador(o.id_operador);
-      toast.success('Estado actualizado');
+      await toggleEstadoOperador(confirmOp.id_operador);
+      toast.success('Operador desactivado');
+      setConfirmOp(null);
       cargar();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al cambiar estado');
+      toast.error(err.response?.data?.message || 'Error al desactivar');
+    } finally {
+      setDesactivando(false);
+    }
+  };
+
+  const confirmarActivar = async () => {
+    if (!activarOp) return;
+    setActivando(true);
+    try {
+      await toggleEstadoOperador(activarOp.id_operador);
+      toast.success('Operador activado');
+      setActivarOp(null);
+      cargar();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al activar');
+    } finally {
+      setActivando(false);
     }
   };
 
@@ -185,12 +213,21 @@ export default function Operadores() {
 
       <div className="table-card">
         <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6' }}>
-          <input
-            placeholder="Buscar por nombre o correo..."
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            style={{ width: '100%', maxWidth: 360, padding: '10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
-          />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
+            <input
+              placeholder="Buscar por nombre o correo..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
+            />
+            <svg
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
         </div>
 
         {!loading && filtrados.length === 0 ? (
@@ -247,14 +284,14 @@ export default function Operadores() {
                         </svg>
                       </button>
                       {o.id_estado === ESTADO_INACTIVO ? (
-                        <button className="icon-btn activate" onClick={() => toggleEstado(o)} title="Activar operador">
+                        <button className="icon-btn activate" onClick={() => setActivarOp(o)} title="Activar operador">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
                             <line x1="12" y1="2" x2="12" y2="12" />
                           </svg>
                         </button>
                       ) : (
-                        <button className="icon-btn delete" onClick={() => toggleEstado(o)} title="Desactivar operador">
+                        <button className="icon-btn delete" onClick={() => setConfirmOp(o)} title="Desactivar operador">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -321,7 +358,7 @@ export default function Operadores() {
                 <label>Cantidad de personas</label>
                 <input type="number" min="0" value={grupo.num_personas}
                   onChange={(e) => setGrupo({ ...grupo, num_personas: e.target.value })} />
-                <small style={{ color: '#6b7280' }}>Se otorgan puntos a partir de 12 personas.</small>
+                <small style={{ color: '#6b7280', fontWeight: 700 }}>Se otorgan puntos a partir de 12 personas.</small>
               </div>
 
               {resultado ? (
@@ -413,6 +450,55 @@ export default function Operadores() {
                 )}
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar desactivar */}
+      {confirmOp && (
+        <div className="modal-overlay" onClick={() => setConfirmOp(null)}>
+          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <h3 className="confirm-title">¿Desactivar operador?</h3>
+            <p className="confirm-text">
+              <strong>{confirmOp.nombre}</strong> pasará a estado inactivo.
+            </p>
+            <div className="modal-actions confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setConfirmOp(null)}>Cancelar</button>
+              <button type="button" className="btn-danger" onClick={confirmarDesactivar} disabled={desactivando}>
+                {desactivando ? 'Desactivando...' : 'Sí, desactivar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar activar */}
+      {activarOp && (
+        <div className="modal-overlay" onClick={() => setActivarOp(null)}>
+          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon confirm-icon-ok">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                <line x1="12" y1="2" x2="12" y2="12" />
+              </svg>
+            </div>
+            <h3 className="confirm-title">¿Activar operador?</h3>
+            <p className="confirm-text">
+              <strong>{activarOp.nombre}</strong> volverá a estado activo.
+            </p>
+            <div className="modal-actions confirm-actions">
+              <button type="button" className="btn-ghost" onClick={() => setActivarOp(null)}>Cancelar</button>
+              <button type="button" className="btn-primary" onClick={confirmarActivar} disabled={activando}>
+                {activando ? 'Activando...' : 'Sí, activar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

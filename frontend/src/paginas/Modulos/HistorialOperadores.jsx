@@ -5,6 +5,10 @@ import { listarTransaccionesOperador } from '../../servicios/servicioOperadores'
 import { exportarPDF } from '../../utilidades/pdf';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
+import Boton from '../../componentes/UI/Boton';
+import Campo from '../../componentes/UI/Campo';
+import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
+import Resumen from '../../componentes/UI/Resumen';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -31,10 +35,10 @@ function ModalDetalleOperador({ t, onClose }) {
         </div>
 
         {/* Operador */}
-        <div style={{ background: '#EEF0FC', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
+        <div style={{ background: '#EEF0FC', border: '1px solid #D6DBF5', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
           <p style={{ margin: 0, fontWeight: 800, color: '#0A1259', fontSize: 15 }}>{t.operador}</p>
-          {t.telefono && <p style={{ margin: '4px 0 0', fontSize: 13, color: '#4b5563' }}>Tel: {t.telefono}</p>}
-          {t.correo && <p style={{ margin: '2px 0 0', fontSize: 13, color: '#4b5563' }}>Correo: {t.correo}</p>}
+          {t.telefono && <p style={{ margin: '6px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Tel: {t.telefono}</p>}
+          {t.correo && <p style={{ margin: '2px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Correo: {t.correo}</p>}
         </div>
 
         {/* Detalles */}
@@ -44,26 +48,24 @@ function ModalDetalleOperador({ t, onClose }) {
           { label: 'Personas',       valor: t.num_personas },
         ].map(({ label, valor }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #e5e7eb', fontSize: 14 }}>
-            <span style={{ color: '#6b7280', fontWeight: 500 }}>{label}</span>
+            <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
             <span style={{ color: '#111827', fontWeight: 600 }}>{valor}</span>
           </div>
         ))}
 
         {/* Puntos: otorgados (por visita) o canjeados */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, paddingTop: 4 }}>
-            {Number(t.puntos_canjeados) > 0 ? (
-              <>
-                <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos canjeados</span>
-                <strong style={{ color: '#dc2626', fontSize: 18 }}>-{Number(t.puntos_canjeados).toFixed(2)}</strong>
-              </>
-            ) : (
-              <>
-                <span style={{ fontWeight: 700, color: '#0A1259' }}>Puntos otorgados (por visita)</span>
-                <strong style={{ color: '#16a34a', fontSize: 18 }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>
-              </>
-            )}
-          </div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          {Number(t.puntos_canjeados) > 0 ? (
+            <div style={{ flex: 1, background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{Number(t.puntos_canjeados).toFixed(2)}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos canjeados</p>
+            </div>
+          ) : (
+            <div style={{ flex: 1, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos otorgados (por visita)</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -167,39 +169,36 @@ export default function HistorialOperadores() {
       <p className="page-subtitle">Grupos registrados y puntos otorgados por operador</p>
 
       <form className="filtros-row" onSubmit={aplicarFiltros} style={{ marginBottom: 18 }}>
-        <select
+        <Campo
+          as="select"
           value={filtros.tipo}
           onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
         >
           <option value="">Todos los operadores</option>
           <option value="Persona natural">Persona natural</option>
           <option value="Empresa">Empresa</option>
-        </select>
-        <div className="filtro-fecha">
-          <label>Desde</label>
-          <input type="date" value={filtros.desde}
-            onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })} />
-        </div>
-        <div className="filtro-fecha">
-          <label>Hasta</label>
-          <input type="date" value={filtros.hasta}
-            onChange={(e) => setFiltros({ ...filtros, hasta: e.target.value })} />
-        </div>
+        </Campo>
+        <DatePicker size="compacto" label="Desde" placeholder="dd/mm/aaaa"
+          value={isoAFecha(filtros.desde)}
+          onChange={(d) => setFiltros({ ...filtros, desde: fechaAISO(d) })} />
+        <DatePicker size="compacto" label="Hasta" placeholder="dd/mm/aaaa"
+          value={isoAFecha(filtros.hasta)}
+          onChange={(d) => setFiltros({ ...filtros, hasta: fechaAISO(d) })} />
         <button type="submit" className="btn-primary">Filtrar</button>
-        <button type="button" className="btn-ghost" onClick={limpiar}>Limpiar</button>
-        <button type="button" className="btn-ghost" onClick={exportarPdf} disabled={historial.length === 0}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: '-2px' }}>
+        <Boton type="button" onClick={limpiar}>Limpiar</Boton>
+        <Boton type="button" onClick={exportarPdf} disabled={historial.length === 0}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-2px' }}>
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="15" x2="15" y2="15" />
           </svg>
           Exportar PDF
-        </button>
+        </Boton>
       </form>
 
-      <div className="hist-resumen">
-        <span>Registros: <strong>{historial.length}</strong></span>
-        <span>Personas: <strong>{totalPersonas}</strong></span>
-        <span>Puntos otorgados: <strong>{totalPuntos.toFixed(2)}</strong></span>
-      </div>
+      <Resumen items={[
+        { etiqueta: 'Registros', valor: historial.length },
+        { etiqueta: 'Personas', valor: totalPersonas },
+        { etiqueta: 'Puntos otorgados', valor: totalPuntos.toFixed(2) },
+      ]} />
 
       <div className="table-card">
         {!cargando && historial.length === 0 ? (

@@ -3,7 +3,12 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
+}
+/* El subtítulo ya no necesita su margen inferior dentro del header:
+   el propio .page-head controla la separación con la tabla. */
+.page-head .page-subtitle {
+  margin-bottom: 0;
 }
 
 /* ===== Botones ===== */
@@ -33,20 +38,20 @@
 
 .btn-ghost {
   padding: 12px 20px;
-  border: 1.5px solid #d1d5db;
+  border: 2px solid #0D1BB8;
   border-radius: 14px;
   background: #ffffff;
-  color: #4b5563;
+  color: #0D1BB8;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s;
 }
 .btn-ghost:hover {
-  border-color: var(--pd-teal);
-  background: var(--pd-teal-light);
-  color: var(--pd-teal-dark);
+  border-color: #0a15a0;
+  background: #EEF0FC;
+  color: #0a15a0;
 }
 
 /* ===== Error ===== */
@@ -71,7 +76,8 @@
 .table-empty {
   padding: 48px;
   text-align: center;
-  color: #9ca3af;
+  color: #374151;
+  font-weight: 600;
   font-size: 14px;
 }
 .data-table {
@@ -82,8 +88,8 @@
   text-align: left;
   padding: 16px 18px;
   font-size: 12px;
-  font-weight: 700;
-  color: #9ca3af;
+  font-weight: 800;
+  color: #4b5563;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -105,18 +111,43 @@
   border-radius: 20px;
   text-transform: capitalize;
 }
-.badge-estado {
+/* Badge de rol en el listado de usuarios: azul oscuro con letra blanca (estilo historial) */
+.badge-rol-oscuro {
   display: inline-block;
-  white-space: nowrap;
+  background: #0D1BB8;
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 20px;
   text-transform: capitalize;
 }
-.estado-activo     { background: #dcfce7; color: #16a34a; }
-.estado-inactivo   { background: #f3f4f6; color: #6b7280; }
-.estado-suspendido { background: #fef3c7; color: #d97706; }
+/* Badge del tipo de documento (DUI / Pasaporte): mismo estilo que el perfil */
+.badge-doc {
+  background: #0D1BB8;
+  color: #fff;
+  text-transform: none;
+}
+/* Correo en la tabla: gris oscuro en claro, se aclara en oscuro (ver tema.css) */
+.td-correo { color: #4b5563; }
+.badge-estado {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: capitalize;
+}
+/* Fondos profundos para que el blanco resalte igual que en la badge de rol */
+.estado-activo     { background: #166534; color: #ffffff; }
+.estado-inactivo   { background: #f3f4f6; color: #6b7280; font-weight: 600; }
+.estado-suspendido { background: #b45309; color: #ffffff; }
+
+/* Badges de estado del módulo Promociones: fondo saturado + letra blanca */
+.estado-programada     { background: #b45309; color: #ffffff; }
+.estado-finalizada     { background: #475569; color: #ffffff; }
+.estado-promo-inactivo { background: #b91c1c; color: #ffffff; }
 
 /* Acciones por fila */
 .row-actions { display: flex; gap: 8px; }
@@ -142,6 +173,8 @@
 .icon-btn.canje:hover:not(:disabled) { background: #9333ea; color: #fff; }
 .icon-btn.activate { background: #dcfce7; color: #16a34a; }
 .icon-btn.activate:hover:not(:disabled) { background: #16a34a; color: #fff; }
+.icon-btn.warning { background: #fffbeb; color: #f59e0b; }
+.icon-btn.warning:hover:not(:disabled) { background: #f59e0b; color: #fff; }
 .icon-btn:disabled {
   background: #f3f4f6;
   color: #d1d5db;
@@ -273,7 +306,7 @@
 .form-field label {
   font-size: 13px;
   font-weight: 700;
-  color: var(--pd-teal-mid);
+  color: #6b7280;
 }
 .form-field .optional {
   font-weight: 400;
@@ -284,20 +317,31 @@
 .form-field select {
   width: 100%;
   box-sizing: border-box;
-  background: var(--pd-teal-light);
-  border: 1px solid transparent;
+  background: #fff;
+  border: 2px solid #0D1BB8;
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
+  height: 42px;
   font-size: 14px;
   font-family: inherit;
-  color: var(--pd-teal-dark);
+  color: #111827;
+  font-weight: 700;
   outline: none;
-  transition: all 0.2s;
+  transition: border-color 0.15s;
+}
+/* Select con la misma flecha azul que <Campo> */
+.form-field select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230D1BB8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 .form-field input:focus,
 .form-field select:focus {
-  background: #C8EBE6;
-  border-color: var(--pd-text-xmuted);
+  border-color: #0a15a0;
 }
 
 /* Input de contraseña con botón de mostrar/ocultar */
@@ -419,6 +463,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.confirm-icon.confirm-icon-ok {
+  background: #ecfdf5;
+  color: #16a34a;
+}
+.confirm-icon.confirm-icon-warn {
+  background: #fffbeb;
+  color: #f59e0b;
 }
 .confirm-title {
   font-size: 20px;

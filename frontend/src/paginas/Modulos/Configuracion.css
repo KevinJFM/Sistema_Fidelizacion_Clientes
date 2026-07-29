@@ -20,7 +20,8 @@
 }
 .config-head p {
   font-size: 13px;
-  color: #9ca3af;
+  color: #6b7280;
+  font-weight: 500;
   margin-top: 3px;
 }
 
@@ -88,23 +89,22 @@
 }
 .config-item label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--pd-teal-mid);
+  font-weight: 700;
+  color: #6b7280;
 }
 
 .config-input {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--pd-teal-light);
-  border: 1px solid transparent;
+  background: #fff;
+  border: 2px solid #0D1BB8;
   border-radius: 12px;
   padding: 0 14px;
-  transition: all 0.2s;
+  transition: border-color 0.15s;
 }
 .config-input:focus-within {
-  background: #C8EBE6;
-  border-color: var(--pd-text-xmuted);
+  border-color: #0a15a0;
 }
 .config-input input {
   flex: 1;
@@ -113,14 +113,14 @@
   outline: none;
   padding: 12px 0;
   font-size: 15px;
-  font-weight: 600;
-  color: var(--pd-teal-dark);
+  font-weight: 700;
+  color: #111827;
   font-family: inherit;
 }
 .config-sufijo {
   font-size: 13px;
   font-weight: 700;
-  color: var(--pd-text-muted);
+  color: #6b7280;
 }
 
 .config-actions {
@@ -152,18 +152,8 @@
   border-radius: 10px;
 }
 
-.btn-ghost {
-  background: transparent;
-  border: 1.5px solid #d1d5db;
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pd-text-muted);
-  cursor: pointer;
-  transition: all 0.18s;
-}
-.btn-ghost:hover { background: #f3f4f6; }
+/* .btn-ghost se define una sola vez en Usuarios.css (+ tema.css para oscuro).
+   Aquí solo se usa junto con .btn-sm para el tamaño pequeño. */
 
 .recompensas-list {
   display: flex;
@@ -174,7 +164,8 @@
 .recompensas-empty {
   text-align: center;
   font-size: 13px;
-  color: #9ca3af;
+  color: #374151;
+  font-weight: 600;
   padding: 20px 0;
 }
 
@@ -183,7 +174,8 @@
   align-items: center;
   justify-content: space-between;
   background: #f9fafb;
-  border: 1px solid #f0f0f0;
+  border: 1.5px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
   border-radius: 14px;
   padding: 12px 16px;
   gap: 12px;
@@ -191,9 +183,10 @@
 }
 .recompensa-item:hover { border-color: #d1d5db; }
 
-.recompensa-inactiva {
-  opacity: 0.5;
-}
+/* Inactiva: atenuar texto/fondo (sin opacity, para que los botones e ícono sigan visibles) */
+.recompensa-inactiva { background: #f3f4f6; border-color: #e5e7eb; box-shadow: none; }
+.recompensa-inactiva .recompensa-nombre { color: #9ca3af; }
+.recompensa-inactiva .recompensa-meta   { color: #b0b6c0; }
 
 .recompensa-info { flex: 1; min-width: 0; }
 
@@ -220,25 +213,6 @@
   flex-shrink: 0;
 }
 
-.btn-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  border: 1.5px solid #e5e7eb;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #6b7280;
-  transition: all 0.18s;
-}
-.btn-icon:hover { border-color: var(--pd-teal); color: var(--pd-teal); background: #f0fdfa; }
-
-.btn-icon-danger:hover  { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
-.btn-icon-warning:hover { border-color: #f59e0b; color: #f59e0b; background: #fffbeb; }
-.btn-icon-success:hover { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
-
 .recompensa-nombre-row {
   display: flex;
   align-items: center;
@@ -246,21 +220,30 @@
 }
 
 .badge-inactivo {
-  font-size: 10px;
-  font-weight: 700;
-  background: #f3f4f6;
-  color: #9ca3af;
-  border-radius: 6px;
-  padding: 2px 7px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  background: #ffedd5;
+  color: #c2410e;
+  border: 1px solid #fdba74;
+  border-radius: 9px;
+  padding: 6px 13px;
+  margin-right: 4px;
   flex-shrink: 0;
+}
+[data-theme="dark"] .badge-inactivo {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
 }
 
 /* Dark mode */
-[data-theme="dark"] .recompensa-item { background: #1e244a; border-color: #272e58; }
+[data-theme="dark"] .recompensa-item { background: #1e244a; border-color: #3a4275; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
 [data-theme="dark"] .recompensa-nombre { color: #e8ebff; }
-[data-theme="dark"] .btn-icon { background: #11152e; border-color: #272e58; color: #9ca3af; }
-[data-theme="dark"] .btn-ghost { border-color: #272e58; color: #9ca3af; }
-[data-theme="dark"] .btn-ghost:hover { background: #1e244a; }
+[data-theme="dark"] .recompensa-inactiva { background: #161b38; border-color: #2a3160; box-shadow: none; }
+[data-theme="dark"] .recompensa-inactiva .recompensa-nombre { color: #8891c4; }
+[data-theme="dark"] .recompensa-inactiva .recompensa-meta   { color: #626aa0; }
 
 @media (max-width: 700px) {
   .recompensa-form-fields { grid-template-columns: 1fr; }

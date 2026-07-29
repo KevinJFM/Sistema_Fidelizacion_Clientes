@@ -9,6 +9,7 @@ import {
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatTelefono, esTelefonoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
+import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
@@ -43,7 +44,7 @@ const emptyForm = {
   fecha_nacimiento: '',
   id_departamento: null,
   id_distrito: null,
-  id_rol: 2,
+  id_rol: null,
   id_estado: 1,
 };
 
@@ -62,6 +63,7 @@ export default function Usuarios() {
   const [confirmUser, setConfirmUser] = useState(null); // usuario pendiente de desactivar
   const [deleting, setDeleting]   = useState(false);
   const [passTried, setPassTried] = useState(false); // intentó guardar con contraseña inválida
+  const [filtro, setFiltro]       = useState('');
   const [page, setPage]           = useState(1);
   const [departamentos, setDepartamentos] = useState([]);
   const [distritos, setDistritos]         = useState([]);
@@ -84,8 +86,16 @@ export default function Usuarios() {
     getDepartamentos().then(setDepartamentos).catch(() => {});
   }, []);
 
+  const filtrados = usuarios.filter((u) => {
+    const t = filtro.toLowerCase();
+    return (
+      `${u.nombre} ${u.apellido}`.toLowerCase().includes(t) ||
+      (u.email ?? '').toLowerCase().includes(t)
+    );
+  });
   // Datos de la página actual
-  const pageItems = usuarios.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
 
   const abrirCrear = () => {
     setEditingId(null);
@@ -150,7 +160,7 @@ export default function Usuarios() {
   const handleChange = (e) => {
     const { name } = e.target;
     let value = e.target.value;
-    if (name.startsWith('id_')) value = Number(value);
+    if (name.startsWith('id_')) value = value ? Number(value) : null;
     else if (name === 'telefono') value = formatTelefono(value);
     setForm({ ...form, [name]: value });
     // Al escribir, se limpia el error de ese campo
@@ -183,6 +193,7 @@ export default function Usuarios() {
     if (form.telefono && !esTelefonoValido(form.telefono)) {
       errores.telefono = 'Formato: 4322-2334';
     }
+    if (!form.id_rol) errores.id_rol = 'Requerido';
     if (!form.id_departamento) errores.id_departamento = 'Requerido';
     if (!form.id_distrito) errores.id_distrito = 'Requerido';
 
@@ -222,22 +233,22 @@ export default function Usuarios() {
     }
   };
 
-  const confirmarDesactivar = async () => {
+  const confirmarEliminar = async () => {
     if (!confirmUser) return;
     setDeleting(true);
     try {
       await deleteUsuario(confirmUser.id_usuario);
-      toast.success('Usuario desactivado');
+      toast.success('Usuario eliminado');
       setConfirmUser(null);
       await cargarUsuarios();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al desactivar');
+      toast.error(err.response?.data?.message || 'Error al eliminar');
     } finally {
       setDeleting(false);
     }
   };
 
-  if (inicial) return <SkeletonListado columnas={6} conBusqueda={false} />;
+  if (inicial) return <SkeletonListado columnas={6} />;
 
   return (
     <div className="admin-page">
@@ -258,7 +269,25 @@ export default function Usuarios() {
       {error && <p className="login-error">{error}</p>}
 
       <div className="table-card">
-        {!loading && usuarios.length === 0 ? (
+        <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
+            <input
+              placeholder="Buscar por nombre o correo..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
+            />
+            <svg
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
+        </div>
+
+        {!loading && filtrados.length === 0 ? (
           <p className="table-empty">No hay usuarios registrados</p>
         ) : (
           <table className="data-table">
@@ -280,7 +309,7 @@ export default function Usuarios() {
                   <td>{u.nombre} {u.apellido}</td>
                   <td>{u.email}</td>
                   <td>{u.telefono}</td>
-                  <td><span className="badge-rol">{u.rol}</span></td>
+                  <td><span className="badge-rol-oscuro">{u.rol}</span></td>
                   <td>
                     <span className={`badge-estado estado-${u.estado?.toLowerCase()}`}>
                       {u.estado}
@@ -297,8 +326,7 @@ export default function Usuarios() {
                       <button
                         className="icon-btn delete"
                         onClick={() => setConfirmUser(u)}
-                        disabled={u.id_estado === ESTADO_INACTIVO}
-                        title={u.id_estado === ESTADO_INACTIVO ? 'Ya está inactivo' : 'Desactivar'}
+                        title="Eliminar"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6" />
@@ -315,7 +343,7 @@ export default function Usuarios() {
 
       </div>
 
-      <Paginacion total={usuarios.length} page={page} onChange={setPage} />
+      <Paginacion total={filtrados.length} page={page} onChange={setPage} />
 
       {/* Modal */}
       {modalOpen && (
@@ -365,11 +393,21 @@ export default function Usuarios() {
                   <label>
                     Fecha de nacimiento <span className="optional">(opcional)</span>
                   </label>
-                  <input type="date" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={handleChange} />
+                  <DatePicker
+                    size="compacto"
+                    className="dp--bloque"
+                    value={isoAFecha(form.fecha_nacimiento)}
+                    onChange={(d) => handleChange({ target: { name: 'fecha_nacimiento', value: fechaAISO(d) } })}
+                    placeholder="Elegir fecha"
+                  />
                 </div>
-                <div className="form-field">
-                  <label>Rol</label>
-                  <select name="id_rol" value={form.id_rol} onChange={handleChange}>
+                <div className={`form-field ${fieldErrors.id_rol ? 'has-error' : ''}`}>
+                  <label>
+                    Rol
+                    {fieldErrors.id_rol && <span className="req-tag">{fieldErrors.id_rol}</span>}
+                  </label>
+                  <select name="id_rol" value={form.id_rol ?? ''} onChange={handleChange}>
+                    <option value="">Seleccione...</option>
                     {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                   </select>
                 </div>
@@ -488,17 +526,17 @@ export default function Usuarios() {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </div>
-            <h3 className="confirm-title">¿Desactivar usuario?</h3>
+            <h3 className="confirm-title">¿Eliminar usuario?</h3>
             <p className="confirm-text">
-              <strong>{confirmUser.nombre} {confirmUser.apellido}</strong> pasará a estado
-              inactivo y no podrá iniciar sesión hasta que lo actives de nuevo.
+              <strong>{confirmUser.nombre} {confirmUser.apellido}</strong> se eliminará
+              por completo de la base de datos. Esta acción no se puede deshacer.
             </p>
             <div className="modal-actions confirm-actions">
               <button type="button" className="btn-ghost" onClick={() => setConfirmUser(null)}>
                 Cancelar
               </button>
-              <button type="button" className="btn-danger" onClick={confirmarDesactivar} disabled={deleting}>
-                {deleting ? 'Desactivando...' : 'Sí, desactivar'}
+              <button type="button" className="btn-danger" onClick={confirmarEliminar} disabled={deleting}>
+                {deleting ? 'Eliminando...' : 'Sí, eliminar'}
               </button>
             </div>
           </div>
