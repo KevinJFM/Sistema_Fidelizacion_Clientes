@@ -330,7 +330,7 @@ CREATE TABLE bitacora (
   ip            VARCHAR(45) NULL,
   fecha         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_bitacora),
-  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
+  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_bitacora_fecha (fecha)
 );
 
