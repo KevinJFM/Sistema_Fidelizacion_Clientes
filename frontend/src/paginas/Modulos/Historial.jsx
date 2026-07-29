@@ -293,6 +293,24 @@ export default function Historial() {
         { etiqueta: 'Puntos otorgados', valor: totalPuntos },
       ]} />
 
+      {/* Aviso solo si el backend recortó el resultado por el tope de seguridad.
+          En uso normal nunca aparece; protege el caso extremo de un historial enorme. */}
+      {historial.truncado && (
+        <div style={{
+          background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e',
+          borderRadius: 12, padding: '11px 15px', margin: '0 0 16px', fontSize: 13.5, fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}>
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span>
+            Se alcanzó el máximo de {historial.limite?.toLocaleString()} transacciones. Estás viendo (y exportando)
+            las más recientes. Filtra por fechas o documento para incluir las más antiguas.
+          </span>
+        </div>
+      )}
+
       <div className="table-card">
         {!cargando && historial.length === 0 ? (
           <p className="table-empty">No hay transacciones con esos filtros</p>

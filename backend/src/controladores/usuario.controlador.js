@@ -3,10 +3,25 @@ import pool from '../configuracion/bd.js';
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Valida longitudes máximas según las columnas de la tabla usuarios.
+// Solo revisa los campos presentes (útil tanto al crear como al actualizar).
+// Devuelve un mensaje de error o null si todo está dentro de límite.
+const validarLongitudes = ({ nombre, apellido, email, telefono }) => {
+  if (nombre != null && String(nombre).length > 100) return 'El nombre es demasiado largo (máx. 100)';
+  if (apellido != null && String(apellido).length > 100) return 'El apellido es demasiado largo (máx. 100)';
+  if (email != null && String(email).length > 150) return 'El correo es demasiado largo (máx. 150)';
+  if (telefono != null && String(telefono).length > 20) return 'El teléfono es demasiado largo (máx. 20)';
+  return null;
+};
+
 // Valida la política de contraseñas. Devuelve null si es válida, o un mensaje de error.
 const validarContrasena = (contrasena) => {
   if (contrasena.length < 8) {
     return 'La contraseña debe tener al menos 8 caracteres';
+  }
+  // bcrypt ignora los bytes después del 72, así que no tiene sentido permitir más.
+  if (contrasena.length > 72) {
+    return 'La contraseña es demasiado larga (máx. 72 caracteres)';
   }
   if (!/[A-Z]/.test(contrasena)) {
     return 'La contraseña debe incluir al menos una letra mayúscula';
@@ -83,6 +98,11 @@ export const crearUsuario = async (req, res) => {
       return res.status(400).json({ message: 'El email no tiene un formato válido' });
     }
 
+    const errorLongitud = validarLongitudes(req.body);
+    if (errorLongitud) {
+      return res.status(400).json({ message: errorLongitud });
+    }
+
     const errorContrasena = validarContrasena(contrasena);
     if (errorContrasena) {
       return res.status(400).json({ message: errorContrasena });
@@ -138,6 +158,12 @@ export const actualizarUsuario = async (req, res) => {
     // Validar formato del email
     if (email && !REGEX_CORREO.test(email)) {
       return res.status(400).json({ message: 'El email no tiene un formato válido' });
+    }
+
+    // Validar longitudes máximas de los campos presentes
+    const errorLongitud = validarLongitudes(req.body);
+    if (errorLongitud) {
+      return res.status(400).json({ message: errorLongitud });
     }
 
     // Verificar que el email no esté en uso por otro usuario
