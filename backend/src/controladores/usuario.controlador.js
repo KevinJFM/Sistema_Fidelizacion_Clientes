@@ -1,8 +1,6 @@
 import bcrypt from 'bcryptjs';
 import pool from '../configuracion/bd.js';
 
-const ESTADO_INACTIVO = 2; // estados: 1=activo, 2=inactivo, 3=suspendido
-
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Valida la política de contraseñas. Devuelve null si es válida, o un mensaje de error.
@@ -183,12 +181,15 @@ export const actualizarUsuario = async (req, res) => {
   }
 };
 
-// Borrado lógico (cambia el estado a inactivo)
+// Borrado físico: elimina el usuario por completo de la base de datos.
+// Los refresh_tokens caen solos (ON DELETE CASCADE) y la bitácora se desliga
+// (id_usuario = NULL) para conservar el historial de auditoría. Si el usuario
+// tiene transacciones registradas, la FK lo impide y se avisa al front.
 export const eliminarUsuario = async (req, res) => {
+  const { id } = req.params;
+  const conexion = await pool.getConnection();
   try {
-    const { id } = req.params;
-
-    const [existe] = await pool.query(
+    const [existe] = await conexion.query(
       'SELECT id_usuario FROM usuarios WHERE id_usuario = ?',
       [id]
     );
@@ -196,13 +197,23 @@ export const eliminarUsuario = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    await pool.query(
-      'UPDATE usuarios SET id_estado = ? WHERE id_usuario = ?',
-      [ESTADO_INACTIVO, id]
-    );
+    await conexion.beginTransaction();
+    // Conservar la auditoría pero desligarla del usuario que se elimina
+    await conexion.query('UPDATE bitacora SET id_usuario = NULL WHERE id_usuario = ?', [id]);
+    await conexion.query('DELETE FROM usuarios WHERE id_usuario = ?', [id]);
+    await conexion.commit();
 
-    return res.status(200).json({ message: 'Usuario desactivado correctamente' });
+    return res.status(200).json({ message: 'Usuario eliminado correctamente' });
   } catch (error) {
+    await conexion.rollback();
+    // El usuario tiene transacciones asociadas (RESTRICT): no se puede borrar
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.errno === 1451) {
+      return res.status(409).json({
+        message: 'No se puede eliminar: el usuario tiene transacciones registradas. Desactívalo en su lugar.',
+      });
+    }
     return res.status(500).json({ message: 'Error interno del servidor' });
+  } finally {
+    conexion.release();
   }
 };
