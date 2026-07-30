@@ -15,6 +15,8 @@ USE db_fidelizacion;
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
 DROP TABLE IF EXISTS alertas_enviadas;
+DROP TABLE IF EXISTS pos_pedido_procesado;
+DROP TABLE IF EXISTS pos_cliente_procesado;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
@@ -307,6 +309,33 @@ CREATE TABLE pos_configuracion (
 -- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
 INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por)
 VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual', NULL);
+
+-- ============================================================
+--  LOG DE SINCRONIZACIÓN POS
+--  Registra cada pedido/cliente del POS ya procesado para no
+--  re-importarlo en la próxima sincronización.
+-- ============================================================
+CREATE TABLE pos_pedido_procesado (
+  id_pedido_pos   INT          NOT NULL,
+  id_transaccion  INT          NULL,
+  id_cliente      INT          NULL,
+  resultado       VARCHAR(20)  NOT NULL,   -- 'creada' | 'sin_cliente'
+  detalle         VARCHAR(255) NULL,
+  fecha_procesado DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_pedido_pos),
+  CONSTRAINT fk_posped_trans   FOREIGN KEY (id_transaccion) REFERENCES transacciones(id_transaccion) ON DELETE SET NULL,
+  CONSTRAINT fk_posped_cliente FOREIGN KEY (id_cliente)     REFERENCES clientes(id_cliente)     ON DELETE SET NULL
+);
+
+CREATE TABLE pos_cliente_procesado (
+  id_cliente_pos  INT          NOT NULL,
+  id_cliente      INT          NULL,
+  resultado       VARCHAR(20)  NOT NULL,   -- 'creado' | 'emparejado' | 'sin_documento'
+  detalle         VARCHAR(255) NULL,
+  fecha_procesado DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_cliente_pos),
+  CONSTRAINT fk_poscli_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE SET NULL
+);
 
 -- ============================================================
 --  REFRESH TOKENS (sesiones — revocación de tokens)
