@@ -11,6 +11,12 @@ dist/
 dist-ssr/
 build/
 
+# Playwright (pruebas E2E)
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+
 # Logs
 *.log
 npm-debug.log*
