@@ -1,0 +1,210 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="pagina-panel" name="Panel administrativo">
+    <mxGraphModel dx="1000" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Frontera del sistema -->
+        <mxCell id="B1" value="Sistema de Fidelizacion de Clientes — Panel administrativo" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=none;strokeColor=#6C8EBF;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="40" width="820" height="740" as="geometry" />
+        </mxCell>
+
+        <!-- Actores -->
+        <mxCell id="ACT_EMP" value="Empleado" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="110" y="180" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ACT_REC" value="Recepcionista" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="110" y="380" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ACT_ADM" value="Administrador" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="110" y="580" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ACT_POS" value="Punto de venta (POS externo)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="300" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Generalizacion de roles: Admin -|> Recepcionista -|> Empleado -->
+        <mxCell id="gen1" value="" style="endArrow=block;endFill=0;html=1;" edge="1" parent="1" source="ACT_ADM" target="ACT_REC">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gen2" value="" style="endArrow=block;endFill=0;html=1;" edge="1" parent="1" source="ACT_REC" target="ACT_EMP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Casos de uso - fila 1 -->
+        <mxCell id="UC_LOGIN" value="Iniciar sesion" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="330" y="90" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_LOGOUT" value="Cerrar sesion" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="540" y="90" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- fila 2 (nivel Empleado) -->
+        <mxCell id="UC_BUSCAR" value="Buscar cliente" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="200" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_VERREC" value="Ver recompensas activas" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="540" y="200" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_VERTRANS" value="Ver transacciones" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="750" y="200" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- fila 3 (nivel Recepcionista) -->
+        <mxCell id="UC_GCLI" value="Gestionar clientes" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="330" y="310" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_TRANS" value="Registrar transaccion (acumular puntos)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="540" y="310" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_CANJE" value="Registrar canje de recompensa" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="750" y="310" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- fila 4 (nivel Recepcionista) -->
+        <mxCell id="UC_REP" value="Ver reportes / resumen" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="330" y="420" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_TOP" value="Ver top de clientes" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="540" y="420" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- fila 5 (nivel Admin) -->
+        <mxCell id="UC_GUSR" value="Gestionar usuarios del sistema" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="330" y="530" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_GOPER" value="Gestionar operadores" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="540" y="530" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_GREC" value="Gestionar recompensas" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="750" y="530" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- fila 6 (nivel Admin) -->
+        <mxCell id="UC_GPROMO" value="Gestionar promociones" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="330" y="640" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_CONFIG" value="Configurar sistema (parametros)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="540" y="640" width="190" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Asociaciones Empleado -->
+        <mxCell id="a1" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_EMP" target="UC_LOGIN"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a2" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_EMP" target="UC_LOGOUT"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a3" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_EMP" target="UC_BUSCAR"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a4" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_EMP" target="UC_VERREC"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a5" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_EMP" target="UC_VERTRANS"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Asociaciones Recepcionista -->
+        <mxCell id="a6" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_REC" target="UC_GCLI"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a7" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_REC" target="UC_TRANS"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a8" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_REC" target="UC_CANJE"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a9" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_REC" target="UC_REP"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a10" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_REC" target="UC_TOP"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Asociaciones Admin -->
+        <mxCell id="a11" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_ADM" target="UC_GUSR"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a12" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_ADM" target="UC_GOPER"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a13" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_ADM" target="UC_GREC"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a14" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_ADM" target="UC_GPROMO"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="a15" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_ADM" target="UC_CONFIG"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- POS -->
+        <mxCell id="a16" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_POS" target="UC_TRANS"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Include -->
+        <mxCell id="inc1" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontStyle=2" edge="1" parent="1" source="UC_TRANS" target="UC_BUSCAR"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="inc2" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontStyle=2" edge="1" parent="1" source="UC_CANJE" target="UC_BUSCAR"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="pagina-cliente" name="Cliente y tareas automaticas">
+    <mxGraphModel dx="1000" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Frontera Portal / App -->
+        <mxCell id="B2" value="Portal web / App movil del cliente" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=none;strokeColor=#6C8EBF;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="60" width="560" height="560" as="geometry" />
+        </mxCell>
+
+        <!-- Frontera Tareas automaticas -->
+        <mxCell id="B3" value="Tareas automaticas (cron)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=none;strokeColor=#B85450;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1120" y="120" width="380" height="500" as="geometry" />
+        </mxCell>
+
+        <!-- Actores -->
+        <mxCell id="ACT_CLI" value="Cliente" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="110" y="300" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ACT_CRON" value="Programador de tareas (cron)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="960" y="320" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Casos de uso Cliente -->
+        <mxCell id="UC_SOLIC" value="Solicitar codigo de acceso" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="330" y="110" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_VERIF" value="Verificar codigo e iniciar sesion" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="600" y="110" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_PTS" value="Consultar mis puntos" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_MOV" value="Ver mis movimientos" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="600" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_PROMOS" value="Ver promociones activas" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="330" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_PUSH" value="Registrar dispositivo (notif. push)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="600" y="330" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_LOGOUTC" value="Cerrar sesion (remota)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="330" y="440" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Casos de uso cron -->
+        <mxCell id="UC_A1" value="Enviar alerta: cerca del canje" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="180" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_A2" value="Enviar alerta de reactivacion (inactivos)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="290" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_A3" value="Avisar promociones programadas" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="400" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UC_A4" value="Enviar notificacion (correo / push)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="510" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Asociaciones Cliente -->
+        <mxCell id="c1" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_SOLIC"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c2" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_VERIF"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c3" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_PTS"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c4" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_MOV"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c5" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_PROMOS"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c6" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_PUSH"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c7" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CLI" target="UC_LOGOUTC"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- include login -->
+        <mxCell id="cinc" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontStyle=2" edge="1" parent="1" source="UC_VERIF" target="UC_SOLIC"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Asociaciones cron -->
+        <mxCell id="cr1" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CRON" target="UC_A1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="cr2" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CRON" target="UC_A2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="cr3" style="endArrow=none;html=1;" edge="1" parent="1" source="ACT_CRON" target="UC_A3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- include notificacion -->
+        <mxCell id="ninc1" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontStyle=2" edge="1" parent="1" source="UC_A1" target="UC_A4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ninc2" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontStyle=2" edge="1" parent="1" source="UC_A2" target="UC_A4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ninc3" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontStyle=2" edge="1" parent="1" source="UC_A3" target="UC_A4"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
