@@ -2,6 +2,8 @@
 --  BASE DE DATOS COMPLETA — Sistema de Fidelización (Punta Diamante)
 --  Incluye: catálogos, ubicaciones (depto/municipio/distrito),
 --  usuarios y clientes con ubicación, fidelización y auditoría.
+--
+--  Acceso del cliente al portal/app: por CÓDIGO (OTP) enviado al correo.
 -- ============================================================
 CREATE DATABASE IF NOT EXISTS db_fidelizacion
   CHARACTER SET utf8mb4
@@ -11,12 +13,14 @@ USE db_fidelizacion;
 
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
+DROP TABLE IF EXISTS alertas_enviadas;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
 DROP TABLE IF EXISTS transacciones_operador;
 DROP TABLE IF EXISTS operadores_turisticos;
 DROP TABLE IF EXISTS beneficios_emitidos;
+DROP TABLE IF EXISTS recompensas;
 DROP TABLE IF EXISTS promociones;
 DROP TABLE IF EXISTS configuracion;
 DROP TABLE IF EXISTS clientes;
@@ -48,7 +52,7 @@ CREATE TABLE roles (
 
 CREATE TABLE tipos_documento (
   id_tipo_documento INT NOT NULL AUTO_INCREMENT,
-  nombre            VARCHAR(40) NOT NULL UNIQUE,   -- DUI, Pasaporte
+  nombre            VARCHAR(40) NOT NULL UNIQUE,
   PRIMARY KEY (id_tipo_documento)
 );
 
@@ -97,7 +101,7 @@ CREATE TABLE usuarios (
   email             VARCHAR(150) NOT NULL UNIQUE,
   contrasena_hash   VARCHAR(255) NOT NULL,
   telefono          VARCHAR(20)  NOT NULL,
-  fecha_nacimiento  DATE         NULL,          -- opcional
+  fecha_nacimiento  DATE         NULL,
   id_departamento   INT          NULL,
   id_distrito       INT          NULL,
   id_rol            INT          NOT NULL,
@@ -113,7 +117,8 @@ CREATE TABLE usuarios (
 );
 
 -- ============================================================
---  CLIENTES DE FIDELIZACIÓN (NO inician sesión)
+--  CLIENTES DE FIDELIZACIÓN (NO inician sesión al panel)
+--  Consultan sus puntos en el portal/app con un código (OTP) por correo.
 -- ============================================================
 CREATE TABLE clientes (
   id_cliente        INT NOT NULL AUTO_INCREMENT,
@@ -127,6 +132,12 @@ CREATE TABLE clientes (
   id_departamento   INT          NULL,
   id_distrito       INT          NULL,
   puntos_acumulados INT          NOT NULL DEFAULT 0,
+  otp_hash          VARCHAR(255) NULL,
+  otp_expira        DATETIME     NULL,
+  otp_intentos      INT          NOT NULL DEFAULT 0,
+  push_token        VARCHAR(255) NULL,
+  sesion_app        VARCHAR(64)  NULL,
+  sesion_portal     VARCHAR(64)  NULL,
   id_estado         INT          NOT NULL,
   created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -157,6 +168,20 @@ CREATE TABLE promociones (
 );
 
 -- ============================================================
+--  RECOMPENSAS (catálogo de canje: qué puede canjear el cliente)
+--  tipo = tipo de habitación (Estándar / Especial). Valor en $ = puntos * 0.05 (fijo por código).
+-- ============================================================
+CREATE TABLE recompensas (
+  id         INT NOT NULL AUTO_INCREMENT,
+  nombre     VARCHAR(120) NOT NULL,
+  tipo       VARCHAR(60)  NOT NULL DEFAULT 'Estándar',
+  puntos     INT NOT NULL,
+  activo     TINYINT(1) NOT NULL DEFAULT 1,
+  creado_en  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+
+-- ============================================================
 --  BENEFICIOS EMITIDOS (cupones por cliente)
 -- ============================================================
 CREATE TABLE beneficios_emitidos (
@@ -180,11 +205,11 @@ CREATE TABLE beneficios_emitidos (
 CREATE TABLE transacciones (
   id_transaccion     INT NOT NULL AUTO_INCREMENT,
   id_cliente         INT NOT NULL,
-  id_usuario         INT NOT NULL,                 -- cajero/recepcionista que la registró
+  id_usuario         INT NOT NULL,
   id_escenario       INT NULL,
-  referencia_venta   VARCHAR(60) NULL,             -- N.º de folio/ticket del sistema externo
-  fecha_ingreso      DATE NULL,                    -- entrada del huésped (hospedaje)
-  fecha_salida       DATE NULL,                    -- salida del huésped (hospedaje)
+  referencia_venta   VARCHAR(60) NULL,
+  fecha_ingreso      DATE NULL,
+  fecha_salida       DATE NULL,
   monto              DECIMAL(10,2) NOT NULL,
   descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   puntos_otorgados   INT NOT NULL DEFAULT 0,
@@ -206,7 +231,7 @@ CREATE TABLE movimientos_puntos (
   id_cliente      INT NOT NULL,
   id_transaccion  INT NULL,
   tipo            ENUM('ganado','canjeado','ajuste') NOT NULL,
-  puntos          INT NOT NULL,                   -- + gana / - canjea
+  puntos          INT NOT NULL,
   descripcion     VARCHAR(150) NULL,
   fecha           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_movimiento),
@@ -216,12 +241,11 @@ CREATE TABLE movimientos_puntos (
 
 -- ============================================================
 --  TOUR OPERADORES (programa de puntos B2B)
---  Empresas que traen grupos. Puntos DECIMAL (1.5 x persona, 0.5% consumo).
 -- ============================================================
 CREATE TABLE operadores_turisticos (
   id_operador       INT NOT NULL AUTO_INCREMENT,
   nombre            VARCHAR(120)  NOT NULL,
-  tipo              VARCHAR(20)   NOT NULL DEFAULT 'Persona natural',  -- 'Persona natural' o 'Empresa'
+  tipo              VARCHAR(20)   NOT NULL DEFAULT 'Persona natural',
   telefono          VARCHAR(20)   NULL,
   correo            VARCHAR(120)  NULL,
   puntos_acumulados DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -234,10 +258,10 @@ CREATE TABLE operadores_turisticos (
 CREATE TABLE transacciones_operador (
   id_transaccion_op  INT NOT NULL AUTO_INCREMENT,
   id_operador        INT NOT NULL,
-  id_usuario         INT NOT NULL,                 -- recepcionista/admin que registró
+  id_usuario         INT NOT NULL,
   num_personas       INT NOT NULL DEFAULT 0,
-  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- puntos por persona (si grupo >= mínimo)
-  puntos_otorgados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- total
+  puntos_personas    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  puntos_otorgados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   puntos_canjeados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   fecha              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -266,7 +290,7 @@ CREATE TABLE configuracion (
 CREATE TABLE refresh_tokens (
   id_token     INT NOT NULL AUTO_INCREMENT,
   id_usuario   INT NOT NULL,
-  token_hash   VARCHAR(255) NOT NULL,             -- se guarda el HASH, nunca el token
+  token_hash   VARCHAR(255) NOT NULL,
   user_agent   VARCHAR(255) NULL,
   ip           VARCHAR(45) NULL,
   revocado     TINYINT NOT NULL DEFAULT 0,
@@ -274,7 +298,23 @@ CREATE TABLE refresh_tokens (
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_token),
   CONSTRAINT fk_rt_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-  INDEX idx_rt_usuario (id_usuario)
+  INDEX idx_rt_usuario (id_usuario),
+  INDEX idx_rt_token (token_hash)
+);
+
+-- ============================================================
+--  ALERTAS DE CORREO ENVIADAS (retención)
+--  Rastrea qué alertas ya se mandaron para no repetirlas (cooldown 30 días).
+-- ============================================================
+CREATE TABLE alertas_enviadas (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  id_cliente    INT          NOT NULL,
+  tipo          VARCHAR(40)  NOT NULL,
+  referencia    VARCHAR(100) NULL,
+  fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE,
+  INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
 );
 
 -- ============================================================
@@ -282,7 +322,7 @@ CREATE TABLE refresh_tokens (
 -- ============================================================
 CREATE TABLE bitacora (
   id_bitacora   INT NOT NULL AUTO_INCREMENT,
-  id_usuario    INT NULL,                          -- quién (NULL = acción anónima/sistema)
+  id_usuario    INT NULL,
   accion        VARCHAR(80) NOT NULL,
   entidad       VARCHAR(60) NULL,
   id_registro   INT NULL,
@@ -290,7 +330,7 @@ CREATE TABLE bitacora (
   ip            VARCHAR(45) NULL,
   fecha         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_bitacora),
-  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
+  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_bitacora_fecha (fecha)
 );
 
@@ -301,7 +341,7 @@ INSERT INTO estados (estado) VALUES ('activo'), ('inactivo'), ('suspendido');
 
 INSERT INTO roles (rol, descripcion) VALUES
   ('admin',         'Acceso total al sistema'),
-  ('recepcionista', 'Front desk: registra huéspedes, consumos y consultas'),
+  ('recepcionista', 'Registra huéspedes, consumos y consultas'),
   ('empleado',      'Consulta de puntos de los huéspedes');
 
 INSERT INTO tipos_documento (nombre) VALUES ('DUI'), ('Pasaporte');
@@ -314,16 +354,24 @@ INSERT INTO tipos_beneficio (nombre, descripcion) VALUES
   ('Cumpleaños',           'Beneficio por fecha de cumpleaños');
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
-  -- Reglas FIJAS del sistema (NO en esta tabla): ganar $1 = 1 punto; cada punto vale $0.05;
-  -- catálogo de canje (recompensas.js); operador = 100 puntos por visita. Fijas por código.
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
   ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
   ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
   ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
-  -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
-  -- El canje siempre está activo (no configurable), por eso no está aquí.
+  ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
   ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
   ('descuento_monto_activo', '0',   'Activa el descuento por compra alta');
+
+-- ============================================================
+--  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)
+-- ============================================================
+INSERT INTO recompensas (nombre, tipo, puntos) VALUES
+  ('Pasanoche (Dom a Jue)',                 'Estándar', 700),
+  ('Pasadía (Dom a Jue)',                   'Estándar', 800),
+  ('Estadía 24h · 2 personas (Dom a Jue)',  'Estándar', 1000),
+  ('Pasanoche (Vie o Sáb)',                 'Estándar', 800),
+  ('Pasadía (Vie o Sáb)',                   'Estándar', 800),
+  ('Estadía 24h · 2 personas (Vie o Sáb)',  'Estándar', 1200);
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)
