@@ -33,12 +33,12 @@ export const actualizarConfiguracion = async (req, res) => {
     const conexion = await pool.getConnection();
     try {
       await conexion.beginTransaction();
+      const idUsuario = req.usuario?.id_usuario ?? null;
       for (const clave of claves) {
-        // Si la clave existe actualiza su valor; si no, la crea.
         await conexion.query(
-          `INSERT INTO configuracion (clave, valor) VALUES (?, ?)
-           ON DUPLICATE KEY UPDATE valor = VALUES(valor)`,
-          [clave, String(valores[clave])]
+          `INSERT INTO configuracion (clave, valor, actualizado_por) VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por)`,
+          [clave, String(valores[clave]), idUsuario]
         );
       }
       await conexion.commit();

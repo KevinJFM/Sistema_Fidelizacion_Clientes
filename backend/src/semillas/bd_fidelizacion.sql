@@ -251,11 +251,13 @@ CREATE TABLE transacciones_operador (
 --  CONFIGURACIÓN GLOBAL
 -- ============================================================
 CREATE TABLE configuracion (
-  id_config    INT NOT NULL AUTO_INCREMENT,
-  clave        VARCHAR(60)  NOT NULL UNIQUE,
-  valor        VARCHAR(100) NOT NULL,
-  descripcion  VARCHAR(150) NULL,
-  PRIMARY KEY (id_config)
+  id_config       INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(60)  NOT NULL UNIQUE,
+  valor           VARCHAR(100) NOT NULL,
+  descripcion     VARCHAR(150) NULL,
+  actualizado_por INT          NULL,
+  PRIMARY KEY (id_config),
+  CONSTRAINT fk_config_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -320,8 +322,8 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
   -- El canje siempre está activo (no configurable), por eso no está aquí.
-  ('bienvenida_activo',      '1',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta');
+  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
+  ('descuento_monto_activo', '0',   'Activa el descuento por compra alta');
 
 -- ============================================================
 --  DATOS INICIALES — UBICACIONES (14 deptos, 44 municipios, 262 distritos)
