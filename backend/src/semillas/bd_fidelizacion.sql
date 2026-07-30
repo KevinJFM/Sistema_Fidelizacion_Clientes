@@ -23,6 +23,7 @@ DROP TABLE IF EXISTS operadores_turisticos;
 DROP TABLE IF EXISTS beneficios_emitidos;
 DROP TABLE IF EXISTS recompensas;
 DROP TABLE IF EXISTS promociones;
+DROP TABLE IF EXISTS pos_configuracion;
 DROP TABLE IF EXISTS configuracion;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS usuarios;
@@ -283,6 +284,25 @@ CREATE TABLE configuracion (
   descripcion  VARCHAR(150) NULL,
   PRIMARY KEY (id_config)
 );
+
+-- ============================================================
+--  INTEGRACIÓN POS (configuración de conexión al sistema de ventas externo)
+--  Una fila por empresa. La contraseña se guarda cifrada (AES-256-GCM, prefijo enc:).
+-- ============================================================
+CREATE TABLE pos_configuracion (
+  id         INT          NOT NULL AUTO_INCREMENT,
+  servidor   VARCHAR(120) NOT NULL DEFAULT 'localhost',
+  puerto     INT          NOT NULL DEFAULT 3306,
+  usuario    VARCHAR(60)  NOT NULL DEFAULT 'root',
+  contrasena VARCHAR(512) NULL,              -- cifrada con AES-256-GCM si POS_ENCRYPTION_KEY está configurada
+  base_datos VARCHAR(60)  NOT NULL DEFAULT 'eorderback',
+  modo       VARCHAR(20)  NOT NULL DEFAULT 'manual', -- 'manual' | 'automatico'
+  PRIMARY KEY (id)
+);
+
+-- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
+INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo)
+VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual');
 
 -- ============================================================
 --  REFRESH TOKENS (sesiones — revocación de tokens)
