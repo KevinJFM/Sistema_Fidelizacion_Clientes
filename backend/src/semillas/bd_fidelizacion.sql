@@ -278,11 +278,13 @@ CREATE TABLE transacciones_operador (
 --  CONFIGURACIÓN GLOBAL
 -- ============================================================
 CREATE TABLE configuracion (
-  id_config    INT NOT NULL AUTO_INCREMENT,
-  clave        VARCHAR(60)  NOT NULL UNIQUE,
-  valor        VARCHAR(100) NOT NULL,
-  descripcion  VARCHAR(150) NULL,
-  PRIMARY KEY (id_config)
+  id_config       INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(60)  NOT NULL UNIQUE,
+  valor           VARCHAR(100) NOT NULL,
+  descripcion     VARCHAR(150) NULL,
+  actualizado_por INT          NULL,            -- último usuario que modificó este valor
+  PRIMARY KEY (id_config),
+  CONSTRAINT fk_config_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -290,19 +292,21 @@ CREATE TABLE configuracion (
 --  Una fila por empresa. La contraseña se guarda cifrada (AES-256-GCM, prefijo enc:).
 -- ============================================================
 CREATE TABLE pos_configuracion (
-  id         INT          NOT NULL AUTO_INCREMENT,
-  servidor   VARCHAR(120) NOT NULL DEFAULT 'localhost',
-  puerto     INT          NOT NULL DEFAULT 3306,
-  usuario    VARCHAR(60)  NOT NULL DEFAULT 'root',
-  contrasena VARCHAR(512) NULL,              -- cifrada con AES-256-GCM si POS_ENCRYPTION_KEY está configurada
-  base_datos VARCHAR(60)  NOT NULL DEFAULT 'eorderback',
-  modo       VARCHAR(20)  NOT NULL DEFAULT 'manual', -- 'manual' | 'automatico'
-  PRIMARY KEY (id)
+  id              INT          NOT NULL AUTO_INCREMENT,
+  servidor        VARCHAR(120) NOT NULL DEFAULT 'localhost',
+  puerto          INT          NOT NULL DEFAULT 3306,
+  usuario         VARCHAR(60)  NOT NULL DEFAULT 'root',
+  contrasena      VARCHAR(512) NULL,            -- cifrada con AES-256-GCM si POS_ENCRYPTION_KEY está configurada
+  base_datos      VARCHAR(60)  NOT NULL DEFAULT 'eorderback',
+  modo            VARCHAR(20)  NOT NULL DEFAULT 'manual', -- 'manual' | 'automatico'
+  configurado_por INT          NULL,            -- último usuario que modificó la configuración del POS
+  PRIMARY KEY (id),
+  CONSTRAINT fk_posconfig_usuario FOREIGN KEY (configurado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 -- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
-INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo)
-VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual');
+INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por)
+VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual', NULL);
 
 -- ============================================================
 --  REFRESH TOKENS (sesiones — revocación de tokens)
@@ -334,6 +338,7 @@ CREATE TABLE alertas_enviadas (
   referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; NULL para reactivacion
   fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE,
   INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
 );
 
