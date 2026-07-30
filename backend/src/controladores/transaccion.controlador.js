@@ -1,9 +1,6 @@
 import pool from '../configuracion/bd.js';
 import { enviarPush } from '../configuracion/push.js';
-
-// Regla FIJA del sistema (no editable): ganar $1 de consumo = 1 punto.
-// (El valor del punto $0.05 y el catálogo de canje viven en recompensas.js)
-const DOLARES_POR_PUNTO = 1;    // 1 punto por cada $1
+import { calcularBeneficios } from '../dominio/reglasPuntos.js';
 
 // Lee VARIAS claves de la tabla configuracion en UNA sola consulta (evita N queries
 // en serie). `defaults` es un objeto { clave: valorPorDefecto }; devuelve { clave: valor }
@@ -104,22 +101,6 @@ export const crearTransaccion = async (req, res) => {
       }
     }
 
-    // ============================================================
-    //  MOTOR DE REGLAS POR PRIORIDAD
-    //  - Los PUNTOS se acumulan (base + bienvenida + promoción)
-    //  - El DESCUENTO es uno solo, por prioridad:
-    //    1. Canje de puntos (bloquea otros descuentos)
-    //    2. Bienvenida (primera compra)
-    //    3. Promoción / fecha especial
-    //    4. Descuento por monto alto
-    // ============================================================
-    const promocionesAplicadas = [];
-    let puntosExtraBienvenida   = 0;
-    let puntosExtraPromocion    = 0;
-    let puntosOtorgados         = 0;
-    let descuento               = 0;
-    let puntosCanjeados         = 0;
-
     // Recompensa elegida para canjear (consultada desde la BD). Validaciones:
     let recompensa = null;
     if (id_recompensa) {
@@ -133,42 +114,40 @@ export const crearTransaccion = async (req, res) => {
         return res.status(400).json({ message: 'El cliente no tiene puntos suficientes para esa recompensa' });
       }
     }
-    const quiereCanjear = !!recompensa && cliente.puntos_acumulados >= recompensa.puntos;
-    const aplicaBienvenida = bienvenidaActivo && esPrimeraCompra;
 
-    // Puntos base (regla fija): 1 punto por cada $1 de consumo. En un canje NO se ganan puntos.
-    const puntosBase = quiereCanjear ? 0 : Math.floor(montoNumerico / DOLARES_POR_PUNTO);
-
-    if (quiereCanjear) {
-      // CANJE: el cliente usa su beneficio (premio). No gana puntos nuevos ni recibe descuento en $.
-      // Paga el monto completo y se le descuentan los puntos del premio.
-      puntosCanjeados = recompensa.puntos;
-      promocionesAplicadas.push(`Canje: ${recompensa.nombre}`);
-    } else {
-      // Flujo normal: acumula puntos (base + bienvenida + promoción) y aplica UN descuento por prioridad.
-      puntosOtorgados = puntosBase;
-      if (aplicaBienvenida) {
-        puntosExtraBienvenida = bienvenidaPuntos;
-        puntosOtorgados += puntosExtraBienvenida;
-        promocionesAplicadas.push('Bienvenida (primera compra)');
-      }
-      if (promocion) {
-        puntosExtraPromocion = Number(promocion.puntos_extra);
-        puntosOtorgados += puntosExtraPromocion;
-        promocionesAplicadas.push(`Promoción: ${promocion.nombre}`);
-      }
-
-      if (aplicaBienvenida) {
-        descuento = bienvenidaDescuento;
-      } else if (promocion) {
-        descuento = (Number(promocion.descuento_extra) / 100) * montoNumerico;
-      } else if (descuentoMontoActivo && montoNumerico >= descuentoMontoMinimo) {
-        descuento = descuentoMontoValor;
-        promocionesAplicadas.push('Descuento por compra alta');
-      }
-    }
-
-    if (descuento > montoNumerico) descuento = montoNumerico;
+    // ============================================================
+    //  MOTOR DE REGLAS POR PRIORIDAD  (lógica pura → src/dominio/reglasPuntos.js)
+    //  Se delega el cálculo de puntos/descuento para poder probarlo con
+    //  pruebas unitarias sin depender de la base de datos.
+    //  - Los PUNTOS se acumulan (base + bienvenida + promoción)
+    //  - El DESCUENTO es uno solo, por prioridad:
+    //    1. Canje  2. Bienvenida  3. Promoción/fecha especial  4. Compra alta
+    // ============================================================
+    const {
+      quiereCanjear,
+      aplicaBienvenida,
+      puntosBase,
+      puntosExtraBienvenida,
+      puntosExtraPromocion,
+      puntosOtorgados,
+      puntosCanjeados,
+      descuento,
+      promocionesAplicadas,
+    } = calcularBeneficios({
+      monto: montoNumerico,
+      saldoPuntos: cliente.puntos_acumulados,
+      esPrimeraCompra,
+      promocion,
+      recompensa,
+      config: {
+        bienvenidaPuntos,
+        bienvenidaDescuento,
+        descuentoMontoMinimo,
+        descuentoMontoValor,
+        bienvenidaActivo,
+        descuentoMontoActivo,
+      },
+    });
 
     // Escritura atómica (transacción de BD). Bloqueamos la fila del cliente con
     // SELECT ... FOR UPDATE y actualizamos el saldo de forma RELATIVA (no absoluta),
