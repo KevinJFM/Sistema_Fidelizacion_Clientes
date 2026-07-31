@@ -179,7 +179,9 @@ CREATE TABLE recompensas (
   puntos     INT NOT NULL,
   activo     TINYINT(1) NOT NULL DEFAULT 1,
   creado_en  DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  creado_por INT          NULL,                 -- usuario del panel que creó la recompensa
+  PRIMARY KEY (id),
+  CONSTRAINT fk_recompensas_usuario FOREIGN KEY (creado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 -- ============================================================
