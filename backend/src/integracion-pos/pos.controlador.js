@@ -32,7 +32,7 @@ export const guardarConfig = async (req, res) => {
         return res.status(400).json({ message: 'Puerto inválido (debe estar entre 1 y 65535)' });
       }
     }
-    const guardado = await guardarConfigPos({ host, puerto, usuario, password, base_datos });
+    const guardado = await guardarConfigPos({ host, puerto, usuario, password, base_datos, idUsuario: req.usuario?.id_usuario ?? null });
     return res.status(200).json({ message: 'Configuración guardada', usuario: guardado.usuario });
   } catch {
     return res.status(500).json({ message: 'Error al guardar la configuración del POS' });
@@ -46,7 +46,7 @@ export const cambiarModo = async (req, res) => {
     if (!['automatico', 'manual'].includes(modo)) {
       return res.status(400).json({ message: 'Modo inválido' });
     }
-    await guardarConfigPos({ modo });
+    await guardarConfigPos({ modo, idUsuario: req.usuario?.id_usuario ?? null });
     await aplicarModoPos(); // arranca o detiene el poller según el nuevo modo
     return res.status(200).json({ message: `Modo cambiado a ${modo}`, modo });
   } catch {

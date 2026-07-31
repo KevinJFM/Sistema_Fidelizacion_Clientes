@@ -69,7 +69,7 @@ export const obtenerConfigPos = async () => {
 };
 
 // Guarda (o crea) la configuración del POS
-export const guardarConfigPos = async ({ host, puerto, usuario, password, base_datos, modo }) => {
+export const guardarConfigPos = async ({ host, puerto, usuario, password, base_datos, modo, idUsuario = null }) => {
   const actual = await obtenerConfigPos();
   const nuevo = {
     host: host ?? actual.host,
@@ -86,13 +86,13 @@ export const guardarConfigPos = async ({ host, puerto, usuario, password, base_d
   const [filas] = await pool.query('SELECT id FROM pos_configuracion ORDER BY id LIMIT 1');
   if (filas.length) {
     await pool.query(
-      'UPDATE pos_configuracion SET servidor=?, puerto=?, usuario=?, contrasena=?, base_datos=?, modo=? WHERE id=?',
-      [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, filas[0].id]
+      'UPDATE pos_configuracion SET servidor=?, puerto=?, usuario=?, contrasena=?, base_datos=?, modo=?, configurado_por=? WHERE id=?',
+      [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, idUsuario, filas[0].id]
     );
   } else {
     await pool.query(
-      'INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo) VALUES (?, ?, ?, ?, ?, ?)',
-      [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo]
+      'INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, idUsuario]
     );
   }
   poolPos = null; // fuerza reconstruir el pool con los datos nuevos

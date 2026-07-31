@@ -15,6 +15,8 @@ USE db_fidelizacion;
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
 DROP TABLE IF EXISTS alertas_enviadas;
+DROP TABLE IF EXISTS pos_pedido_procesado;
+DROP TABLE IF EXISTS pos_cliente_procesado;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
@@ -23,6 +25,7 @@ DROP TABLE IF EXISTS operadores_turisticos;
 DROP TABLE IF EXISTS beneficios_emitidos;
 DROP TABLE IF EXISTS recompensas;
 DROP TABLE IF EXISTS promociones;
+DROP TABLE IF EXISTS pos_configuracion;
 DROP TABLE IF EXISTS configuracion;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS usuarios;
@@ -279,11 +282,61 @@ CREATE TABLE transacciones_operador (
 --  CONFIGURACIÓN GLOBAL
 -- ============================================================
 CREATE TABLE configuracion (
-  id_config    INT NOT NULL AUTO_INCREMENT,
-  clave        VARCHAR(60)  NOT NULL UNIQUE,
-  valor        VARCHAR(100) NOT NULL,
-  descripcion  VARCHAR(150) NULL,
-  PRIMARY KEY (id_config)
+  id_config       INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(60)  NOT NULL UNIQUE,
+  valor           VARCHAR(100) NOT NULL,
+  descripcion     VARCHAR(150) NULL,
+  actualizado_por INT          NULL,            -- último usuario que modificó este valor
+  PRIMARY KEY (id_config),
+  CONSTRAINT fk_config_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- ============================================================
+--  INTEGRACIÓN POS (configuración de conexión al sistema de ventas externo)
+--  Una fila por empresa. La contraseña se guarda cifrada (AES-256-GCM, prefijo enc:).
+-- ============================================================
+CREATE TABLE pos_configuracion (
+  id              INT          NOT NULL AUTO_INCREMENT,
+  servidor        VARCHAR(120) NOT NULL DEFAULT 'localhost',
+  puerto          INT          NOT NULL DEFAULT 3306,
+  usuario         VARCHAR(60)  NOT NULL DEFAULT 'root',
+  contrasena      VARCHAR(512) NULL,            -- cifrada con AES-256-GCM si POS_ENCRYPTION_KEY está configurada
+  base_datos      VARCHAR(60)  NOT NULL DEFAULT 'eorderback',
+  modo            VARCHAR(20)  NOT NULL DEFAULT 'manual', -- 'manual' | 'automatico'
+  configurado_por INT          NULL,            -- último usuario que modificó la configuración del POS
+  PRIMARY KEY (id),
+  CONSTRAINT fk_posconfig_usuario FOREIGN KEY (configurado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
+INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por)
+VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual', NULL);
+
+-- ============================================================
+--  LOG DE SINCRONIZACIÓN POS
+--  Registra cada pedido/cliente del POS ya procesado para no
+--  re-importarlo en la próxima sincronización.
+-- ============================================================
+CREATE TABLE pos_pedido_procesado (
+  id_pedido_pos   INT          NOT NULL,
+  id_transaccion  INT          NULL,
+  id_cliente      INT          NULL,
+  resultado       VARCHAR(20)  NOT NULL,   -- 'creada' | 'sin_cliente'
+  detalle         VARCHAR(255) NULL,
+  fecha_procesado DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_pedido_pos),
+  CONSTRAINT fk_posped_trans   FOREIGN KEY (id_transaccion) REFERENCES transacciones(id_transaccion) ON DELETE SET NULL,
+  CONSTRAINT fk_posped_cliente FOREIGN KEY (id_cliente)     REFERENCES clientes(id_cliente)     ON DELETE SET NULL
+);
+
+CREATE TABLE pos_cliente_procesado (
+  id_cliente_pos  INT          NOT NULL,
+  id_cliente      INT          NULL,
+  resultado       VARCHAR(20)  NOT NULL,   -- 'creado' | 'emparejado' | 'sin_documento'
+  detalle         VARCHAR(255) NULL,
+  fecha_procesado DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_cliente_pos),
+  CONSTRAINT fk_poscli_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -316,6 +369,7 @@ CREATE TABLE alertas_enviadas (
   referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; NULL para reactivacion
   fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE,
   INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
 );
 
