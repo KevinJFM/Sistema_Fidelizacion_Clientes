@@ -34,3 +34,14 @@ Thumbs.db
 
 # Claude Code (skills/config local, no se sube)
 .claude/
+
+# Documentos y diagramas (binarios: no van al repo de código)
+*.docx
+*.doc
+*.drawio
+*.pdf
+
+# Temporales de Office (archivos de bloqueo)
+~$*
+*.tmp
+~WRL*.tmp
