@@ -10,8 +10,7 @@ export const verificarToken = (req, res, next) => {
       return res.status(401).json({ message: 'Token no proporcionado' });
     }
 
-    // Formato esperado: "Bearer <token>". Se valida explícitamente para no depender de
-    // que exista el espacio (un header mal formado da 401 claro, no un error de split).
+    // Formato esperado "Bearer <token>"; se valida explícitamente (header mal formado da 401 claro).
     const partes = encabezadoAuth.split(' ');
     if (partes.length !== 2 || partes[0] !== 'Bearer' || !partes[1].trim()) {
       return res.status(401).json({ message: 'Formato de autorización inválido' });
@@ -26,9 +25,7 @@ export const verificarToken = (req, res, next) => {
   }
 };
 
-// Sesión única por superficie (solo clientes): el 'sid' del token debe coincidir
-// con la ranura (sesion_app / sesion_portal) guardada en la BD. Si no coincide, es
-// que el cliente inició sesión en otro dispositivo de esa misma superficie.
+// Sesión única por superficie (clientes): el sid del token debe coincidir con la ranura de la BD (sesion_app/sesion_portal); si no, inició sesión en otro dispositivo.
 export const verificarSesionCliente = async (req, res, next) => {
   try {
     const { id_cliente, origen, sid } = req.usuario || {};

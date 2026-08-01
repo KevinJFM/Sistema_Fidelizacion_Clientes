@@ -18,7 +18,7 @@ export const obtenerDistritosPorDepartamento = async (req, res) => {
     const { id_departamento } = req.query;
 
     if (!id_departamento) {
-      return res.status(400).json({ message: 'El id_departamento es requerido' });
+      return res.status(400).json({ message: 'El departamento es requerido' });
     }
 
     const [filas] = await pool.query(

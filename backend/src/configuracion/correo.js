@@ -1,13 +1,6 @@
 import nodemailer from 'nodemailer';
 
-// ============================================================
-//  Envío de correo (OTP del portal + alertas de clientes)
-//  Configúralo en el .env con una cuenta de Gmail y una
-//  "Contraseña de aplicación" (App Password, NO la normal):
-//     CORREO_USUARIO=tucorreo@gmail.com
-//     CORREO_CLAVE=xxxx xxxx xxxx xxxx
-//  Si no está configurado, los correos se omiten silenciosamente.
-// ============================================================
+// Envío de correo (OTP del portal + alertas). Configurar en .env con Gmail y App Password (CORREO_USUARIO/CORREO_CLAVE); si falta, los correos se omiten en silencio.
 const crearTransportador = () => {
   if (!process.env.CORREO_USUARIO || !process.env.CORREO_CLAVE) return null;
   return nodemailer.createTransport({

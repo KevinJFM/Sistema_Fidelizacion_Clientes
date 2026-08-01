@@ -1,20 +1,5 @@
--- ============================================================
---  AGREGAR CLIENTES + PAGOS A `eorderback` (manual, para pruebas)
---  Flujo para probar el módulo Integración POS:
---   1) RESET: borra clientes/pagos de prueba en LAS DOS bases (empezar de cero).
---   2) Crea los clientes uno por uno.
---   3) Registra un pago por cada uno para ver cómo entra al HISTORIAL.
---
---  CÓMO CORRERLO
---  En MySQL Workbench (el servidor local tiene las dos bases: eorderback y
---  db_fidelizacion_merasopa). Ve por partes: crea un cliente, dale "Sincronizar
---  ahora", mete su pago, sincroniza de nuevo y revisa su historial de puntos.
---
---  Recordatorio (tabla `documento`):
---    idDocumento 2 = DUI (número en el campo NIT: ########-#)
---    idDocumento 4 = Pasaporte (alfanumérico en NIT)
---    Sin DUI/Pasaporte = NO se crea/registra (queda 'sin_documento' / 'sin cliente').
--- ============================================================
+-- Agregar clientes + pagos a `eorderback` (manual, para probar Integración POS): RESET en las dos bases, crear clientes y registrar un pago por cada uno.
+-- Correr por partes en MySQL Workbench (crear cliente → Sincronizar → pago → sincronizar → revisar historial). Documento: idDocumento 2 = DUI, 4 = Pasaporte; sin ellos no se crea.
 
 -- ============================================================
 --  PARTE 1 — RESET (empezar de cero). SE BORRA EN LAS DOS BASES.

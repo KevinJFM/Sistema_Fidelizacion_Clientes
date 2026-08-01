@@ -69,7 +69,7 @@ export default function StoreLayout() {
   const dispatch  = useDispatch();
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { user }  = useSelector((state) => state.auth);
+  const { user, posHabilitado } = useSelector((state) => state.auth);
 
   const handleLogout = async () => {
     try { await logoutRequest(); } catch {}
@@ -78,7 +78,11 @@ export default function StoreLayout() {
     navigate('/login');
   };
 
-  const visibleItems = navItems.filter((item) => item.roles.includes(user?.rol));
+  const visibleItems = navItems.filter((item) =>
+    item.roles.includes(user?.rol) &&
+    // El módulo Integración POS solo se muestra si el backend lo habilita (POS_ENABLED)
+    (item.to !== '/admin/integracion-pos' || posHabilitado)
+  );
 
   return (
     <div className="admin-layout">

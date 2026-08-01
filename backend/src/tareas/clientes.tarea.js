@@ -1,17 +1,6 @@
-// ============================================================
-//  Tareas programadas de retención de clientes.
-//
-//  1. alertarCercaDelCanje  — corre diario a las 9:00 AM (El Salvador).
-//     Por cada cliente activo con correo, busca su próxima recompensa
-//     inalcanzable. Si ya está al 80 % o más de los puntos requeridos,
-//     envía un correo de "¡casi llegas!". No re-envía si ya lo notificó
-//     en los últimos 30 días para esa misma recompensa.
-//
-//  2. alertarInactivos  — corre diario a las 9:00 AM (El Salvador).
-//     Si un cliente con puntos no tiene transacciones en el último mes,
-//     envía un correo de "hace tiempo que no te vemos" con su saldo y
-//     las recompensas que ya puede canjear. Cooldown de 30 días.
-// ============================================================
+// Tareas de retención (diario 9:00 AM El Salvador, cooldown 30 días):
+//  1. alertarCercaDelCanje: cliente al 80%+ de su próxima recompensa → correo "¡casi llegas!".
+//  2. alertarInactivos: cliente con puntos y sin compras en el último mes → correo de reactivación.
 import pool from '../configuracion/bd.js';
 import { enviarAlertaCercaDelCanje, enviarAlertaReactivacion } from '../configuracion/correo.js';
 
@@ -133,8 +122,7 @@ export const alertarInactivos = async () => {
 // ─── Scheduler ────────────────────────────────────────────────────────────────
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
-// Programa una tarea diaria a una hora fija en UTC.
-// El Salvador es UTC-6 fijo (sin horario de verano): 9:00 AM = 15:00 UTC.
+// Programa una tarea diaria a hora fija UTC. El Salvador es UTC-6 fijo: 9:00 AM = 15:00 UTC.
 const programarDiarioUTC = (horaUTC, tarea) => {
   const ahora   = new Date();
   const proximo = new Date(Date.UTC(

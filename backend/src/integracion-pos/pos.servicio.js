@@ -1,20 +1,5 @@
-// ============================================================
-//  Sincronización POS -> Fidelización. Dos procesos independientes:
-//
-//  A) Sync de CLIENTES (sincronizarClientes): trae los clientes del POS
-//     al módulo, por lotes. Registra a los que traen DUI/Pasaporte y no
-//     existen; a los que ya existen los empareja (no duplica).
-//
-//  B) Sync de PAGOS (sincronizarPagos): por cada pedido PAGADO POR COMPLETO,
-//     otorga puntos SOLO si el cliente YA está registrado (emparejando por
-//     documento / correo / teléfono). NO crea clientes: si paga alguien que
-//     no está en el sistema, no gana puntos (queda 'sin cliente'). El registro
-//     lo hace el Sync de clientes o el recepcionista a mano.
-//
-//  Reglas comunes:
-//   - Puntos = total del pedido (consumo), regla fija $1 = 1 punto.
-//   - Solo lectura sobre el POS: nunca modificamos su base.
-// ============================================================
+// Sync POS -> Fidelización: (A) sincronizarClientes trae clientes por lotes (crea DUI/Pasaporte, empareja el resto); (B) sincronizarPagos da puntos por pedido pagado solo si el cliente ya existe (no crea).
+// Puntos = total del pedido, $1 = 1 punto. Solo lectura sobre el POS.
 import pool from '../configuracion/bd.js';
 import { enviarPush } from '../configuracion/push.js';
 import { obtenerConfigPos, obtenerPoolPos } from './conexionPos.js';
@@ -36,11 +21,7 @@ const partirNombre = (nombre) => {
   return { nombres, apellidos };
 };
 
-// Deriva un documento utilizable del cliente del POS.
-// El TIPO se lee del catálogo `documento` del POS (cliente.idDocumento -> documento.tipoDocumento)
-// y el NÚMERO del campo NIT. Solo DUI y Pasaporte existen en nuestro catálogo:
-// NIT / Otro / Carnet de residente NO crean cliente (pero pueden emparejarse por correo/teléfono).
-// Devuelve { tipo, numero } o null si no hay documento usable.
+// Deriva { tipo, numero } del cliente POS (tipo del catálogo `documento`, número del NIT) o null. Solo DUI/Pasaporte crean cliente; el resto solo empareja por correo/teléfono.
 const derivarDocumento = (posCliente) => {
   const numero = String(posCliente.NIT ?? '').trim();
   const tipoPos = String(posCliente.tipoDocumentoPos ?? '').trim().toUpperCase();
@@ -48,7 +29,7 @@ const derivarDocumento = (posCliente) => {
   if (tipoPos === 'DUI') {
     const dig = soloDigitos(numero);
     if (dig.length === 9) return { tipo: 'DUI', numero: `${dig.slice(0, 8)}-${dig.slice(8)}` };
-    return null; // marcado como DUI pero el número no es válido
+    return null; // marcado DUI pero número inválido
   }
   if (tipoPos === 'PASAPORTE') {
     const pas = numero.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -56,7 +37,7 @@ const derivarDocumento = (posCliente) => {
     return null;
   }
 
-  // Respaldo: cliente sin tipo marcado pero cuyo número parece un DUI (9 dígitos)
+  // Respaldo: sin tipo pero el número parece DUI (9 dígitos)
   if (!tipoPos) {
     const dig = soloDigitos(numero);
     if (dig.length === 9) return { tipo: 'DUI', numero: `${dig.slice(0, 8)}-${dig.slice(8)}` };
@@ -64,8 +45,7 @@ const derivarDocumento = (posCliente) => {
   return null;
 };
 
-// Usuario (recepcionista/admin) al que se le atribuyen las transacciones automáticas
-// TTL de 5 min: si el admin es eliminado, el siguiente ciclo lo redescubre
+// Usuario (admin/recepcionista) al que se atribuyen las transacciones automáticas. Cache con TTL de 5 min.
 let idUsuarioCache = null;
 let idUsuarioCacheExpira = 0;
 const obtenerUsuarioRegistrador = async () => {
@@ -107,8 +87,7 @@ const buscarClienteExistente = async (posCliente, doc) => {
   return null;
 };
 
-// Crea un cliente en nuestra base a partir del documento derivado (DUI/Pasaporte).
-// Nace con 0 puntos (los puntos llegan después, cuando pague). Devuelve id o null.
+// Crea un cliente con el documento derivado (DUI/Pasaporte), nace con 0 puntos. Devuelve id o null.
 const crearClienteConDocumento = async (posCliente, doc) => {
   const [td] = await pool.query('SELECT id_tipo_documento FROM tipos_documento WHERE nombre = ? LIMIT 1', [doc.tipo]);
   if (!td.length) return null;
@@ -196,10 +175,7 @@ export const sincronizarPagos = async () => {
 
   const pos = await obtenerPoolPos();
 
-  // Pedidos PAGADOS POR COMPLETO: la suma de sus pagos cubre el total a pagar.
-  // OJO: en este POS "cancelado" = cuenta COBRADA (cancelar la cuenta = pagarla),
-  // por eso NO se filtra por ese campo. Los ANULADOS sí se excluyen.
-  // El tipo de documento del cliente se lee del catálogo `documento` del POS.
+  // Pedidos pagados por completo (suma de pagos >= total). Se excluyen anulados, NO los "cancelados" (aquí cancelar = cobrar). Tipo de documento del catálogo `documento` del POS.
   const [pedidos] = await pos.query(`
     SELECT p.idPedido, p.total, p.totalPago, p.fecha,
            c.nombre, c.email, c.telefono, c.NIT, c.idDocumento,
@@ -223,8 +199,7 @@ export const sincronizarPagos = async () => {
   for (const ped of pedidos) {
     if (yaProcesado.has(ped.idPedido)) continue;
     try {
-      // Solo se otorgan puntos si el cliente YA está registrado (emparejar, NO crear).
-      // El registro lo hace el "Sync de clientes" o el recepcionista a mano.
+      // Solo da puntos si el cliente ya existe (emparejar, no crear).
       const doc = derivarDocumento(ped);
       const idCliente = await buscarClienteExistente(ped, doc);
       if (!idCliente) {
@@ -232,7 +207,7 @@ export const sincronizarPagos = async () => {
         sinCliente++;
         continue;
       }
-      const monto = Number(ped.total) || 0;                 // consumo del pedido
+      const monto = Number(ped.total) || 0;                 // consumo
       const fecha = ped.fechaPago || ped.fecha || new Date(); // fecha del pago
       const idTx = await registrarTransaccionPos({
         id_cliente: idCliente, monto, referencia: `POS #${ped.idPedido}`, fecha, idUsuario,
@@ -258,16 +233,11 @@ const marcarClienteProcesado = async (idClientePos, idCliente, resultado, detall
   );
 };
 
-// Trae un LOTE de clientes del POS (los que aún no procesamos) y los agrega al módulo.
-// Avanza con un cursor por idCliente para NO re-escanear todo cada 2 minutos.
-//   - Si ya existe (documento/correo/teléfono): lo empareja, no lo duplica.
-//   - Si trae DUI/Pasaporte y no existe: lo CREA con 0 puntos.
-//   - Sin documento identificable: no se puede crear (se marca y se salta).
+// Trae un lote de clientes del POS aún no procesados (avanza por cursor de idCliente): empareja si ya existe, crea con 0 puntos si trae DUI/Pasaporte, o lo salta si no tiene documento.
 export const sincronizarClientes = async (limite = LOTE_CLIENTES) => {
   const pos = await obtenerPoolPos();
 
-  // Posición: el mayor idCliente del POS que ya procesamos (0 si es la primera vez).
-  // (No usar el alias "cursor": es palabra reservada en MySQL.)
+  // Posición: mayor idCliente ya procesado (0 la primera vez). Alias "desde" porque "cursor" es reservado en MySQL.
   const [[{ desde }]] = await pool.query(
     'SELECT COALESCE(MAX(id_cliente_pos), 0) AS desde FROM pos_cliente_procesado'
   );
@@ -314,9 +284,7 @@ export const sincronizarClientes = async (limite = LOTE_CLIENTES) => {
   return { creados, emparejados, sinDocumento, revisados: clientes.length };
 };
 
-// ---------- candado: nunca correr dos sincronizaciones a la vez ----------
-// Evita puntos/clientes duplicados si le dan "Sincronizar" muchas veces seguidas
-// o si el clic coincide con el ciclo automático. Corre clientes y luego pagos.
+// Candado: evita correr dos sincronizaciones a la vez (clics repetidos o choque con el ciclo automático). Corre clientes y luego pagos.
 let sincronizando = false;
 
 export const sincronizarTodo = async () => {
@@ -341,10 +309,7 @@ export const aplicarModoPos = async () => {
 
   if (cfg.modo === 'automatico') {
     if (!temporizador) {
-      // Solo arranca el ciclo (cada 2 min). NO sincroniza de inmediato al activar:
-      // la primera corrida es del ciclo o del botón "Sincronizar ahora".
-      // sincronizarTodo respeta el candado: si el clic manual ya está corriendo,
-      // este ciclo se salta (y viceversa).
+      // Solo arranca el ciclo (cada 2 min); no sincroniza al activar. Respeta el candado de sincronizarTodo.
       temporizador = setInterval(
         () => { sincronizarTodo().catch((e) => console.error('[pos.servicio] Error en sincronización automática:', e.message)); },
         MINUTOS_POLL * 60 * 1000

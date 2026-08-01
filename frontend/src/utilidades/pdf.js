@@ -5,9 +5,7 @@ const AZUL  = [13, 27, 184];
 const VERDE = [22, 163, 74];
 const ROSA  = '#E5388A'; // color de marca del logo
 
-// Toma el logo SVG que ya está renderizado en la página (sidebar), lo recolorea
-// y lo convierte a PNG (dataURL) para poder incrustarlo en el PDF.
-// Devuelve null si no lo encuentra, para que el PDF se genere igual sin logo.
+// Toma el logo SVG del sidebar, lo recolorea y lo convierte a PNG para incrustarlo en el PDF. Devuelve null si no lo encuentra (el PDF sale igual sin logo).
 function obtenerLogoPNG(color = ROSA, px = 200) {
   return new Promise((resolve) => {
     try {
@@ -41,15 +39,11 @@ function dibujarEncabezado(doc, logoPng, ancho) {
   doc.setFillColor(...AZUL);
   doc.rect(0, 0, ancho, 72, 'F');
 
-  // Ícono igual al del sistema: cuadro rosado con el diamante/letras en blanco.
-  // El SVG rellena todo el cuadro de rosado y deja el diamante y el texto como
-  // huecos; el fondo blanco se ve a través de ellos.
+  // Ícono igual al del sistema: cuadro rosado con el diamante y el texto en hueco (se ve el fondo blanco).
   if (logoPng) {
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(30, 13, 48, 48, 12, 12, 'F');
-    // El logo rosado llena toda la insignia, recortado a las esquinas redondeadas.
-    // El estilo null hace que roundedRect solo genere el trazo (sin pintarlo),
-    // para que clip() pueda usarlo como máscara.
+    // Recorta el logo a las esquinas redondeadas: roundedRect con estilo null solo traza (sin pintar) para usarlo de máscara con clip().
     doc.saveGraphicsState();
     doc.roundedRect(30, 13, 48, 48, 12, 12, null);
     doc.clip();
@@ -243,8 +237,7 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   doc.setLineWidth(1.5);
   doc.roundedRect(30, y, ancho - 60, 56, 8, 8, 'FD');
 
-  // Dibuja una línea con segmentos: etiquetas en negrita oscura y valores en
-  // negrita azul. segmentos = [{ eti, val }, ...]  (permite "|  Canjeados: 900")
+  // Dibuja una línea de segmentos { eti, val }: etiqueta en negrita oscura, valor en azul.
   const linea = (segmentos, x, ly, align = 'left') => {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');

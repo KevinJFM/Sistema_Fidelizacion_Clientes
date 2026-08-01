@@ -3,9 +3,22 @@ import pool from '../configuracion/bd.js';
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Valida longitudes máximas según las columnas de la tabla usuarios.
-// Solo revisa los campos presentes (útil tanto al crear como al actualizar).
-// Devuelve un mensaje de error o null si todo está dentro de límite.
+// Máximo 2 administradores (id_rol = 1): dueño y encargado del hotel.
+const ID_ROL_ADMIN = 1;
+const MAX_ADMINS = 2;
+
+// Cuenta administradores, opcionalmente excluyendo un id (al actualizar, para no contarse a sí mismo).
+const contarAdmins = async (excluirId = null) => {
+  const [filas] = await pool.query(
+    excluirId != null
+      ? 'SELECT COUNT(*) AS total FROM usuarios WHERE id_rol = ? AND id_usuario != ?'
+      : 'SELECT COUNT(*) AS total FROM usuarios WHERE id_rol = ?',
+    excluirId != null ? [ID_ROL_ADMIN, excluirId] : [ID_ROL_ADMIN]
+  );
+  return filas[0].total;
+};
+
+// Valida longitudes máximas de los campos presentes (crear/actualizar). Devuelve mensaje de error o null.
 const validarLongitudes = ({ nombre, apellido, email, telefono }) => {
   if (nombre != null && String(nombre).length > 100) return 'El nombre es demasiado largo (máx. 100)';
   if (apellido != null && String(apellido).length > 100) return 'El apellido es demasiado largo (máx. 100)';
@@ -116,6 +129,13 @@ export const crearUsuario = async (req, res) => {
       return res.status(409).json({ message: 'El email ya está registrado' });
     }
 
+    // Tope de seguridad: como máximo 2 administradores en todo el sistema
+    if (Number(id_rol) === ID_ROL_ADMIN && (await contarAdmins()) >= MAX_ADMINS) {
+      return res.status(409).json({
+        message: `Solo se permiten ${MAX_ADMINS} administradores en el sistema. No es posible crear otra cuenta con rol de administrador.`,
+      });
+    }
+
     const contrasenaHash = await bcrypt.hash(contrasena, 10);
 
     const [resultado] = await pool.query(
@@ -177,6 +197,14 @@ export const actualizarUsuario = async (req, res) => {
       }
     }
 
+    // Tope de seguridad: al promover a administrador, verificar que no se
+    // superen los 2 admins permitidos (sin contar al propio usuario editado).
+    if (Number(id_rol) === ID_ROL_ADMIN && (await contarAdmins(id)) >= MAX_ADMINS) {
+      return res.status(409).json({
+        message: `Solo se permiten ${MAX_ADMINS} administradores en el sistema. No es posible asignar el rol de administrador a otro usuario.`,
+      });
+    }
+
     await pool.query(
       `UPDATE usuarios
        SET nombre = ?, apellido = ?, email = ?, telefono = ?, fecha_nacimiento = ?,
@@ -207,10 +235,7 @@ export const actualizarUsuario = async (req, res) => {
   }
 };
 
-// Borrado físico: elimina el usuario por completo de la base de datos.
-// Los refresh_tokens caen solos (ON DELETE CASCADE) y la bitácora se desliga
-// (id_usuario = NULL) para conservar el historial de auditoría. Si el usuario
-// tiene transacciones registradas, la FK lo impide y se avisa al front.
+// Borrado físico: refresh_tokens caen por CASCADE y la bitácora se desliga (id_usuario = NULL) para conservar auditoría. Si tiene transacciones, la FK lo impide y se avisa al front.
 export const eliminarUsuario = async (req, res) => {
   const { id } = req.params;
   const conexion = await pool.getConnection();

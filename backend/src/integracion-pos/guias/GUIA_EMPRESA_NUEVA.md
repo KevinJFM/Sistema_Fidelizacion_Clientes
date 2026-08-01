@@ -21,20 +21,24 @@ por el nombre que quieras antes de ejecutar. Más detalle en `semilla_empresa/RE
 
 ## Paso 3 — Levantar el backend apuntando a esa BD
 
-En una terminal **nueva** (puedes dejar la de Punta Diamantes corriendo en el 4000):
+Hay dos formas (detalle completo en [guias/COMO_CORRER.md](COMO_CORRER.md)):
 
+**Opción simple (recomendada) — mismo puerto 4000.** En `backend/.env` deja activa la línea de
+la empresa y comenta la otra, y **reinicia el backend** (Ctrl + C + `pnpm dev`). El frontend no
+se toca (sigue en el 4000):
+```env
+# DB_NAME=db_fidelizacion            # Punta Diamantes
+DB_NAME=db_fidelizacion_merasopa     # esta empresa
+```
+> ⚠️ Reiniciar es obligatorio: el `.env` se lee solo al arrancar y **nodemon no vigila el `.env`**.
+
+**Opción dos puertos — para ver ambas a la vez.** En una terminal nueva (deja el 4000 corriendo),
+las variables de la terminal mandan sobre el `.env`:
 ```powershell
 $env:DB_NAME='db_fidelizacion_merasopa'; $env:PORT='4001'; pnpm dev
 ```
-
-- `DB_NAME` manda el backend a la base de la empresa.
-- `PORT=4001` evita chocar con el 4000 de Punta Diamantes.
-- No hace falta otro `.env`: las variables que pongas en la terminal **mandan** sobre el `.env`
-  (dotenv no las sobrescribe). El resto (JWT, correo, etc.) se sigue tomando del `.env`.
-
-Para que el **panel** hable con esa instancia durante la demo, apunta el frontend a ese puerto:
-en `frontend/.env` pon `VITE_API_URL=http://TU-IP:4001/api` (o `http://localhost:4001/api`) y
-reinícialo.
+Y apunta el panel a ese puerto: en `frontend/.env` pon `VITE_API_URL=http://localhost:4001/api`
+(o `http://TU-IP:4001/api`) y reinicia Vite.
 
 ---
 
@@ -49,9 +53,12 @@ Sus clientes y puntos quedan en **`db_fidelizacion_merasopa`** — nunca en la d
 ---
 
 ## Notas
-- El **menú "Integración POS" sigue visible** en todas las instancias (así se demuestra la
-  capacidad de conectarse a otras BD). En la instancia de Punta Diamantes ese menú existe pero
-  no se usa (su base ya no tiene las tablas del POS); la demo del POS se hace en la instancia
-  de la empresa (la del 4001), que sí las tiene.
+- El **menú "Integración POS" se muestra u oculta con el flag `POS_ENABLED`** del `.env` del
+  backend:
+  - `POS_ENABLED=true` → **visible** (para la defensa / instancia de Mera Sopa).
+  - `POS_ENABLED=false` o ausente → **oculto** (entrega a Punta Diamantes). Además, la ruta
+    `/admin/integracion-pos` queda **bloqueada por URL** (redirige al panel).
+  - Es *secure-by-default*: si el flag no está, el módulo NO se ve. El backend lo decide y lo
+    envía en el login/refresh; no depende de recompilar el frontend.
 - Para agregar **otra** empresa en el futuro: repite el Paso 1 con otro nombre y levanta otra
   instancia en otro puerto (4002, 4003, ...). Mismo sistema, bases aisladas.

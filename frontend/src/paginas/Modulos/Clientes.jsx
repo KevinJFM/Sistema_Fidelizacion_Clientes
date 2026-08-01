@@ -74,9 +74,7 @@ export default function Clientes() {
     getDepartamentos().then(setDepartamentos).catch(() => {});
   }, []);
 
-  // Auto-refresco en segundo plano: ve lo que trae el POS (u otro cajero) sin
-  // recargar ni cambiar de módulo. Solo actualiza si los datos cambiaron, y se
-  // pausa si la pestaña no está visible.
+  // Auto-refresco en segundo plano (POS u otro cajero): solo actualiza si los datos cambiaron y se pausa si la pestaña no está visible.
   useEffect(() => {
     const id = setInterval(() => {
       if (document.visibilityState !== 'visible') return;

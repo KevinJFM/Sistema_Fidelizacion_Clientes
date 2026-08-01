@@ -58,7 +58,9 @@ pedido cobrado vs anulado?
 
 ## 4) Cómo adaptar el POS de una empresa NUEVA
 
-1. **Pide un dump** (o acceso de **solo lectura**) a su base del POS.
+1. **Pide un dump** (o acceso de **solo lectura**) a su base del POS. Para que el backend en
+   producción pueda conectarse a esa base de forma remota, ver
+   [guias/CONEXION_REMOTA_POS.md](guias/CONEXION_REMOTA_POS.md).
 2. Revísalo y ubica lo del punto 1: dónde están sus **clientes + documento** y sus
    **pedidos + pagos**.
 3. Ajusta las **consultas** en [pos.servicio.js](pos.servicio.js) (`sincronizarClientes` y

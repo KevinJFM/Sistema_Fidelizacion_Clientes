@@ -9,23 +9,14 @@ import { enviarCodigoAcceso } from '../configuracion/correo.js';
 const OTP_MINUTOS = 5;         // vigencia del código
 const OTP_MAX_INTENTOS = 5;    // intentos de verificación por código
 
-// ============================================================
-//  Portal de autoservicio del cliente (Fase 2)
-//  El cliente entra con su documento + un PIN y consulta (solo lectura)
-//  sus puntos, cuánto valen y su historial. NO canjea desde aquí.
-// ============================================================
+// Portal de autoservicio del cliente (Fase 2): entra con documento + OTP y consulta (solo lectura) sus puntos, valor e historial. No canjea desde aquí.
 
 const ESTADO_ACTIVO = 1;
 
-// Duración del token según la superficie: la app (dispositivo personal) dura más;
-// el portal (a veces en computadoras compartidas) dura menos. Al expirar, el cliente
-// vuelve a entrar con un código OTP al correo.
+// Duración del token: la app (dispositivo personal) dura más que el portal (equipos compartidos). Al expirar, se reingresa con OTP.
 const DURACION_SESION = { app: '180d', portal: '30d' };
 
-// Token del cliente: rol 'cliente' + su id + origen + id de sesión (sid).
-// Sesión única por superficie: el 'sid' debe coincidir con la ranura de la BD
-// (sesion_app / sesion_portal). Al iniciar sesión en otro dispositivo de la MISMA
-// superficie se genera un sid nuevo y el anterior deja de valer (ver verificarSesionCliente).
+// Token del cliente: rol 'cliente' + id + origen + sid. Sesión única por superficie: el sid debe coincidir con la ranura de la BD (sesion_app/sesion_portal); un login nuevo invalida el anterior de esa superficie.
 const firmarTokenCliente = (cliente, origen, sid) =>
   jwt.sign(
     { id_cliente: cliente.id_cliente, rol: 'cliente', documento: cliente.numero_documento, origen, sid },
@@ -55,9 +46,7 @@ export const solicitarCodigo = async (req, res) => {
       [tipo_documento, numero_documento]
     );
 
-    // Respuesta SIEMPRE genérica: no revelamos si el documento existe, si la cuenta
-    // está activa ni si tiene correo (evita enumerar clientes iterando documentos).
-    // El código solo se envía si el cliente existe, está activo y tiene correo.
+    // Respuesta siempre genérica (no revela si el documento existe): evita enumerar clientes. El código solo se envía si existe, está activo y tiene correo.
     const cliente = filas[0];
     if (cliente && cliente.id_estado === ESTADO_ACTIVO && cliente.correo) {
       const codigo = String(Math.floor(100000 + Math.random() * 900000));
@@ -125,10 +114,7 @@ export const verificarCodigo = async (req, res) => {
       return res.status(401).json({ message: 'Código incorrecto' });
     }
 
-    // Correcto: se limpia el código (un solo uso) y se emite el token.
-    // Sesión única por superficie: se genera un sid nuevo y se guarda en la ranura
-    // de esta superficie (app o portal). Eso invalida la sesión anterior de la MISMA
-    // superficie, sin tocar la de la otra.
+    // Correcto: limpia el código (un solo uso) y emite el token. Genera un sid nuevo en la ranura de esta superficie, invalidando la sesión anterior de la misma.
     const origen = normalizarOrigen(req.body.origen);
     const sid = crypto.randomBytes(24).toString('hex');
     await pool.query(
@@ -147,9 +133,7 @@ export const verificarCodigo = async (req, res) => {
   }
 };
 
-// (El login por PIN se eliminó: el portal y la app usan solo el acceso por
-//  código OTP al correo — ver solicitarCodigo/verificarCodigo. El campo pin_hash
-//  ya no existe en la tabla clientes.)
+// El login por PIN se eliminó: portal y app usan solo OTP por correo (solicitarCodigo/verificarCodigo).
 
 // Datos de puntos del cliente logueado (saldo, valor en $ y catálogo de recompensas)
 export const misPuntos = async (req, res) => {
@@ -263,10 +247,7 @@ export const misMovimientos = async (req, res) => {
   }
 };
 
-// Cierre remoto: cierra la sesión de la OTRA superficie.
-//   - Desde el PORTAL se cierra la sesión de la 'app' (ej. teléfono robado).
-//   - Desde la APP se cierra la sesión del 'portal'.
-// Idempotente: avisa si había una sesión abierta o si ya no había ninguna.
+// Cierre remoto: cierra la sesión de la otra superficie (portal cierra app y viceversa). Idempotente: avisa si había o no una sesión abierta.
 export const cerrarSesionRemota = async (req, res) => {
   try {
     const objetivo = normalizarOrigen(req.body.objetivo);

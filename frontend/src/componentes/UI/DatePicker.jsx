@@ -2,38 +2,8 @@ import { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import './DatePicker.css';
 
-/* ============================================================
-   DatePicker reutilizable del panel (componente UI/DatePicker).
-   Selector de fecha "premium": botón con gradiente + calendario
-   desplegable con 3 vistas navegables (días → meses → años).
-   Sin librerías externas. Combina con UI/Boton y UI/Campo.
-
-   El calendario se renderiza en un PORTAL con posición fija: así
-   nunca se recorta dentro de modales con overflow, y se abre hacia
-   arriba automáticamente si no hay espacio abajo.
-
-   Uso (con Date):
-     const [fecha, setFecha] = useState(null);
-     <DatePicker value={fecha} onChange={setFecha} />
-
-   Uso dentro de un form que guarda 'yyyy-mm-dd' (helpers exportados):
-     <DatePicker
-       value={isoAFecha(form.fecha_nacimiento)}
-       onChange={(d) => handleChange({ target: { name: 'fecha_nacimiento', value: fechaAISO(d) } })}
-     />
-
-   Props:
-     value        Date | null   -> fecha seleccionada
-     onChange     (Date) => void -> se llama al elegir un día
-     placeholder  string         -> texto cuando no hay fecha
-     size         'grande'       -> botón azul con gradiente (por defecto)
-                  'compacto'     -> igual tamaño que UI/Campo (blanco, borde
-                                    azul, 42px) para filas de filtros
-     label        string         -> etiqueta arriba del campo (como UI/Campo)
-     min / max    Date           -> límites seleccionables (opcional)
-     disabled     bool
-     className    string         -> clases extra en el contenedor
-   ============================================================ */
+/* DatePicker reutilizable: calendario con 3 vistas (días → meses → años), sin librerías. Se renderiza en un portal fijo para no recortarse en modales y abrir hacia arriba si no cabe.
+   Helpers isoAFecha/fechaAISO para forms que guardan 'yyyy-mm-dd'. Props: value, onChange, placeholder, size ('grande'|'compacto'), label, min/max, disabled, className, centrado. */
 
 const MESES        = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -89,8 +59,7 @@ export default function DatePicker({
   const triggerRef = useRef(null);
   const panelRef   = useRef(null);
 
-  // El calendario se muestra centrado en pantalla (con fondo tenue) en vez de
-  // pegado al botón. Se puede anclar al botón pasando `centrado={false}`.
+  // Centrado en pantalla por defecto; anclar al botón con centrado={false}.
   const panelCentrado = centrado ?? true;
 
   // Al abrir, posicionar la vista en la fecha seleccionada (o en el mes actual).
@@ -103,8 +72,7 @@ export default function DatePicker({
     }
   }, [abierto]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Posiciona el panel (portal) respecto al trigger; se abre hacia arriba si no
-  // cabe abajo. Se recalcula al hacer scroll, redimensionar o cambiar de vista.
+  // Posiciona el panel respecto al trigger (arriba si no cabe abajo); recalcula al hacer scroll, resize o cambiar de vista.
   useLayoutEffect(() => {
     if (!abierto || panelCentrado) return; // centrado: no se posiciona respecto al botón
     const actualizar = () => {
@@ -149,8 +117,7 @@ export default function DatePicker({
     };
   }, [abierto]);
 
-  // Fecha de hoy (estable durante la vida del componente) para resaltar el
-  // día/mes/año actual en el calendario, aunque todavía no se haya elegido nada.
+  // Fecha de hoy (estable) para resaltar el día/mes/año actual en el calendario.
   const hoy = useMemo(() => new Date(), []);
 
   const fueraDeRango = (d) => {

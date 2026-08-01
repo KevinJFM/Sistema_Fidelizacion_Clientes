@@ -1,14 +1,5 @@
-// ============================================================
-//  Conexión (solo lectura) a la base del POS externo.
-//  Los datos de conexión se guardan en la tabla pos_configuracion
-//  de NUESTRA base y se pueden editar desde la pantalla del sistema.
-//
-//  >>> CREDENCIALES POR DEFECTO <<<
-//  La tabla pos_configuracion nace con una fila por defecto (ver el .sql de
-//  creación de la BD, semilla_empresa/db_fidelizacion_merasopa.sql):
-//    servidor: localhost | puerto: 3306 | usuario: root | contrasena: (vacío) | base: eorderback
-//  Cámbialas desde la pantalla "Integración POS" o en esa tabla.
-// ============================================================
+// Conexión (solo lectura) a la base del POS externo. Los datos se guardan en pos_configuracion (editable desde "Integración POS").
+// Credenciales por defecto: localhost:3306, root, sin contraseña, base eorderback.
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import pool from '../configuracion/bd.js';
@@ -16,9 +7,7 @@ import pool from '../configuracion/bd.js';
 let poolPos = null;
 let firmaActual = ''; // para reconstruir el pool solo si cambian las credenciales
 
-// ─── Cifrado AES-256-GCM de la contraseña del POS ────────────────────────────
-// Requiere POS_ENCRYPTION_KEY en .env: 32 bytes aleatorios en hex (64 chars).
-// Si la clave no está configurada, la contraseña se guarda sin cifrar (compat. hacia atrás).
+// Cifrado AES-256-GCM de la contraseña del POS. Requiere POS_ENCRYPTION_KEY (32 bytes hex); sin ella, se guarda sin cifrar.
 const _getKey = () => {
   const raw = process.env.POS_ENCRYPTION_KEY;
   if (!raw) return null;
@@ -58,8 +47,7 @@ const descifrarPassword = (texto) => {
 
 // Lee la única fila de configuración del POS (crea el objeto por defecto si no existe)
 export const obtenerConfigPos = async () => {
-  // Las columnas se llaman servidor/contrasena (host y password son palabras reservadas
-  // en MySQL). Con alias, el resto del código sigue usando .host y .password.
+  // Columnas servidor/contrasena (host/password son reservadas en MySQL); con alias el resto usa .host/.password.
   const [filas] = await pool.query(
     `SELECT id, servidor AS host, puerto, usuario, contrasena AS password, base_datos, modo
        FROM pos_configuracion ORDER BY id LIMIT 1`

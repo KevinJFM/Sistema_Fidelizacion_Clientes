@@ -1,6 +1,4 @@
-/* ============================================
-   MENÚ DE USUARIO (trigger + desplegable)
-   ============================================ */
+/* MENÚ DE USUARIO (trigger + desplegable) */
 .user-menu {
   position: relative;
 }
@@ -83,9 +81,7 @@
   color: #0D1BB8;
 }
 
-/* ============================================
-   MODO OSCURO — overrides
-   ============================================ */
+/* MODO OSCURO — overrides */
 [data-theme="dark"] {
   --pd-sand:      #0a0e27;
   --pd-text-dark: #e8ebff;
@@ -98,8 +94,9 @@
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
 }
 [data-theme="dark"] .sidebar-brand { color: #e8ebff; }
-[data-theme="dark"] .sidebar-link { color: #9aa0c9; }
+[data-theme="dark"] .sidebar-link { color: #eaeefc; }   /* blanco más encendido (antes gris apagado) */
 [data-theme="dark"] .sidebar-link:hover { background: #1e244a; color: #fff; }
+[data-theme="dark"] .sidebar-link.active { color: #fff; }
 [data-theme="dark"] .admin-header {
   background: #11152e;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
@@ -124,10 +121,8 @@
 [data-theme="dark"] .modal-title,
 [data-theme="dark"] .confirm-title { color: #e8ebff; }
 [data-theme="dark"] .page-subtitle { color: #c5cae8; }
-/* .res-vacio vive dentro de la tarjeta blanca (.trans-card), que no se oscurece:
-   se queda gris oscuro para leerse sobre el fondo blanco. */
-/* La tarjeta de "Registrar transacción" se queda blanca en oscuro:
-   ahí los labels deben seguir oscuros para que se lean. */
+/* .res-vacio va sobre la tarjeta blanca (.trans-card): se queda gris oscuro para leerse. */
+/* La tarjeta "Registrar transacción" sigue blanca en oscuro: sus labels quedan oscuros. */
 [data-theme="dark"] .trans-card .form-field label { color: #6b7280; }
 [data-theme="dark"] .stat-card,
 [data-theme="dark"] .stat-card-v2,
@@ -216,11 +211,10 @@
 
 /* --- Modales / formularios --- */
 [data-theme="dark"] .modal { background: #11152e; }
-[data-theme="dark"] .confirm-text { color: #9aa0c9; }
-[data-theme="dark"] .confirm-text strong { color: #e8ebff; }
+[data-theme="dark"] .confirm-text { color: #dfe3fa; }
+[data-theme="dark"] .confirm-text strong { color: #ffffff; font-weight: 800; }
 [data-theme="dark"] .form-field label { color: #c5cae8; }
-/* Los campos usan el mismo diseño que <Campo> (fondo blanco + borde azul)
-   también en oscuro; heredan el estilo del modo claro. */
+/* Los campos mantienen el diseño de <Campo> (fondo blanco + borde azul) también en oscuro. */
 [data-theme="dark"] .password-rules { background: #1a1f40; }
 [data-theme="dark"] .btn-ghost {
   background: #ffffff;

@@ -5,8 +5,7 @@
   justify-content: space-between;
   margin-bottom: 20px;
 }
-/* El subtítulo ya no necesita su margen inferior dentro del header:
-   el propio .page-head controla la separación con la tabla. */
+/* El subtítulo no lleva margen inferior aquí: lo controla .page-head. */
 .page-head .page-subtitle {
   margin-bottom: 0;
 }
@@ -366,7 +365,7 @@
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: var(--pd-text-muted);
+  color: var(--pd-teal);          /* azul vivo de marca: se nota bien */
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -480,7 +479,7 @@
 }
 .confirm-text {
   font-size: 14px;
-  color: #6b7280;
+  color: #374151;
   line-height: 1.6;
   margin-bottom: 24px;
 }

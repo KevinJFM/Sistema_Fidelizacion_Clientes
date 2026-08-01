@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { store } from '../redux/store';
-import { setCredentials, logout } from '../redux/slices/sliceAuth';
+import { setCredentials, expirarSesion } from '../redux/slices/sliceAuth';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
@@ -62,7 +62,7 @@ api.interceptors.response.use(
       return api(original);
     } catch (err) {
       processQueue(err, null);
-      store.dispatch(logout()); // refresh falló → sesión terminada
+      store.dispatch(expirarSesion()); // refresh falló → sesión vencida (avisa en el login)
       return Promise.reject(err);
     } finally {
       isRefreshing = false;

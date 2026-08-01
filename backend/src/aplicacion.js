@@ -19,9 +19,7 @@ const app = express();
 // Detrás de un proxy/hosting (Nginx, Render, etc.) para que el rate-limit lea la IP real
 app.set("trust proxy", 1);
 
-// Seguridad de headers HTTP + Content Security Policy explícita.
-// Esta API responde solo JSON, así que una CSP estricta no rompe nada y reduce
-// la superficie de XSS si algún recurso se sirviera por error.
+// Headers de seguridad + CSP estricta (la API es solo JSON, así que no rompe nada y reduce XSS).
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -38,8 +36,7 @@ app.use(
   })
 );
 
-// Orígenes permitidos: el panel del personal y el portal del cliente.
-// CLIENT_URL puede traer varias URLs separadas por coma (ej: "https://app...,https://puntos...").
+// Orígenes permitidos (panel + portal). CLIENT_URL admite varias URLs separadas por coma.
 const origenesPermitidos = (process.env.CLIENT_URL || "")
   .split(",")
   .map((o) => o.trim())
@@ -51,7 +48,7 @@ app.use(
     origin: (origin, callback) => {
       // Herramientas sin origin (Postman, curl): permitidas
       if (!origin) return callback(null, true);
-      // Si CLIENT_URL no está configurado, NO abrir a todos: rechazar (evita CORS abierto)
+      // Sin CLIENT_URL se rechaza (no abrir CORS a todos)
       if (origenesPermitidos.length === 0) {
         return callback(new Error("CLIENT_URL no configurado en el entorno"));
       }
@@ -59,8 +56,7 @@ app.use(
       return callback(new Error("Origen no permitido por CORS"));
     },
     credentials: true,
-    // Cabeceras propias que el navegador SÍ puede leer desde el JS del panel
-    // (ej. aviso de que el historial se recortó por el tope de seguridad).
+    // Cabeceras propias que el panel puede leer (aviso de historial recortado).
     exposedHeaders: ["X-Historial-Truncado", "X-Historial-Limite"],
   })
 );

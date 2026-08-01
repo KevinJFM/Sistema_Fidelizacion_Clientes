@@ -1,10 +1,6 @@
 import './Campo.css';
 
-// Campo reutilizable del panel (input o select) — hermano de <Boton>.
-//   as="select" -> renderiza <select> (pásale las <option> como children)
-//   as="input"  -> (por defecto) renderiza <input>
-//   label       -> etiqueta opcional arriba del campo (como los filtros de fecha)
-// Acepta cualquier prop nativa del control (value, onChange, type, placeholder, disabled, etc.).
+// Campo reutilizable (input o select, hermano de <Boton>): as="select"|"input", label opcional arriba. Acepta cualquier prop nativa del control.
 export default function Campo({ as = 'input', label, className = '', children, ...props }) {
   const control = as === 'select' ? (
     <select className={`ui-campo ui-campo--select ${className}`.trim()} {...props}>

@@ -1,8 +1,4 @@
-/* ============================================================
-   DatePicker reutilizable (componente UI/DatePicker).
-   Look "premium": trigger con gradiente azul + calendario flotante.
-   Los colores salen de variables para poder re-marcar fácil.
-   ============================================================ */
+/* DatePicker reutilizable (UI/DatePicker): trigger con gradiente azul + calendario flotante. Colores por variables para re-marcar fácil. */
 .dp {
   --dp-azul-1: #3B82F6;
   --dp-azul-2: #2563EB;
@@ -15,8 +11,7 @@
 }
 /* Variante compacta: se ajusta al contenido (para filas de filtros) */
 .dp--compacto { width: auto; max-width: none; }
-/* Compacta a lo ancho del contenedor (dentro de formularios/modales, para que
-   el botón mida igual que los <input>/<select> de al lado) */
+/* Compacta al ancho del contenedor: el botón mide igual que los input/select de al lado. */
 .dp--bloque { width: 100%; max-width: none; }
 .dp--bloque .dp-trigger--compacto { width: 100%; min-width: 0; }
 
@@ -235,9 +230,7 @@
 /* Día/mes/año de HOY: se resalta igual que una fecha seleccionada (borde azul) */
 .dp-celda--hoy { border-color: var(--dp-azul-2); color: var(--dp-azul-2); font-weight: 800; }
 
-/* ============================================================
-   MODO OSCURO
-   ============================================================ */
+/* MODO OSCURO */
 [data-theme="dark"] .dp-panel {
   background: #1a1f40;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);

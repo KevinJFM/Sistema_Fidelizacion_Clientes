@@ -3,8 +3,7 @@ import pool from '../configuracion/bd.js';
 const ESTADO_INACTIVO = 2; // estados: 1=activo, 2=inactivo, 3=suspendido
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Longitud máxima de cada campo (igual que las columnas de la tabla clientes).
-// Evita que un cuerpo enorme llegue a la BD y frena entradas basura.
+// Longitud máxima por campo (igual que las columnas de clientes); frena cuerpos enormes y basura.
 const LIMITES_CLIENTE = { nombres: 100, apellidos: 100, numero_documento: 30, telefono: 20, correo: 150 };
 const validarLongitudes = (datos) => {
   for (const [campo, max] of Object.entries(LIMITES_CLIENTE)) {

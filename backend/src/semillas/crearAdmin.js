@@ -16,9 +16,7 @@ const admin = {
 
 async function crearAdmin() {
   try {
-    // Solo sirve para crear el PRIMER admin. Si ya existe cualquier administrador,
-    // no se crea otro (evita una puerta trasera si el script corre en producción).
-    // Los siguientes admins se crean desde el panel (/register, solo admin).
+    // Solo crea el primer admin; si ya existe alguno, no crea otro (evita backdoor en producción). Los demás se crean desde el panel.
     const [admins] = await pool.query(
       `SELECT u.id_usuario FROM usuarios u
        JOIN roles r ON u.id_rol = r.id_rol

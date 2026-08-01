@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { getResumen } from '../../servicios/servicioTransacciones';
 import { getTopClientes } from '../../servicios/servicioClientes';
 import { getPromociones } from '../../servicios/servicioPromociones';
@@ -76,7 +77,7 @@ export default function Dashboard() {
   const [promociones, setPromos]   = useState([]);
 
   useEffect(() => {
-    conMinimo(getResumen()).then(setResumen).catch(() => {});
+    conMinimo(getResumen()).then(setResumen).catch(() => toast.error('No se pudo cargar el panel'));
     getTopClientes().then(setTop).catch(() => {});
     getPromociones().then((p) => setPromos(p.filter((x) => x.estado === 'activo-hoy'))).catch(() => {});
   }, []);

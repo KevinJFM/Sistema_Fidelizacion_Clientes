@@ -141,9 +141,7 @@ export default function Historial() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-refresco en segundo plano: ve las transacciones del POS sin recargar ni
-  // cambiar de módulo. Usa el filtro activo, solo actualiza si cambió (así no te
-  // saca de la página en la que estás), y se pausa si la pestaña no está visible.
+  // Auto-refresco en segundo plano (transacciones del POS): usa el filtro activo, solo actualiza si cambió y se pausa si la pestaña no está visible.
   useEffect(() => {
     const id = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
@@ -225,7 +223,7 @@ export default function Historial() {
     if (filtros.desde) sub.push(`Desde: ${filtros.desde}`);
     if (filtros.hasta) sub.push(`Hasta: ${filtros.hasta}`);
 
-    const resumen = `Transacciones: ${historial.length}    Ventas: $${totalVentas.toFixed(2)}    Puntos otorgados: ${totalPuntos}`;
+    const resumen = `Transacciones: ${historial.length}    Ingresos: $${totalVentas.toFixed(2)}    Puntos otorgados: ${totalPuntos}`;
     const sufijo = filtros.numero_documento
       ? `_${filtros.numero_documento}`
       : (filtros.tipo_documento ? `_${filtros.tipo_documento.toLowerCase()}` : '_completo');
@@ -289,12 +287,11 @@ export default function Historial() {
 
       <Resumen items={[
         { etiqueta: 'Transacciones', valor: historial.length },
-        { etiqueta: 'Ventas', valor: `$${totalVentas.toFixed(2)}` },
+        { etiqueta: 'Ingresos', valor: `$${totalVentas.toFixed(2)}` },
         { etiqueta: 'Puntos otorgados', valor: totalPuntos },
       ]} />
 
-      {/* Aviso solo si el backend recortó el resultado por el tope de seguridad.
-          En uso normal nunca aparece; protege el caso extremo de un historial enorme. */}
+      {/* Aviso solo si el backend recortó el resultado por el tope de seguridad (caso extremo). */}
       {historial.truncado && (
         <div style={{
           background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e',

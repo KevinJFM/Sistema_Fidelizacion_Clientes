@@ -1,6 +1,4 @@
-// ============================================================
-//  Endpoints del módulo de Integración POS (solo admin).
-// ============================================================
+// Endpoints del módulo de Integración POS (solo admin).
 import pool from '../configuracion/bd.js';
 import { obtenerConfigPos, guardarConfigPos, probarConexionPos } from './conexionPos.js';
 import { sincronizarTodo, aplicarModoPos } from './pos.servicio.js';

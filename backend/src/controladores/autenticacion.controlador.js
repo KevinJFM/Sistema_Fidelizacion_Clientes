@@ -109,6 +109,7 @@ export const iniciarSesion = async (req, res) => {
       message: 'Login exitoso',
       token: tokenAcceso,
       usuario: datosPublicosUsuario(usuario),
+      posHabilitado: process.env.POS_ENABLED === 'true', // muestra/oculta el módulo Integración POS
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -164,6 +165,7 @@ export const renovarToken = async (req, res) => {
     return res.status(200).json({
       token: tokenAcceso,
       usuario: datosPublicosUsuario(usuario),
+      posHabilitado: process.env.POS_ENABLED === 'true', // muestra/oculta el módulo Integración POS
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -192,8 +194,7 @@ export const registrarUsuario = async (req, res) => {
       return res.status(400).json({ message: 'Todos los campos son requeridos' });
     }
 
-    // Longitud máxima (columnas de la tabla usuarios). La contraseña se limita a 72
-    // porque bcrypt ignora los bytes posteriores.
+    // Longitud máxima según columnas de usuarios (contraseña a 72: bcrypt ignora el resto).
     if (String(nombre).length > 100 || String(apellido).length > 100) {
       return res.status(400).json({ message: 'Nombre o apellido demasiado largo (máx. 100)' });
     }

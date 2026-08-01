@@ -1,10 +1,4 @@
-// ============================================================
-//  Notificaciones push de promociones.
-//  - Al CREAR una promo que arranca hoy: se avisa en el momento.
-//  - Cada mañana (cron): se avisa de las promos programadas que
-//    arrancan ese día (creadas en días anteriores).
-//  Así una promo creada hoy para el futuro igual avisa el día que empieza.
-// ============================================================
+// Push de promociones: al crear una que arranca hoy avisa en el momento; cada mañana (cron) avisa las programadas que arrancan ese día.
 import pool from '../configuracion/bd.js';
 import { enviarPush } from '../configuracion/push.js';
 
@@ -17,17 +11,7 @@ const cuerpoPromo = (nombre, puntosExtra, descuentoExtra) => {
   return `${String(nombre).trim()}${detalle}. ¡Aprovéchala hoy!`;
 };
 
-/**
- * Notifica a TODOS los clientes con la app sobre las promociones activas que
- * arrancan HOY. La condición "empieza hoy" se evalúa con CURDATE() en la base
- * (misma lógica de fechas del resto del sistema, sin desfases de zona horaria).
- *
- * @param {object} opciones
- * @param {number|null} opciones.soloId  Notificar solo esta promo (al crearla).
- * @param {boolean} opciones.soloCreadasAntesDeHoy  Solo las creadas en días
- *        anteriores (lo usa el cron, para no repetir las creadas hoy que ya se
- *        avisaron en el momento de crearse).
- */
+// Notifica a los clientes con la app las promos que arrancan hoy (CURDATE()). soloId: una sola promo (al crear); soloCreadasAntesDeHoy: solo creadas antes de hoy (cron, no repite las de hoy).
 export const notificarPromosDeHoy = async ({ soloId = null, soloCreadasAntesDeHoy = false } = {}) => {
   const condiciones = [];
   const params = [];
@@ -66,8 +50,7 @@ export const notificarPromosDeHoy = async ({ soloId = null, soloCreadasAntesDeHo
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
-// Programa una tarea para que corra todos los días a una hora fija en UTC.
-// (El Salvador es UTC−6 fijo, sin horario de verano: 8:00 AM local = 14:00 UTC.)
+// Programa una tarea diaria a hora fija UTC. El Salvador es UTC-6 fijo: 8:00 AM local = 14:00 UTC.
 const programarDiarioUTC = (horaUTC, tarea) => {
   const ahora = new Date();
   const proximo = new Date(Date.UTC(

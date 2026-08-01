@@ -1,9 +1,4 @@
-// ============================================================
-//  Envío de notificaciones push vía el servicio gratuito de Expo.
-//  Recibe el "Expo Push Token" del dispositivo (lo registra la app
-//  al iniciar sesión) y le manda una notificación a la barra del
-//  teléfono. No requiere API key.
-// ============================================================
+// Envía notificaciones push vía Expo (gratuito, sin API key). Recibe el Expo Push Token que registra la app al iniciar sesión.
 export const enviarPush = async (token, titulo, cuerpo, datos = {}) => {
   if (!token) return;
   try {

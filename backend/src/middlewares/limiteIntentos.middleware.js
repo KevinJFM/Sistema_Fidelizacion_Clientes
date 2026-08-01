@@ -1,8 +1,6 @@
 import rateLimit from 'express-rate-limit';
 
-// En el entorno de PRUEBAS (NODE_ENV=test) se desactiva el límite de intentos:
-// las suites hacen muchas peticiones seguidas desde la misma IP y no queremos que
-// el rate-limit las bloquee. En desarrollo y producción sigue plenamente activo.
+// En pruebas (NODE_ENV=test) se desactiva el límite (las suites hacen muchas peticiones). Activo en dev y producción.
 const saltarEnPruebas = () => process.env.NODE_ENV === 'test';
 
 // Limita los intentos de inicio de sesión: 5 intentos por IP cada 15 minutos
@@ -19,8 +17,7 @@ export const limitadorInicioSesion = rateLimit({
   },
 });
 
-// Limita la renovación de sesión: 30 renovaciones por IP cada 15 minutos.
-// Evita abuso/DoS del endpoint /auth/refresh (más que suficiente para uso normal).
+// Limita /auth/refresh: 30 renovaciones por IP cada 15 min (evita abuso/DoS).
 export const limitadorRefresh = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,

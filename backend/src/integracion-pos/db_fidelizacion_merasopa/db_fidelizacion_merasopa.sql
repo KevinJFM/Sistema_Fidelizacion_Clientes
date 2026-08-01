@@ -1,25 +1,5 @@
--- ============================================================
---  db_fidelizacion_merasopa.sql — BASE COMPLETA DE LA EMPRESA (crear a mano)
---  Sistema de fidelización + integración POS, TODO en un solo archivo.
---  Es igual a la de Punta Diamantes pero con nombre propio y con las
---  3 tablas del POS ya incluidas.
---
---  CÓMO CORRERLO
---  En MySQL Workbench: abre este archivo y ejecútalo COMPLETO.
---  Crea "db_fidelizacion_merasopa" con todas las tablas + catálogos + las 3 tablas del
---  POS + un admin (admin@empresa.com / Admin123).
---
---  Para OTRA empresa: reemplaza "db_fidelizacion_merasopa" por el nombre que quieras.
--- ============================================================
-
--- ============================================================
---  BASE DE DATOS COMPLETA — Sistema de Fidelización (Punta Diamante)
---  Incluye: catálogos, ubicaciones (depto/municipio/distrito),
---  usuarios y clientes con ubicación, fidelización y auditoría.
---
---  Acceso del cliente al portal/app: por CÓDIGO (OTP) enviado al correo.
---  (El antiguo PIN se eliminó; ver migracion_cliente_quitar_pin.sql)
--- ============================================================
+-- BD completa — Fidelización + Integración POS [db_fidelizacion_merasopa · LA MERA SOPA]. Esquema de Punta Diamantes + 3 tablas POS + admin de arranque.
+-- Login inicial: admin@empresa.com / Admin123 (cámbialo luego). Acceso del cliente: OTP al correo.
 CREATE DATABASE IF NOT EXISTS db_fidelizacion_merasopa
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -28,6 +8,9 @@ USE db_fidelizacion_merasopa;
 
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
+DROP TABLE IF EXISTS alertas_enviadas;
+DROP TABLE IF EXISTS pos_pedido_procesado;
+DROP TABLE IF EXISTS pos_cliente_procesado;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
@@ -36,6 +19,7 @@ DROP TABLE IF EXISTS operadores_turisticos;
 DROP TABLE IF EXISTS beneficios_emitidos;
 DROP TABLE IF EXISTS recompensas;
 DROP TABLE IF EXISTS promociones;
+DROP TABLE IF EXISTS pos_configuracion;
 DROP TABLE IF EXISTS configuracion;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS usuarios;
@@ -150,6 +134,8 @@ CREATE TABLE clientes (
   otp_expira        DATETIME     NULL,            -- vencimiento del código
   otp_intentos      INT          NOT NULL DEFAULT 0,  -- intentos de verificación del código actual
   push_token        VARCHAR(255) NULL,            -- token de notificaciones push (app móvil)
+  sesion_app        VARCHAR(64)  NULL,            -- id de la sesión ACTIVA en la app (sesión única por superficie)
+  sesion_portal     VARCHAR(64)  NULL,            -- id de la sesión ACTIVA en el portal web
   id_estado         INT          NOT NULL,
   created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -190,7 +176,9 @@ CREATE TABLE recompensas (
   puntos     INT NOT NULL,
   activo     TINYINT(1) NOT NULL DEFAULT 1,
   creado_en  DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  creado_por INT          NULL,                 -- usuario del panel que creó la recompensa
+  PRIMARY KEY (id),
+  CONSTRAINT fk_recompensas_usuario FOREIGN KEY (creado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -288,11 +276,58 @@ CREATE TABLE transacciones_operador (
 --  CONFIGURACIÓN GLOBAL
 -- ============================================================
 CREATE TABLE configuracion (
-  id_config    INT NOT NULL AUTO_INCREMENT,
-  clave        VARCHAR(60)  NOT NULL UNIQUE,
-  valor        VARCHAR(100) NOT NULL,
-  descripcion  VARCHAR(150) NULL,
-  PRIMARY KEY (id_config)
+  id_config       INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(60)  NOT NULL UNIQUE,
+  valor           VARCHAR(100) NOT NULL,
+  descripcion     VARCHAR(150) NULL,
+  actualizado_por INT          NULL,            -- último usuario que modificó este valor
+  PRIMARY KEY (id_config),
+  CONSTRAINT fk_config_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- ============================================================
+--  INTEGRACIÓN POS (configuración de conexión al sistema de ventas externo)
+--  Una fila por empresa. La contraseña se guarda cifrada (AES-256-GCM, prefijo enc:)
+--  si POS_ENCRYPTION_KEY está configurada; si no, en texto plano.
+-- ============================================================
+CREATE TABLE pos_configuracion (
+  id              INT          NOT NULL AUTO_INCREMENT,
+  servidor        VARCHAR(120) NOT NULL DEFAULT 'localhost',
+  puerto          INT          NOT NULL DEFAULT 3306,
+  usuario         VARCHAR(60)  NOT NULL DEFAULT 'root',
+  contrasena      VARCHAR(512) NULL,            -- cifrada con AES-256-GCM si POS_ENCRYPTION_KEY está configurada
+  base_datos      VARCHAR(60)  NOT NULL DEFAULT 'eorderback',
+  modo            VARCHAR(20)  NOT NULL DEFAULT 'manual', -- 'manual' | 'automatico'
+  configurado_por INT          NULL,            -- último usuario que modificó la configuración del POS
+  PRIMARY KEY (id),
+  CONSTRAINT fk_posconfig_usuario FOREIGN KEY (configurado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- ============================================================
+--  LOG DE SINCRONIZACIÓN POS
+--  Registra cada pedido/cliente del POS ya procesado para no
+--  re-importarlo en la próxima sincronización.
+-- ============================================================
+CREATE TABLE pos_pedido_procesado (
+  id_pedido_pos   INT          NOT NULL,
+  id_transaccion  INT          NULL,
+  id_cliente      INT          NULL,
+  resultado       VARCHAR(20)  NOT NULL,   -- 'creada' | 'sin_cliente'
+  detalle         VARCHAR(255) NULL,
+  fecha_procesado DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_pedido_pos),
+  CONSTRAINT fk_posped_trans   FOREIGN KEY (id_transaccion) REFERENCES transacciones(id_transaccion) ON DELETE SET NULL,
+  CONSTRAINT fk_posped_cliente FOREIGN KEY (id_cliente)     REFERENCES clientes(id_cliente)     ON DELETE SET NULL
+);
+
+CREATE TABLE pos_cliente_procesado (
+  id_cliente_pos  INT          NOT NULL,
+  id_cliente      INT          NULL,
+  resultado       VARCHAR(20)  NOT NULL,   -- 'creado' | 'emparejado' | 'sin_documento'
+  detalle         VARCHAR(255) NULL,
+  fecha_procesado DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_cliente_pos),
+  CONSTRAINT fk_poscli_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE SET NULL
 );
 
 -- ============================================================
@@ -309,7 +344,24 @@ CREATE TABLE refresh_tokens (
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_token),
   CONSTRAINT fk_rt_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-  INDEX idx_rt_usuario (id_usuario)
+  INDEX idx_rt_usuario (id_usuario),
+  INDEX idx_rt_token (token_hash)
+);
+
+-- ============================================================
+--  ALERTAS DE CORREO ENVIADAS (retención)
+--  Rastrea qué alertas ya se mandaron (cerca del canje / reactivación)
+--  para no repetirlas hasta que pase el cooldown.
+-- ============================================================
+CREATE TABLE alertas_enviadas (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  id_cliente    INT          NOT NULL,
+  tipo          VARCHAR(40)  NOT NULL,       -- 'cerca_canje' | 'reactivacion'
+  referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; NULL para reactivacion
+  fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE,
+  INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
 );
 
 -- ============================================================
@@ -325,7 +377,7 @@ CREATE TABLE bitacora (
   ip            VARCHAR(45) NULL,
   fecha         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_bitacora),
-  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario),
+  CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_bitacora_fecha (fecha)
 );
 
@@ -356,9 +408,10 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
   ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
-  -- El canje siempre está activo (no configurable), por eso no está aquí.
-  ('bienvenida_activo',      '1',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '1',   'Activa el descuento por compra alta');
+  -- Bienvenida y descuento nacen APAGADOS; el admin los activa cuando quiera.
+  ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
+  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
+  ('descuento_monto_activo', '0',   'Activa el descuento por compra alta');
 
 -- ============================================================
 --  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)
@@ -511,58 +564,6 @@ INSERT INTO distritos (nombre, id_municipio) VALUES
 ('Conchagua',44),('El Carmen',44),('Intipucá',44),('La Unión',44),('Meanguera del Golfo',44),
 ('San Alejo',44),('Yayantique',44),('Yucuaiquín',44);
 
-
--- ============================================================
---  TABLAS DE LA INTEGRACIÓN POS (las 3 tablas NUEVAS)
---  Aditivas: no tocan ninguna tabla del sistema base.
--- ============================================================
--- Nota: se usan "servidor" y "contrasena" en vez de host/password
--- porque esas dos son palabras reservadas en MySQL.
-CREATE TABLE IF NOT EXISTS pos_configuracion (
-  id          INT NOT NULL AUTO_INCREMENT,
-  servidor    VARCHAR(120) NOT NULL DEFAULT 'localhost',
-  puerto      INT          NOT NULL DEFAULT 3306,
-  usuario     VARCHAR(120) NOT NULL DEFAULT 'root',
-  contrasena  VARCHAR(255) NOT NULL DEFAULT '',        -- OJO: texto plano (uso local/tesis). Recomendado: usuario MySQL de solo lectura.
-  base_datos  VARCHAR(120) NOT NULL DEFAULT 'eorderback',
-  modo        ENUM('automatico','manual') NOT NULL DEFAULT 'manual',
-  PRIMARY KEY (id)
-);
-
--- Fila inicial con las credenciales por defecto.
--- CAMBIA servidor/puerto/usuario/contrasena/base por los tuyos (o desde la pantalla del sistema).
-INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo)
-SELECT 'localhost', 3306, 'root', '', 'eorderback', 'manual' FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM pos_configuracion);
-
--- Control de pedidos del POS ya convertidos en transacción (evita duplicados).
-CREATE TABLE IF NOT EXISTS pos_pedido_procesado (
-  id              INT NOT NULL AUTO_INCREMENT,
-  id_pedido_pos   INT NOT NULL,                 -- idPedido en la base del POS
-  id_transaccion  INT NULL,                     -- transacción creada en nuestra base
-  id_cliente      INT NULL,                     -- cliente de fidelización al que se otorgó
-  resultado       VARCHAR(30) NOT NULL DEFAULT 'creada',  -- creada | sin_cliente
-  detalle         VARCHAR(200) NULL,
-  fecha_procesado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_pos_pedido (id_pedido_pos)
-);
-
--- Control de clientes del POS ya traídos al módulo (evita duplicados y re-escaneo).
--- Lo usa el "Sync de clientes": al conectar la BD trae TODOS los clientes
--- identificables (por lotes), aunque no hayan consumido todavía.
-CREATE TABLE IF NOT EXISTS pos_cliente_procesado (
-  id              INT NOT NULL AUTO_INCREMENT,
-  id_cliente_pos  INT NOT NULL,                 -- idCliente en la base del POS
-  id_cliente      INT NULL,                     -- cliente creado/emparejado en nuestra base
-  resultado       VARCHAR(30) NOT NULL DEFAULT 'creado',  -- creado | emparejado | sin_documento
-  detalle         VARCHAR(200) NULL,
-  fecha_procesado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_pos_cliente (id_cliente_pos)
-);
-
-
 -- ============================================================
 --  USUARIO ADMIN DE ARRANQUE (para iniciar sesión al panel)
 --  Correo: admin@empresa.com   Contraseña: Admin123  (cámbiala luego)
@@ -571,3 +572,7 @@ INSERT INTO usuarios (nombre, apellido, email, contrasena_hash, telefono, id_rol
 VALUES ('Admin', 'Empresa', 'admin@empresa.com', '$2a$10$ts0FfQJEVaVhWns0GtKMS.5m56V/Zi3ZVhjOyuOQTnvTkOwqUDq46', '00000000',
         (SELECT id_rol    FROM roles   WHERE rol    = 'admin'   LIMIT 1),
         (SELECT id_estado FROM estados WHERE estado = 'activo' LIMIT 1));
+
+-- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
+INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por)
+VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual', NULL);

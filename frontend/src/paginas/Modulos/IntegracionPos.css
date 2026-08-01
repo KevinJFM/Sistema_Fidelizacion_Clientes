@@ -1,8 +1,4 @@
-/* ============================================================
-   Integración POS — botones secundarios con letras NOTORIAS
-   (negrita y color de marca, visibles en tema claro y oscuro)
-   Con !important para que ninguna regla del panel las pise.
-   ============================================================ */
+/* Integración POS — botones secundarios notorios (negrita + color de marca, claro/oscuro); !important para que el panel no los pise. */
 .btn-pos {
   padding: 12px 20px;
   border: 2px solid #0D1BB8 !important;
@@ -27,10 +23,7 @@
 }
 [data-theme="dark"] .btn-pos:hover { background: #e8ebff !important; }
 
-/* ============================================================
-   Campos deshabilitados cuando está CONECTADO
-   (letra gris y fondo apagado, como un control bloqueado)
-   ============================================================ */
+/* Campos deshabilitados cuando está conectado (letra gris y fondo apagado). */
 /* Mismo estilo en tema claro y oscuro (las tarjetas del panel son blancas en ambos) */
 .pos-page .config-input input:disabled,
 [data-theme="dark"] .pos-page .config-input input:disabled {
@@ -41,9 +34,7 @@
   opacity: 1;
 }
 
-/* Neutraliza el resaltado AZUL del autocompletado del navegador
-   (Chrome/Brave lo pintan con un color interno que 'background' no vence;
-   el único modo de taparlo es un box-shadow interno del color deseado). */
+/* Neutraliza el resaltado azul del autocompletado (Chrome/Brave): solo se tapa con un box-shadow interno del color deseado. */
 .pos-page .config-input input:-webkit-autofill,
 .pos-page .config-input input:-webkit-autofill:hover,
 .pos-page .config-input input:-webkit-autofill:focus {
@@ -60,9 +51,7 @@
   -webkit-text-fill-color: #9ca3af !important;
 }
 
-/* ============================================================
-   Chip de estado de conexión (● Conectado / ● Desconectado)
-   ============================================================ */
+/* Chip de estado de conexión (● Conectado / ● Desconectado) */
 .pos-chip {
   display: inline-flex;
   align-items: center;
@@ -78,9 +67,7 @@
 [data-theme="dark"] .pos-chip.on  { background: rgba(22, 163, 74, 0.2);  color: #4ade80; }
 [data-theme="dark"] .pos-chip.off { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
 
-/* ============================================================
-   Modal de conexión (Conectando… / Conexión exitosa / Error / Desconexión)
-   ============================================================ */
+/* Modal de conexión (Conectando… / Conexión exitosa / Error / Desconexión) */
 .pos-modal-fondo {
   position: fixed;
   inset: 0;

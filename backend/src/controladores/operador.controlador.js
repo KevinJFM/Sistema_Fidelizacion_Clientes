@@ -4,8 +4,7 @@ const ESTADO_ACTIVO = 1;
 const ESTADO_INACTIVO = 2;
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Regla FIJA del sistema (no editable): el operador gana puntos por VISITA registrada,
-// siempre que traiga el mínimo de personas. Si trae menos, la visita se registra pero sin puntos.
+// Regla fija: el operador gana puntos por visita solo si trae el mínimo de personas; si trae menos, se registra sin puntos.
 const PUNTOS_POR_VISITA = 100;
 const MINIMO_PERSONAS = 12;
 
@@ -124,8 +123,7 @@ export const registrarConsumoOperador = async (req, res) => {
       return res.status(400).json({ message: 'El operador no está activo' });
     }
 
-    // Regla fija: 100 puntos por visita, SOLO si trae el mínimo de personas.
-    // Si trae menos, se registra la visita pero no se otorgan puntos.
+    // 100 puntos por visita solo si trae el mínimo de personas; si no, se registra sin puntos.
     const otorgaPuntos = personas >= MINIMO_PERSONAS;
     const puntosOtorgados = otorgaPuntos ? PUNTOS_POR_VISITA : 0;
     const saldoFinal = Number(filasOp[0].puntos_acumulados) + puntosOtorgados;
@@ -169,8 +167,7 @@ export const registrarConsumoOperador = async (req, res) => {
 
 // ===================== Canje de puntos =====================
 
-// El operador canjea sus puntos por una recompensa (habitación).
-// Se RESTAN los puntos del premio. NO se otorgan puntos ni descuento en dinero.
+// El operador canjea puntos por una recompensa: se restan los puntos del premio, sin otorgar puntos ni descuento.
 export const canjearOperador = async (req, res) => {
   try {
     const { id_operador, id_recompensa } = req.body;

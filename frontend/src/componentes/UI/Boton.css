@@ -1,6 +1,4 @@
-/* ============================================================
-   Botón reutilizable del panel (componente UI/Boton).
-   ============================================================ */
+/* Botón reutilizable del panel (componente UI/Boton). */
 .ui-boton {
   display: inline-flex;
   align-items: center;
@@ -24,8 +22,7 @@
 }
 .ui-boton--marco:hover:not(:disabled) { background: #dde2fa; }
 
-/* Tema oscuro: mantiene el mismo azul del modo claro (fondo azul suave, borde y letra azul)
-   para que no cambie de aspecto al alternar de tema. */
+/* Tema oscuro: mantiene el mismo azul del modo claro para no cambiar de aspecto al alternar. */
 
 /* Variante "primario" — relleno azul de marca */
 .ui-boton--primario {

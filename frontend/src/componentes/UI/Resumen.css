@@ -1,7 +1,4 @@
-/* ============================================================
-   Resumen reutilizable del panel (componente UI/Resumen).
-   Etiquetas en negrita; valores destacados en verde.
-   ============================================================ */
+/* Resumen reutilizable (UI/Resumen): etiquetas en negrita, valores en verde. */
 .ui-resumen {
   display: flex;
   gap: 24px;

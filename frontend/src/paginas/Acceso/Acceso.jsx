@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { setCredentials } from '../../redux/slices/sliceAuth';
+import { setCredentials, limpiarSesionExpirada } from '../../redux/slices/sliceAuth';
 import { login } from '../../servicios/servicioAuth';
 import { inicioDeRol } from '../../utilidades/roles';
 import Logo from '../../componentes/Logo/Logo';
@@ -25,8 +25,21 @@ export default function Login() {
   const [loading, setLoading]         = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
+  const [avisoSesion, setAvisoSesion] = useState(false);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const sesionExpirada = useSelector((s) => s.auth.sesionExpirada);
+
+  // Si la sesión venció sola (401 sin refresh válido), avisa al llegar al login:
+  // modal con "Aceptar" + toast. Se limpia la bandera para que no se repita.
+  useEffect(() => {
+    if (sesionExpirada) {
+      setAvisoSesion(true);
+      toast.error('Tu sesión expiró por seguridad. Vuelve a iniciar sesión.');
+      dispatch(limpiarSesionExpirada());
+    }
+  }, [sesionExpirada, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -197,6 +210,40 @@ export default function Login() {
 
         </motion.div>
       </div>
+
+      {/* Modal de sesión vencida: aparece al volver al login tras un 401 */}
+      <AnimatePresence>
+        {avisoSesion && (
+          <motion.div
+            className="sesion-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="sesion-modal"
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="sesion-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <h3 className="sesion-title">Sesión expirada</h3>
+              <p className="sesion-text">
+                Tu sesión expiró por seguridad. Vuelve a iniciar sesión para continuar.
+              </p>
+              <button type="button" className="sesion-btn" onClick={() => setAvisoSesion(false)}>
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

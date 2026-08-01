@@ -14,9 +14,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Si el token venció o es inválido (401), se cierra la sesión y se vuelve al login.
-// El portal no usa refresh token (a diferencia del panel del personal).
-// OJO: en el acceso (login/OTP) un 401 es esperado (código incorrecto), NO debe redirigir.
+// Un 401 cierra sesión y vuelve al login (el portal no usa refresh token). Excepción: en las rutas de acceso un 401 es esperado (código incorrecto) y no debe redirigir.
 const RUTAS_ACCESO = ['/portal/login', '/portal/solicitar-codigo', '/portal/verificar-codigo'];
 api.interceptors.response.use(
   (res) => res,

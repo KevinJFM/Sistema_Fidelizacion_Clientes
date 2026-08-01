@@ -1,15 +1,5 @@
-// ============================================================
-//  Crear un usuario ADMIN en la base de una empresa.
-//  Útil porque las bases nuevas nacen vacías (sin usuarios) y
-//  hay que poder iniciar sesión en su panel.
-//
-//  CÓMO CORRERLO
-//  En la terminal de backend:
-//     node src/integracion-pos/scripts/crear_admin.js merasopa correo@empresa.com MiClave123
-//
-//  Crea el admin en la base:  db_fidelizacion_merasopa
-//  Usa las credenciales de MySQL del .env del backend (DB_HOST, etc.).
-// ============================================================
+// Crea un usuario admin en la base de una empresa (las bases nuevas nacen sin usuarios).
+// Uso: node src/integracion-pos/scripts/crear_admin.js merasopa correo@empresa.com MiClave123 -> crea el admin en db_fidelizacion_merasopa usando el .env del backend.
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';

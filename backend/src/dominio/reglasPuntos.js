@@ -1,53 +1,9 @@
-// ============================================================
-//  MOTOR DE REGLAS DE PUNTOS Y DESCUENTOS  (lógica de negocio PURA)
-//
-//  Este módulo NO toca la base de datos: recibe todo lo que necesita
-//  como parámetros y devuelve el resultado del cálculo. Así la lógica
-//  de fidelización se puede probar de forma unitaria (rápida y
-//  determinista) sin depender de MySQL.
-//
-//  El controlador de transacciones se encarga de leer/escribir en la BD
-//  y le delega a este módulo el "cuánto se gana / cuánto se descuenta".
-// ============================================================
+// Motor de reglas de puntos/descuentos: lógica pura (no toca la BD), recibe parámetros y devuelve el cálculo. El controlador de transacciones persiste y le delega el "cuánto se gana/descuenta".
 
-// Regla FIJA del sistema (no editable): ganar $1 de consumo = 1 punto.
-// (El valor del punto $0.05 y el catálogo de canje viven en recompensas.js)
-export const DOLARES_POR_PUNTO = 1; // 1 punto por cada $1
+// Regla fija: $1 de consumo = 1 punto. El valor del punto y el catálogo de canje viven en recompensas.js.
+export const DOLARES_POR_PUNTO = 1;
 
-/**
- * Calcula los puntos y el descuento de una transacción aplicando el
- * MOTOR DE REGLAS POR PRIORIDAD:
- *   - Los PUNTOS se acumulan (base + bienvenida + promoción).
- *   - El DESCUENTO es uno solo, por prioridad:
- *       1. Canje de puntos (bloquea cualquier otro descuento y no otorga puntos)
- *       2. Bienvenida (primera compra)
- *       3. Promoción / fecha especial
- *       4. Descuento por compra alta (monto mínimo)
- *   - El descuento nunca supera el monto de la compra.
- *
- * @param {Object}  params
- * @param {number}  params.monto            Monto de la compra en dólares.
- * @param {number}  [params.saldoPuntos=0]  Puntos que el cliente ya tiene acumulados.
- * @param {boolean} [params.esPrimeraCompra=false] Si es la primera transacción del cliente.
- * @param {Object|null} [params.promocion=null]    Promoción vigente aplicable
- *        ({ nombre, puntos_extra, descuento_extra }) o null si no hay.
- * @param {Object|null} [params.recompensa=null]   Recompensa a canjear
- *        ({ nombre, puntos }) o null si no se canjea.
- * @param {Object}  [params.config={}]      Reglas configurables:
- *        { bienvenidaPuntos, bienvenidaDescuento, descuentoMontoMinimo,
- *          descuentoMontoValor, bienvenidaActivo, descuentoMontoActivo }
- * @returns {{
- *   quiereCanjear: boolean,
- *   aplicaBienvenida: boolean,
- *   puntosBase: number,
- *   puntosExtraBienvenida: number,
- *   puntosExtraPromocion: number,
- *   puntosOtorgados: number,
- *   puntosCanjeados: number,
- *   descuento: number,
- *   promocionesAplicadas: string[]
- * }}
- */
+// Calcula puntos y descuento de una transacción. Los puntos se acumulan (base + bienvenida + promoción); el descuento es uno solo por prioridad: canje > bienvenida > promoción > compra alta, y nunca supera el monto.
 export function calcularBeneficios({
   monto,
   saldoPuntos = 0,
@@ -74,20 +30,19 @@ export function calcularBeneficios({
   let descuento = 0;
   let puntosCanjeados = 0;
 
-  // El cliente canjea solo si eligió una recompensa Y tiene puntos suficientes.
+  // Solo canjea si eligió recompensa y tiene puntos suficientes.
   const quiereCanjear = !!recompensa && saldoPuntos >= recompensa.puntos;
   const aplicaBienvenida = !!bienvenidaActivo && !!esPrimeraCompra;
 
-  // Puntos base (regla fija): 1 punto por cada $1 de consumo. En un canje NO se ganan puntos.
+  // Puntos base: 1 por cada $1. En un canje no se ganan puntos.
   const puntosBase = quiereCanjear ? 0 : Math.floor(montoNumerico / DOLARES_POR_PUNTO);
 
   if (quiereCanjear) {
-    // CANJE: el cliente usa su beneficio (premio). No gana puntos nuevos ni recibe
-    // descuento en $. Paga el monto completo y se le descuentan los puntos del premio.
+    // Canje: paga el monto completo, no gana puntos ni descuento, se le restan los puntos del premio.
     puntosCanjeados = recompensa.puntos;
     promocionesAplicadas.push(`Canje: ${recompensa.nombre}`);
   } else {
-    // Flujo normal: acumula puntos (base + bienvenida + promoción) y aplica UN descuento por prioridad.
+    // Flujo normal: acumula puntos y aplica un descuento por prioridad.
     puntosOtorgados = puntosBase;
     if (aplicaBienvenida) {
       puntosExtraBienvenida = Number(bienvenidaPuntos);
@@ -110,7 +65,7 @@ export function calcularBeneficios({
     }
   }
 
-  // El descuento nunca puede superar el monto de la compra.
+  // El descuento nunca supera el monto de la compra.
   if (descuento > montoNumerico) descuento = montoNumerico;
 
   return {

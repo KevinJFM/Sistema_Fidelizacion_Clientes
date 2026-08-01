@@ -21,9 +21,7 @@ export function SkeletonFilas({ columnas, filas = 8 }) {
   ));
 }
 
-// Skeleton de una página de CONFIGURACIÓN (tarjetas config-card): título + subtítulo
-// y N tarjetas, cada una con encabezado y varios campos. Sirve para Configuración y
-// para Integración POS (ambas usan las mismas clases).
+// Skeleton de página de configuración (tarjetas config-card): título, subtítulo y N tarjetas. Sirve para Configuración e Integración POS.
 export function SkeletonConfig({ tarjetas = 3, filasPorTarjeta = 3 }) {
   return (
     <div className="admin-page">
@@ -52,8 +50,7 @@ export function SkeletonConfig({ tarjetas = 3, filasPorTarjeta = 3 }) {
   );
 }
 
-// Skeleton del PERFIL de un cliente: tarjeta (avatar + info + stats + botón) y la
-// tabla de su historial. Se usa mientras carga el perfil tras buscar un cliente.
+// Skeleton del perfil de un cliente: tarjeta (avatar + info + stats + botón) y tabla de su historial.
 export function SkeletonPerfil({ columnas = 11, filas = 6 }) {
   return (
     <>
@@ -96,12 +93,8 @@ export function SkeletonPerfil({ columnas = 11, filas = 6 }) {
   );
 }
 
-// Skeleton de un MÓDULO de lista COMPLETO: encabezado (título + subtítulo, con o sin
-// botón), barra de filtros o buscador, y tabla (encabezados + filas). Se usa mientras
-// carga la primera vez, para que TODA la pantalla se vea como esqueleto (no solo las filas).
-//   conBoton    -> muestra el botón de acción a la derecha del título (page-head)
-//   conBusqueda -> caja de búsqueda simple dentro de la tabla
-//   filtros     -> nº de campos de una barra de filtros arriba (si >0, para Historial, etc.)
+// Skeleton de un módulo de lista completo (encabezado, filtros/buscador y tabla) para que toda la pantalla se vea como esqueleto al cargar.
+// conBoton: botón de acción junto al título; conBusqueda: caja de búsqueda en la tabla; filtros: nº de campos de la barra de filtros.
 export function SkeletonListado({ columnas, filas = 8, conBoton = true, conBusqueda = true, filtros = 0 }) {
   return (
     <div className="admin-page">

@@ -1,11 +1,4 @@
-/* ============================================================
-   Campo reutilizable del panel (componente UI/Campo).
-   Input y select que combinan con UI/Boton (borde azul de marca).
-   Nota: se usa doble clase (.ui-campo.ui-campo) a propósito, para
-   ganarle en especificidad a la regla heredada de
-   ".filtros-row input/select" (Transacciones.css) que comparten
-   otras páginas todavía sin migrar.
-   ============================================================ */
+/* Campo reutilizable (UI/Campo): input/select con borde azul de marca. Doble clase (.ui-campo.ui-campo) a propósito para ganar especificidad a ".filtros-row input/select" (Transacciones.css). */
 .ui-campo.ui-campo {
   padding: 10px 12px;
   border-radius: 12px;

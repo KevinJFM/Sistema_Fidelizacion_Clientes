@@ -197,6 +197,7 @@ export default function Configuracion() {
     setValores((prev) => ({ ...prev, [clave]: nuevoValor }));
     try {
       await updateConfiguracion({ [clave]: nuevoValor });
+      toast.success(nuevoValor === '1' ? 'Opción activada' : 'Opción desactivada');
     } catch {
       setValores((prev) => ({ ...prev, [clave]: anterior }));
       toast.error('Error al guardar el cambio');

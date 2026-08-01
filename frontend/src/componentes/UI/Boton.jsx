@@ -1,9 +1,6 @@
 import './Boton.css';
 
-// Botón reutilizable del panel.
-//   variant="marco"    -> borde + letra azul de marca (mismo look que "Conectar" de Integración POS)
-//   variant="primario" -> relleno azul (para acciones principales)
-// Acepta cualquier prop de <button> (onClick, type, disabled, etc.) y children (íconos + texto).
+// Botón reutilizable: variant="marco" (borde + letra azul) o "primario" (relleno azul). Acepta props de <button> y children.
 export default function Boton({ variant = 'marco', className = '', children, ...props }) {
   return (
     <button className={`ui-boton ui-boton--${variant} ${className}`.trim()} {...props}>

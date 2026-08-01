@@ -152,8 +152,7 @@
   border-radius: 10px;
 }
 
-/* .btn-ghost se define una sola vez en Usuarios.css (+ tema.css para oscuro).
-   Aquí solo se usa junto con .btn-sm para el tamaño pequeño. */
+/* .btn-ghost se define en Usuarios.css (+ tema.css); aquí solo se combina con .btn-sm. */
 
 .recompensas-list {
   display: flex;

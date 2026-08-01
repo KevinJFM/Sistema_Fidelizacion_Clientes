@@ -34,6 +34,15 @@ const RequireRole = ({ roles, children }) => {
   return children;
 };
 
+// Módulo Integración POS: solo admin y solo si el backend lo habilita (POS_ENABLED).
+// Si está oculto, entrar por URL redirige al panel.
+const RequirePos = ({ children }) => {
+  const { isAuth, user, posHabilitado } = useSelector((state) => state.auth);
+  if (!isAuth) return <Navigate to="/login" replace />;
+  if (user?.rol !== 'admin' || !posHabilitado) return <Navigate to={inicioDeRol(user?.rol)} replace />;
+  return children;
+};
+
 function App() {
   const dispatch = useDispatch();
   const { bootstrapped } = useSelector((state) => state.auth);
@@ -99,7 +108,7 @@ function App() {
           <Route path="usuarios" element={<RequireRole roles={['admin']}><Usuarios /></RequireRole>} />
           <Route path="promociones" element={<RequireRole roles={['admin']}><Promociones /></RequireRole>} />
           <Route path="configuracion" element={<RequireRole roles={['admin']}><Configuracion /></RequireRole>} />
-          <Route path="integracion-pos" element={<RequireRole roles={['admin']}><IntegracionPos /></RequireRole>} />
+          <Route path="integracion-pos" element={<RequirePos><IntegracionPos /></RequirePos>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />
