@@ -16,6 +16,32 @@ const obtenerConfigs = async (defaults) => {
   return mapa;
 };
 
+// Avisa por push (aparte del "¡Ganaste puntos!") cuando el cliente ACABA de alcanzar una o más
+// recompensas al ganar puntos (cruzó el umbral). Lista todas las que ya puede canjear en ese momento.
+// Solo se envía si desbloqueó algo nuevo con esta transacción (evita repetir el aviso en cada compra).
+const avisarRecompensasDesbloqueadas = async (pushToken, saldoAntes, saldoDespues) => {
+  try {
+    // Menor a mayor: la recompensa más accesible (menos puntos) va primero, para que se vea
+    // aunque Android recorte la notificación colapsada.
+    const [recompensas] = await pool.query(
+      'SELECT nombre, puntos FROM recompensas WHERE activo = 1 ORDER BY puntos ASC, nombre ASC'
+    );
+    const desbloqueoNuevo = recompensas.some((r) => r.puntos > saldoAntes && r.puntos <= saldoDespues);
+    if (!desbloqueoNuevo) return;
+
+    const nombres = recompensas.filter((r) => r.puntos <= saldoDespues).map((r) => r.nombre);
+    if (nombres.length === 0) return;
+
+    const cuerpo = nombres.length === 1
+      ? `Con tus ${saldoDespues} pts ya puedes canjear ${nombres[0]}. Podrás canjearlo en tu próximo consumo.`
+      : `Con tus ${saldoDespues} pts ya puedes canjear una de estas: ${nombres.join(', ')}. Elige una en tu próximo consumo.`;
+
+    enviarPush(pushToken, '¡Ya puedes canjear! 🎉', cuerpo, { tipo: 'recompensa_desbloqueada' });
+  } catch {
+    // El aviso nunca debe romper la transacción.
+  }
+};
+
 // Listar recompensas activas desde la BD (ruta legacy mantenida por compatibilidad)
 export const listarRecompensas = async (req, res) => {
   try {
@@ -198,6 +224,8 @@ export const crearTransaccion = async (req, res) => {
           enviarPush(cliente.push_token, 'Canje realizado', `Canjeaste ${recompensa.nombre}. Tu saldo es ${saldoFinal} pts.`);
         } else if (puntosOtorgados > 0) {
           enviarPush(cliente.push_token, `¡Ganaste ${puntosOtorgados} puntos!`, `Tu nuevo saldo es ${saldoFinal} pts.`);
+          // Aviso aparte si con estos puntos desbloqueó una o más recompensas nuevas.
+          avisarRecompensasDesbloqueadas(cliente.push_token, puntosActuales, saldoFinal);
         }
       }
 
