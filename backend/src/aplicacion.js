@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import rutasAuth from "./rutas/autenticacion.rutas.js";
 import rutasUsuarios from "./rutas/usuario.rutas.js";
 import rutasClientes from "./rutas/cliente.rutas.js";
@@ -66,10 +69,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Rutas
-app.get("/", (req, res) => {
-  res.json({ message: "API Sistema de Fidelización de Clientes" });
-});
+// ── Servir el panel (frontend compilado) en el mismo origen que la API ──
+// En producción el panel se compila dentro de backend/public (ver vite.config.js).
+// Si esa carpeta existe, Express la sirve; si no (desarrollo/pruebas), la raíz
+// responde el JSON de siempre y no se rompe nada.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PANEL_DIR = path.resolve(__dirname, "../public");
+const PANEL_INDEX = path.join(PANEL_DIR, "index.html");
+const servirPanel = fs.existsSync(PANEL_INDEX);
+
+if (servirPanel) {
+  // Archivos estáticos del panel (JS, CSS, imágenes). No intercepta /api.
+  app.use(express.static(PANEL_DIR));
+} else {
+  // Sin build del panel: la raíz confirma que la API está viva.
+  app.get("/", (req, res) => {
+    res.json({ message: "API Sistema de Fidelización de Clientes" });
+  });
+}
 
 app.use("/api/auth", rutasAuth);
 app.use("/api/usuarios", rutasUsuarios);
@@ -82,5 +99,13 @@ app.use("/api/operadores", rutasOperadores);
 app.use("/api/portal", rutasPortalCliente);
 app.use("/api/recompensas", rutasRecompensas);
 app.use("/api/pos", rutasPos);
+
+// Fallback del SPA: cualquier ruta que NO empiece por /api/ devuelve el index
+// del panel, para que React Router funcione al recargar en rutas como /clientes.
+if (servirPanel) {
+  app.get(/^(?!\/api\/).*/, (req, res) => {
+    res.sendFile(PANEL_INDEX);
+  });
+}
 
 export default app;
