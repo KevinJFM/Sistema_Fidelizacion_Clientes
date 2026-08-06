@@ -22,10 +22,6 @@ const ROLES = [
 ];
 const ESTADO_INACTIVO = 2;
 
-// Máximo 2 administradores: dueño y encargado del hotel.
-const ID_ROL_ADMIN = 1;
-const MAX_ADMINS = 2;
-
 // Opciones seleccionables en el formulario (Inactivo se maneja con el botón de desactivar)
 const ESTADOS_FORM = [
   { id: 1, label: 'Activo' },
@@ -67,7 +63,6 @@ export default function Usuarios() {
   const [confirmUser, setConfirmUser] = useState(null); // usuario pendiente de desactivar
   const [deleting, setDeleting]   = useState(false);
   const [passTried, setPassTried] = useState(false); // intentó guardar con contraseña inválida
-  const [showAdminLimit, setShowAdminLimit] = useState(false); // modal de tope de administradores
   const [filtro, setFiltro]       = useState('');
   const [page, setPage]           = useState(1);
   const [departamentos, setDepartamentos] = useState([]);
@@ -101,12 +96,6 @@ export default function Usuarios() {
   // Datos de la página actual
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
-
-  // Tope de admins: permite asignar el rol si no se llegó al máximo o si el usuario editado ya es admin.
-  const totalAdmins = usuarios.filter((u) => u.id_rol === ID_ROL_ADMIN).length;
-  const editandoAdmin = editingId != null &&
-    usuarios.some((u) => u.id_usuario === editingId && u.id_rol === ID_ROL_ADMIN);
-  const puedeAsignarAdmin = editandoAdmin || totalAdmins < MAX_ADMINS;
 
   const abrirCrear = () => {
     setEditingId(null);
@@ -174,12 +163,6 @@ export default function Usuarios() {
     if (name.startsWith('id_')) value = value ? Number(value) : null;
     else if (name === 'telefono') value = formatTelefono(value);
 
-    // Bloquear la selección del rol admin si ya se alcanzó el tope permitido
-    if (name === 'id_rol' && value === ID_ROL_ADMIN && !puedeAsignarAdmin) {
-      setShowAdminLimit(true);
-      return; // no cambiamos el rol
-    }
-
     setForm({ ...form, [name]: value });
     // Al escribir, se limpia el error de ese campo
     if (fieldErrors[name]) {
@@ -230,12 +213,6 @@ export default function Usuarios() {
         );
         return;
       }
-    }
-
-    // Respaldo del tope de administradores (la validación real está en el backend)
-    if (Number(form.id_rol) === ID_ROL_ADMIN && !puedeAsignarAdmin) {
-      setShowAdminLimit(true);
-      return;
     }
 
     setSaving(true);
@@ -561,30 +538,6 @@ export default function Usuarios() {
               </button>
               <button type="button" className="btn-danger" onClick={confirmarEliminar} disabled={deleting}>
                 {deleting ? 'Eliminando...' : 'Sí, eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal informativo: tope de administradores por seguridad */}
-      {showAdminLimit && (
-        <div className="modal-overlay" onClick={() => setShowAdminLimit(false)}>
-          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </div>
-            <h3 className="confirm-title">Límite de administradores</h3>
-            <p className="confirm-text">
-              Por seguridad, el sistema solo permite <strong>{MAX_ADMINS} administradores</strong>. No es posible
-              crear más cuentas con rol de administrador.
-            </p>
-            <div className="modal-actions confirm-actions">
-              <button type="button" className="btn-primary" onClick={() => setShowAdminLimit(false)}>
-                Entendido
               </button>
             </div>
           </div>
