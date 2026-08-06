@@ -1,0 +1,10 @@
+# El portal es una SPA (React Router): cualquier ruta que no sea un archivo real
+# se sirve con index.html, para que al recargar en /algo no dé 404.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

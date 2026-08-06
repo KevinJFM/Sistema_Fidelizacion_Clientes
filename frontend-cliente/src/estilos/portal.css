@@ -251,8 +251,8 @@ input, select { font-family: inherit; }
 .pt-campana { position: relative; }
 .pt-campana-boton { position: relative; color: var(--texto); padding: 4px; display: flex; }
 .pt-campana-globo {
-  position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px;
-  border-radius: 9px; background: var(--rosa); color: #fff; font-size: 10px; font-weight: 800;
+  position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px;
+  border-radius: 10px; background: var(--rosa); color: #fff; font-size: 10px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; padding: 0 4px;
   border: 2px solid var(--barra-fondo);
 }
