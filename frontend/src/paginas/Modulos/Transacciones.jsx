@@ -30,6 +30,7 @@ export default function Transacciones() {
   const [saving, setSaving]       = useState(false);
   const [resultado, setResultado] = useState(null);
   const [recompensas, setRecompensas] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     getRecompensas().then(setRecompensas).catch(() => {});
@@ -63,6 +64,7 @@ export default function Transacciones() {
       return;
     }
     setSaving(true);
+    setModalOpen(true);
     try {
       const res = await crearTransaccion({
         id_cliente: cliente.id_cliente,
@@ -73,14 +75,19 @@ export default function Transacciones() {
         id_recompensa: form.id_recompensa || null,
       });
       setResultado(res);
-      toast.success('Transacción registrada');
       setCliente({ ...cliente, puntos_acumulados: res.saldo_puntos });
       setForm(emptyForm);
     } catch (err) {
+      setModalOpen(false);
       toast.error(err.response?.data?.message || 'Error al registrar');
     } finally {
       setSaving(false);
     }
+  };
+
+  const cerrarModal = () => {
+    if (saving) return; // no permitir cerrar mientras carga
+    setModalOpen(false);
   };
 
   return (
@@ -245,6 +252,34 @@ export default function Transacciones() {
           )}
         </div>
       </div>
+
+      {/* Modal de progreso / confirmación */}
+      {modalOpen && (
+        <div className="modal-overlay" onClick={cerrarModal}>
+          <div className="trans-modal" onClick={(e) => e.stopPropagation()}>
+            {saving ? (
+              <>
+                <div className="trans-modal-spinner" />
+                <h3 className="trans-modal-titulo">Registrando transacción...</h3>
+                <p className="trans-modal-texto">Un momento, por favor.</p>
+              </>
+            ) : (
+              <>
+                <div className="trans-modal-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <h3 className="trans-modal-titulo">¡Transacción realizada!</h3>
+                <button type="button" className="btn-primary trans-modal-btn" onClick={cerrarModal}>
+                  Aceptar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

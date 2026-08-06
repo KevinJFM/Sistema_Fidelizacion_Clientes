@@ -283,6 +283,65 @@
 .busqueda-input-row { display: flex; gap: 8px; }
 .busqueda-input-row input { flex: 1; min-width: 0; }
 
+/* Modal de progreso / confirmación de transacción */
+.trans-modal {
+  background: #fff;
+  border-radius: 26px;
+  padding: 34px 32px 28px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 30px 70px rgba(6, 58, 52, 0.3);
+  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.trans-modal-titulo {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--pd-teal-dark);
+  margin: 18px 0 4px;
+}
+.trans-modal-texto {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Spinner de carga */
+.trans-modal-spinner {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto;
+  border: 5px solid var(--pd-teal-light);
+  border-top-color: var(--pd-teal);
+  border-radius: 50%;
+  animation: transSpin 0.8s linear infinite;
+}
+@keyframes transSpin { to { transform: rotate(360deg); } }
+
+/* Check verde de éxito */
+.trans-modal-check {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: transCheckPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.trans-modal-check svg { width: 34px; height: 34px; }
+@keyframes transCheckPop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.trans-modal-btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: 22px;
+}
+
 @media (max-width: 1000px) {
   .trans-grid { grid-template-columns: 1fr; }
 }
