@@ -1,0 +1,28 @@
+#!/bin/sh
+# ============================================================================
+# Hook: recompila el PANEL automaticamente cuando cambia el frontend.
+#
+# Por que: en produccion el panel NO corre el codigo fuente, sino el build
+# compilado que vive en backend/public/. Ese build hay que generarlo con
+# "pnpm build" ANTES de commitear. Este hook lo hace solo y lo agrega al
+# mismo commit, para que un simple "git push" deje el cambio en el dominio
+# (Hostinger auto-despliega la carpeta backend/).
+# ============================================================================
+
+# Si el commit NO toca el frontend, no hay nada que recompilar -> commit rapido.
+CAMBIOS_FRONTEND=$(git diff --cached --name-only -- frontend/)
+if [ -z "$CAMBIOS_FRONTEND" ]; then
+  exit 0
+fi
+
+echo "[pre-commit] Cambios en frontend detectados -> recompilando panel..."
+
+cd frontend || { echo "[pre-commit] No se encontro la carpeta frontend."; exit 1; }
+pnpm build || { echo "[pre-commit] ERROR: fallo el build del panel. Commit abortado."; exit 1; }
+cd ..
+
+# El build salio a backend/public (config en frontend/vite.config.js).
+git add backend/public
+
+echo "[pre-commit] OK: panel recompilado y backend/public agregado al commit."
+exit 0
