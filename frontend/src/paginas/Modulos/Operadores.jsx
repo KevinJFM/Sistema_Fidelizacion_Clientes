@@ -14,6 +14,7 @@ import { formatTelefono, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
+import ModalExito from '../../componentes/UI/ModalExito';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -37,6 +38,7 @@ export default function Operadores() {
   const [form, setForm]             = useState(emptyForm);
   const [errores, setErrores]       = useState({});
   const [saving, setSaving]         = useState(false);
+  const [exito, setExito]           = useState(null); // mensaje del check de éxito que se cierra solo
 
   // Modal registrar grupo
   const [grupoOp, setGrupoOp]       = useState(null); // operador seleccionado
@@ -108,14 +110,16 @@ export default function Operadores() {
 
     setSaving(true);
     try {
+      let mensaje;
       if (editingId) {
         await updateOperador(editingId, form);
-        toast.success('Operador actualizado');
+        mensaje = 'Operador actualizado';
       } else {
         await createOperador(form);
-        toast.success('Operador creado');
+        mensaje = 'Operador creado';
       }
       setModalOpen(false);
+      setExito(mensaje);
       cargar();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al guardar');
@@ -503,6 +507,8 @@ export default function Operadores() {
           </div>
         </div>
       )}
+
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito(null)} />}
     </div>
   );
 }

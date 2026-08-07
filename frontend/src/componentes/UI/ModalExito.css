@@ -1,0 +1,41 @@
+/* Modal de éxito reutilizable (check verde que se cierra solo).
+   Usa la .modal-overlay global; mismo look que la confirmación de transacción. */
+.exito-modal {
+  background: #fff;
+  border-radius: 26px;
+  padding: 34px 32px 30px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: 0 30px 70px rgba(6, 58, 52, 0.3);
+  animation: exitoModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes exitoModalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.exito-titulo {
+  font-size: 20px;
+  font-weight: 800;
+  color: #063A34;
+  margin: 18px 0 0;
+}
+
+.exito-check {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: exitoCheckPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.exito-check svg { width: 34px; height: 34px; }
+@keyframes exitoCheckPop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}

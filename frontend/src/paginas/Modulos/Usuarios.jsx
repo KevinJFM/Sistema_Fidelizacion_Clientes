@@ -10,6 +10,7 @@ import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicacio
 import { formatTelefono, esTelefonoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
+import ModalExito from '../../componentes/UI/ModalExito';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
@@ -58,6 +59,7 @@ export default function Usuarios() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm]           = useState(emptyForm);
   const [saving, setSaving]       = useState(false);
+  const [exito, setExito]         = useState(null); // mensaje del check de éxito que se cierra solo
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPass, setShowPass]   = useState(false);
   const [confirmUser, setConfirmUser] = useState(null); // usuario pendiente de desactivar
@@ -217,14 +219,16 @@ export default function Usuarios() {
     setSaving(true);
     setError('');
     try {
+      let mensaje;
       if (editingId) {
         await updateUsuario(editingId, form);
-        toast.success('Usuario actualizado');
+        mensaje = 'Usuario actualizado';
       } else {
         await createUsuario(form);
-        toast.success('Usuario creado');
+        mensaje = 'Usuario creado';
       }
       setModalOpen(false);
+      setExito(mensaje);
       await cargarUsuarios();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al guardar');
@@ -542,6 +546,8 @@ export default function Usuarios() {
           </div>
         </div>
       )}
+
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito(null)} />}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicacio
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
+import ModalExito from '../../componentes/UI/ModalExito';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
@@ -51,6 +52,7 @@ export default function Clientes() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm]           = useState(emptyForm);
   const [saving, setSaving]       = useState(false);
+  const [exito, setExito]         = useState(null); // mensaje del check de éxito que se cierra solo
   const [fieldErrors, setFieldErrors] = useState({});
   const [departamentos, setDepartamentos] = useState([]);
   const [distritos, setDistritos]         = useState([]);
@@ -184,14 +186,16 @@ export default function Clientes() {
 
     setSaving(true);
     try {
+      let mensaje;
       if (editingId) {
         await updateCliente(editingId, form);
-        toast.success('Cliente actualizado');
+        mensaje = 'Cliente actualizado';
       } else {
         await createCliente(form);
-        toast.success('Cliente registrado');
+        mensaje = 'Cliente registrado';
       }
       setModalOpen(false);
+      setExito(mensaje);
       await cargar();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al guardar');
@@ -421,6 +425,8 @@ export default function Clientes() {
           </div>
         </div>
       )}
+
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito(null)} />}
     </div>
   );
 }
