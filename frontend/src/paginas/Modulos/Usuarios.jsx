@@ -364,14 +364,14 @@ export default function Usuarios() {
                     Nombre
                     {fieldErrors.nombre && <span className="req-tag">{fieldErrors.nombre}</span>}
                   </label>
-                  <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej. Kevin Javier" />
+                  <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej. María José" />
                 </div>
                 <div className={`form-field ${fieldErrors.apellido ? 'has-error' : ''}`}>
                   <label>
                     Apellido
                     {fieldErrors.apellido && <span className="req-tag">{fieldErrors.apellido}</span>}
                   </label>
-                  <input name="apellido" value={form.apellido} onChange={handleChange} placeholder="Ej. Flores Mendoza" />
+                  <input name="apellido" value={form.apellido} onChange={handleChange} placeholder="Ej. García López" />
                 </div>
               </div>
 

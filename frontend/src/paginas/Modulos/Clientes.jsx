@@ -338,14 +338,14 @@ export default function Clientes() {
                     Nombres
                     {fieldErrors.nombres && <span className="req-tag">{fieldErrors.nombres}</span>}
                   </label>
-                  <input name="nombres" value={form.nombres} onChange={handleChange} placeholder="Ej. Kevin Javier" />
+                  <input name="nombres" value={form.nombres} onChange={handleChange} placeholder="Ej. María José" />
                 </div>
                 <div className={`form-field ${fieldErrors.apellidos ? 'has-error' : ''}`}>
                   <label>
                     Apellidos
                     {fieldErrors.apellidos && <span className="req-tag">{fieldErrors.apellidos}</span>}
                   </label>
-                  <input name="apellidos" value={form.apellidos} onChange={handleChange} placeholder="Ej. Flores Mendoza" />
+                  <input name="apellidos" value={form.apellidos} onChange={handleChange} placeholder="Ej. García López" />
                 </div>
               </div>
 

@@ -62,17 +62,21 @@ export const buscarClientesPorNombre = async (req, res) => {
     if (!nombre || nombre.trim().length < 2) {
       return res.status(400).json({ message: 'Ingresa al menos 2 caracteres' });
     }
-    const t = `%${nombre.trim()}%`;
+    // Búsqueda por palabras sueltas: cada término debe aparecer en el nombre completo.
+    // Así "Kevin Flores" encuentra a "Kevin Javier Flores Mendoza" aunque haya nombres en medio.
+    const palabras = nombre.trim().split(/\s+/);
+    const condiciones = palabras.map(() => `CONCAT(c.nombres, ' ', c.apellidos) LIKE ?`).join(' AND ');
+    const parametros = palabras.map((p) => `%${p}%`);
     const [filas] = await pool.query(
       `SELECT c.id_cliente, c.id_tipo_documento, c.numero_documento,
               c.nombres, c.apellidos, c.telefono, c.puntos_acumulados,
               td.nombre AS tipo_documento
        FROM clientes c
        JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
-       WHERE c.nombres LIKE ? OR c.apellidos LIKE ? OR CONCAT(c.nombres,' ',c.apellidos) LIKE ?
+       WHERE ${condiciones}
        ORDER BY c.nombres, c.apellidos
        LIMIT 20`,
-      [t, t, t]
+      parametros
     );
     return res.status(200).json(filas);
   } catch (error) {
