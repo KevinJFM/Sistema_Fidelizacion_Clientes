@@ -201,11 +201,10 @@ export default function Clientes() {
   };
 
   const filtrados = clientes.filter((c) => {
-    const t = filtro.toLowerCase();
-    return (
-      c.numero_documento.toLowerCase().includes(t) ||
-      `${c.nombres} ${c.apellidos}`.toLowerCase().includes(t)
-    );
+    // Búsqueda por palabras sueltas: cada término debe aparecer en documento/nombre completo.
+    // Así "Kevin Flores" encuentra a "Kevin Javier Flores Mendoza" aunque haya nombres en medio.
+    const texto = `${c.numero_documento} ${c.nombres} ${c.apellidos}`.toLowerCase();
+    return filtro.toLowerCase().trim().split(/\s+/).every((palabra) => texto.includes(palabra));
   });
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
@@ -335,14 +334,14 @@ export default function Clientes() {
                     Nombres
                     {fieldErrors.nombres && <span className="req-tag">{fieldErrors.nombres}</span>}
                   </label>
-                  <input name="nombres" value={form.nombres} onChange={handleChange} />
+                  <input name="nombres" value={form.nombres} onChange={handleChange} placeholder="Ej. Kevin Javier" />
                 </div>
                 <div className={`form-field ${fieldErrors.apellidos ? 'has-error' : ''}`}>
                   <label>
                     Apellidos
                     {fieldErrors.apellidos && <span className="req-tag">{fieldErrors.apellidos}</span>}
                   </label>
-                  <input name="apellidos" value={form.apellidos} onChange={handleChange} />
+                  <input name="apellidos" value={form.apellidos} onChange={handleChange} placeholder="Ej. Flores Mendoza" />
                 </div>
               </div>
 

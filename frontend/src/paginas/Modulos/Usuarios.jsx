@@ -87,11 +87,10 @@ export default function Usuarios() {
   }, []);
 
   const filtrados = usuarios.filter((u) => {
-    const t = filtro.toLowerCase();
-    return (
-      `${u.nombre} ${u.apellido}`.toLowerCase().includes(t) ||
-      (u.email ?? '').toLowerCase().includes(t)
-    );
+    // Búsqueda por palabras sueltas: cada término debe aparecer en el nombre completo o el correo.
+    // Así "Kevin Flores" encuentra a "Kevin Javier Flores Mendoza" aunque haya nombres en medio.
+    const texto = `${u.nombre} ${u.apellido} ${u.email ?? ''}`.toLowerCase();
+    return filtro.toLowerCase().trim().split(/\s+/).every((palabra) => texto.includes(palabra));
   });
   // Datos de la página actual
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -361,14 +360,14 @@ export default function Usuarios() {
                     Nombre
                     {fieldErrors.nombre && <span className="req-tag">{fieldErrors.nombre}</span>}
                   </label>
-                  <input name="nombre" value={form.nombre} onChange={handleChange} />
+                  <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej. Kevin Javier" />
                 </div>
                 <div className={`form-field ${fieldErrors.apellido ? 'has-error' : ''}`}>
                   <label>
                     Apellido
                     {fieldErrors.apellido && <span className="req-tag">{fieldErrors.apellido}</span>}
                   </label>
-                  <input name="apellido" value={form.apellido} onChange={handleChange} />
+                  <input name="apellido" value={form.apellido} onChange={handleChange} placeholder="Ej. Flores Mendoza" />
                 </div>
               </div>
 

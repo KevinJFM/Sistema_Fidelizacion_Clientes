@@ -36,6 +36,14 @@ export default function Transacciones() {
     getRecompensas().then(setRecompensas).catch(() => {});
   }, []);
 
+  // Al terminar de guardar, el check de éxito se muestra un momento y el modal se cierra solo.
+  useEffect(() => {
+    if (modalOpen && !saving) {
+      const id = setTimeout(() => setModalOpen(false), 1400);
+      return () => clearTimeout(id);
+    }
+  }, [modalOpen, saving]);
+
   const handleBuscar = async () => {
     if (!busqueda.numero_documento.trim()) {
       toast.error('Ingresa un número de documento');
@@ -272,9 +280,6 @@ export default function Transacciones() {
                   </svg>
                 </div>
                 <h3 className="trans-modal-titulo">¡Transacción realizada!</h3>
-                <button type="button" className="btn-primary trans-modal-btn" onClick={cerrarModal}>
-                  Aceptar
-                </button>
               </>
             )}
           </div>

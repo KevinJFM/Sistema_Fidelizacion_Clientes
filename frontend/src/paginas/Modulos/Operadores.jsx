@@ -75,10 +75,11 @@ export default function Operadores() {
 
   useEffect(() => { cargar(); }, []);
 
-  const filtrados = operadores.filter((o) =>
-    o.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
-    (o.correo || '').toLowerCase().includes(filtro.toLowerCase())
-  );
+  const filtrados = operadores.filter((o) => {
+    // Búsqueda por palabras sueltas: cada término debe aparecer en el nombre o el correo.
+    const texto = `${o.nombre} ${o.correo || ''}`.toLowerCase();
+    return filtro.toLowerCase().trim().split(/\s+/).every((palabra) => texto.includes(palabra));
+  });
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
 
