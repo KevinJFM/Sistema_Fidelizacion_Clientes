@@ -40,9 +40,8 @@
 }
 
 .hero-logo-wrap {
-  width: 104px;
-  height: 104px;
-  border-radius: 28px;
+  padding: 2px; /* borde blanco delgado (2px) pegado al logo */
+  border-radius: 22px;
   background: #ffffff;
   display: flex;
   align-items: center;
@@ -51,6 +50,13 @@
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.35),
     0 0 0 4px rgba(255, 255, 255, 0.15);
+}
+
+/* Redondea las esquinas del logo (el SVG dibuja un cuadrado a tope, así que se recorta) */
+.hero-logo-img {
+  display: block;
+  border-radius: 20px;
+  overflow: hidden;
 }
 
 .hero-title {
@@ -316,7 +322,7 @@
   }
   .hero-title { font-size: 26px; }
   .hero-subtitle { font-size: 13px; margin-bottom: 16px; }
-  .hero-logo-wrap { width: 72px; height: 72px; margin-bottom: 16px; }
+  .hero-logo-wrap { margin-bottom: 16px; }
   .login-side { flex: 1; align-items: flex-start; padding-top: 28px; }
   /* El logo de arriba (banner) ya se ve en móvil, así que ocultamos el de la tarjeta para no duplicarlo */
 }

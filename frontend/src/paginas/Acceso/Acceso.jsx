@@ -86,7 +86,7 @@ export default function Login() {
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         >
           <div className="hero-logo-wrap">
-            <Logo size={72} color="#E5388A" />
+            <Logo size={84} color="#E5388A" className="hero-logo-img" />
           </div>
           <h1 className="hero-title">Punta Diamantes</h1>
           <p className="hero-subtitle">Sistema de Fidelización de Clientes</p>

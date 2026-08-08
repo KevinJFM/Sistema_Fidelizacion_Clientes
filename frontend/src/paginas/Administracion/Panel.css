@@ -46,15 +46,28 @@
 .sidebar-logo {
   width: 84px;
   height: 84px;
+  flex-shrink: 0; /* que el sidebar angosto (móvil) no lo aplaste dejándolo rectangular */
+  padding: 2px; /* borde blanco delgado (2px), igual que el login */
   border-radius: 22px;
   background: #fff;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.35),
     0 0 0 3px rgba(255,255,255,0.08);
+}
+
+/* Logo redondeado dentro de la caja (el SVG dibuja un cuadrado a tope, se recorta).
+   Usamos aspect-ratio en vez de height:100% para que llene SIEMPRE la caja cuadrada,
+   incluso en navegadores de móvil donde el % de alto del SVG no se resuelve bien. */
+.sidebar-logo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 20px;
+  overflow: hidden;
 }
 
 /* Navegación */
@@ -210,7 +223,9 @@
   }
   .nav-label,
   .sidebar-logout span { display: none; }
-  .sidebar-logo { width: 46px; height: 46px; border-radius: 13px; }
+  .sidebar-brand { padding: 4px 0 20px; }
+  .sidebar-logo { width: 44px; height: 44px; border-radius: 13px; }
+  .sidebar-logo-img { border-radius: 11px; }
   .sidebar-link,
   .sidebar-logout { justify-content: center; }
   .nav-active-dot { display: none; }
