@@ -45,17 +45,38 @@ const origenesPermitidos = (process.env.CLIENT_URL || "")
   .map((o) => o.trim())
   .filter(Boolean);
 
+// SOLO en desarrollo: acepta cualquier IPv4 de red local privada (la que el router
+// asigne por DHCP), para probar desde el celular sin amarrar una IP fija. En
+// producción esto es siempre false y solo valen los orígenes de CLIENT_URL.
+const esLanPrivadaEnDesarrollo = (origin) => {
+  if (process.env.NODE_ENV === "production") return false;
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      hostname === "localhost" ||
+      /^127\./.test(hostname) ||
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+};
+
 // CORS restringido a esos orígenes + permite enviar cookies
 app.use(
   cors({
     origin: (origin, callback) => {
       // Herramientas sin origin (Postman, curl): permitidas
       if (!origin) return callback(null, true);
+      if (origenesPermitidos.includes(origin)) return callback(null, true);
+      // Cualquier IP de LAN privada en desarrollo (probar desde el celular)
+      if (esLanPrivadaEnDesarrollo(origin)) return callback(null, true);
       // Sin CLIENT_URL se rechaza (no abrir CORS a todos)
       if (origenesPermitidos.length === 0) {
         return callback(new Error("CLIENT_URL no configurado en el entorno"));
       }
-      if (origenesPermitidos.includes(origin)) return callback(null, true);
       return callback(new Error("Origen no permitido por CORS"));
     },
     credentials: true,

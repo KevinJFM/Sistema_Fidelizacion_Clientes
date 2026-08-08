@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+// Sin VITE_API_URL definido (desarrollo), la API se resuelve contra el MISMO host
+// desde el que se abrió el portal. Así funciona con cualquier IP que la red (DHCP)
+// le asigne a la PC, sin amarrarlo a una IP fija: si entras por localhost va a
+// localhost, y si entras por 192.168.x.x desde el celular va a esa misma IP.
+// En producción, VITE_API_URL (.env.production) trae el dominio real y manda.
+const baseURL =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.protocol}//${window.location.hostname}:4000/api`;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+  baseURL,
   timeout: 15000,
 });
 
