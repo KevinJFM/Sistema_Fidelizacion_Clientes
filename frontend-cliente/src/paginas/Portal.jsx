@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import CampanaNotificaciones from '../componentes/CampanaNotificaciones';
 import MisPuntos from './MisPuntos';
 import Promociones from './Promociones';
 import Configuracion from './Configuracion';
+import { getPromociones } from '../servicios/servicioPortal';
+
+// Recuerda hasta qué promoción ya vio el cliente (para el puntito de "nueva")
+const CLAVE_PROMO_VISTO = 'promos_ultimo_visto';
 
 const PESTANAS = [
   { clave: 'inicio', etiqueta: 'Inicio' },
@@ -20,6 +24,41 @@ const Icono = ({ clave, activo }) => {
 
 export default function Portal() {
   const [pestana, setPestana] = useState('inicio');
+  const [promoNueva, setPromoNueva] = useState(false);
+  const promoMaxId = useRef(0);
+
+  // Revisa si hay una promoción con id mayor a la última que el cliente vio.
+  // Reusa el endpoint que ya existe (/portal/promociones); no requiere cambios en el backend.
+  const revisarPromos = useCallback(async () => {
+    try {
+      const promos = await getPromociones();
+      const lista = Array.isArray(promos) ? promos : [];
+      const maxId = lista.reduce((m, p) => Math.max(m, Number(p.id_escenario) || 0), 0);
+      promoMaxId.current = maxId;
+      const visto = Number(localStorage.getItem(CLAVE_PROMO_VISTO)) || 0;
+      setPromoNueva(maxId > visto);
+    } catch {
+      // Silencioso: el aviso nunca debe romper el portal si falla la red
+    }
+  }, []);
+
+  useEffect(() => { revisarPromos(); }, [revisarPromos]);
+
+  // Revisa de nuevo cuando la pestaña del navegador vuelve a estar visible
+  useEffect(() => {
+    const alVolver = () => { if (document.visibilityState === 'visible') revisarPromos(); };
+    document.addEventListener('visibilitychange', alVolver);
+    return () => document.removeEventListener('visibilitychange', alVolver);
+  }, [revisarPromos]);
+
+  // Al entrar a Promociones, marca las actuales como vistas (apaga el puntito)
+  const irA = (clave) => {
+    setPestana(clave);
+    if (clave === 'promos' && promoNueva) {
+      setPromoNueva(false);
+      if (promoMaxId.current > 0) localStorage.setItem(CLAVE_PROMO_VISTO, String(promoMaxId.current));
+    }
+  };
 
   return (
     <div className="pt-shell">
@@ -37,9 +76,22 @@ export default function Portal() {
       <nav className="pt-barra">
         {PESTANAS.map((item) => {
           const activo = pestana === item.clave;
+          const mostrarPunto = item.clave === 'promos' && promoNueva;
           return (
-            <button key={item.clave} className={`pt-barra-item ${activo ? 'activo' : ''}`} onClick={() => setPestana(item.clave)}>
-              <Icono clave={item.clave} activo={activo} />
+            <button key={item.clave} className={`pt-barra-item ${activo ? 'activo' : ''}`} onClick={() => irA(item.clave)}>
+              <span style={{ position: 'relative', display: 'inline-flex' }}>
+                <Icono clave={item.clave} activo={activo} />
+                {mostrarPunto && (
+                  <span
+                    aria-label="Promoción nueva"
+                    style={{
+                      position: 'absolute', top: -3, right: -6,
+                      width: 10, height: 10, borderRadius: '50%',
+                      background: '#E5388A', border: '1.5px solid var(--barra-fondo)',
+                    }}
+                  />
+                )}
+              </span>
               <span>{item.etiqueta}</span>
             </button>
           );
