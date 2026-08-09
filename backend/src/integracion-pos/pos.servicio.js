@@ -163,7 +163,8 @@ const marcarProcesado = async (idPedido, idTx, idCliente, resultado, detalle) =>
      VALUES (?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        id_transaccion = VALUES(id_transaccion), id_cliente = VALUES(id_cliente),
-       resultado = VALUES(resultado), detalle = VALUES(detalle)`,
+       resultado = VALUES(resultado), detalle = VALUES(detalle),
+       fecha_procesado = CURRENT_TIMESTAMP`, // refleja cuándo pasó a 'creada' (un 'sin_cliente' que se resolvió)
     [idPedido, idTx, idCliente, resultado, detalle]
   );
 };
@@ -192,7 +193,11 @@ export const sincronizarPagos = async () => {
     ORDER BY p.idPedido ASC
   `);
 
-  const [procesados] = await pool.query('SELECT id_pedido_pos FROM pos_pedido_procesado');
+  // Solo saltamos los que YA generaron transacción ('creada'). Los 'sin_cliente' se
+  // reintentan en cada corrida: si el cliente ya se registró, ahora sí reciben sus puntos.
+  const [procesados] = await pool.query(
+    "SELECT id_pedido_pos FROM pos_pedido_procesado WHERE resultado = 'creada'"
+  );
   const yaProcesado = new Set(procesados.map((r) => r.id_pedido_pos));
 
   let creadas = 0, sinCliente = 0;
@@ -228,12 +233,15 @@ const marcarClienteProcesado = async (idClientePos, idCliente, resultado, detall
     `INSERT INTO pos_cliente_procesado (id_cliente_pos, id_cliente, resultado, detalle)
      VALUES (?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
-       id_cliente = VALUES(id_cliente), resultado = VALUES(resultado), detalle = VALUES(detalle)`,
+       id_cliente = VALUES(id_cliente), resultado = VALUES(resultado), detalle = VALUES(detalle),
+       fecha_procesado = CURRENT_TIMESTAMP`, // refleja cuándo pasó a 'creado' (un 'sin_documento' que se resolvió)
     [idClientePos, idCliente, resultado, detalle]
   );
 };
 
-// Trae un lote de clientes del POS aún no procesados (avanza por cursor de idCliente): empareja si ya existe, crea con 0 puntos si trae DUI/Pasaporte, o lo salta si no tiene documento.
+// Trae clientes del POS: los NUEVOS (por cursor de idCliente) + los que antes quedaron
+// 'sin_documento' (reintento, por si ya les pusieron el DUI/Pasaporte). Empareja si ya
+// existe, crea con 0 puntos si trae documento, o lo deja 'sin_documento'.
 export const sincronizarClientes = async (limite = LOTE_CLIENTES) => {
   const pos = await obtenerPoolPos();
 
@@ -242,15 +250,30 @@ export const sincronizarClientes = async (limite = LOTE_CLIENTES) => {
     'SELECT COALESCE(MAX(id_cliente_pos), 0) AS desde FROM pos_cliente_procesado'
   );
 
+  // Reintentos: clientes que antes quedaron SIN documento. Se revisan de nuevo aunque su
+  // id sea menor al cursor, por si ya les agregaron el DUI/Pasaporte en el POS.
+  const [pendientes] = await pool.query(
+    "SELECT id_cliente_pos FROM pos_cliente_procesado WHERE resultado = 'sin_documento'"
+  );
+  const idsReintento = pendientes.map((r) => r.id_cliente_pos);
+
+  // Condición: los NUEVOS (id > cursor) O los pendientes de reintento.
+  const condiciones = ['c.idCliente > ?'];
+  const args = [desde];
+  if (idsReintento.length) {
+    condiciones.push(`c.idCliente IN (${idsReintento.map(() => '?').join(',')})`);
+    args.push(...idsReintento);
+  }
+
   const [clientes] = await pos.query(
     `SELECT c.idCliente, c.nombre, c.email, c.telefono, c.NIT, c.idDocumento,
             d.tipoDocumento AS tipoDocumentoPos
        FROM cliente c
        LEFT JOIN documento d ON c.idDocumento = d.idDocumento
-      WHERE c.idCliente > ?
+      WHERE ${condiciones.join(' OR ')}
       ORDER BY c.idCliente ASC
       LIMIT ${Number(limite)}`,
-    [desde]
+    args
   );
 
   let creados = 0, emparejados = 0, sinDocumento = 0;

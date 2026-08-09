@@ -134,9 +134,6 @@ export const obtenerEstado = async (req, res) => {
     const [porResultado] = await pool.query(
       'SELECT resultado, COUNT(*) AS total FROM pos_pedido_procesado GROUP BY resultado'
     );
-    const [ultima] = await pool.query(
-      'SELECT MAX(fecha_procesado) AS ultima FROM pos_pedido_procesado'
-    );
     const conteo = { creada: 0, sin_cliente: 0 };
     for (const r of porResultado) conteo[r.resultado] = r.total;
 
@@ -147,13 +144,25 @@ export const obtenerEstado = async (req, res) => {
     const conteoCli = { creado: 0, emparejado: 0, sin_documento: 0 };
     for (const r of porResultadoCli) conteoCli[r.resultado] = r.total;
 
+    // "Última sincronización" = última vez que la sincronización HIZO algo real:
+    // creó una transacción (pedido 'creada') o trajo un cliente nuevo ('creado').
+    // NO avanza por pagos "sin cliente" ni por corridas donde no entró nada.
+    const [[{ ultimaTx }]] = await pool.query(
+      "SELECT MAX(fecha_procesado) AS ultimaTx FROM pos_pedido_procesado WHERE resultado = 'creada'"
+    );
+    const [[{ ultimaCli }]] = await pool.query(
+      "SELECT MAX(fecha_procesado) AS ultimaCli FROM pos_cliente_procesado WHERE resultado = 'creado'"
+    );
+    const fechasActividad = [ultimaTx, ultimaCli].filter(Boolean).map((f) => new Date(f).getTime());
+    const ultimaSincronizacion = fechasActividad.length ? new Date(Math.max(...fechasActividad)) : null;
+
     return res.status(200).json({
       modo: cfg.modo,
       transacciones_creadas: conteo.creada || 0,
       sin_cliente: conteo.sin_cliente || 0,
       clientes_creados: conteoCli.creado || 0,
       clientes_emparejados: conteoCli.emparejado || 0,
-      ultima_sincronizacion: ultima[0].ultima,
+      ultima_sincronizacion: ultimaSincronizacion,
     });
   } catch {
     return res.status(500).json({ message: 'Error al obtener el estado' });

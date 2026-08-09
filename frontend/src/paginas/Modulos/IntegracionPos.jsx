@@ -155,6 +155,16 @@ export default function IntegracionPos() {
     return () => clearTimeout(t);
   }, [esperaSync]);
 
+  // Auto-refresco del panel de Estado en modo automático: refleja (cada 30 s, sin
+  // recargar) los clientes y transacciones que va trayendo la sincronización.
+  useEffect(() => {
+    if (modo !== 'automatico') return;
+    const t = setInterval(() => {
+      getPosEstado().then(setEstado).catch(() => {});
+    }, 30000);
+    return () => clearInterval(t);
+  }, [modo]);
+
   const handle = (campo, valor) => setForm((p) => ({ ...p, [campo]: valor }));
 
   // Construye el payload del perfil que estás viendo; solo manda la contraseña si escribiste una
