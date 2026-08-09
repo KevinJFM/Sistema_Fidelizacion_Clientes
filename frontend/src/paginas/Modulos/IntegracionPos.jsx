@@ -20,12 +20,17 @@ const MODAL_TEXTOS = {
   exito: {
     icono: 'exito',
     titulo: 'Conexión exitosa',
-    mensaje: 'La conexión funcionó y este perfil quedó como activo. La sincronización usará esta base de datos.',
+    mensaje: 'La conexión funcionó y este perfil quedó activo. Los campos se bloquearon para evitar cambios accidentales; toca "Desconectar" para editarlos.',
   },
   error: {
     icono: 'error',
     titulo: 'No se pudo conectar',
     mensaje: 'Revisa el host, el puerto, el usuario y la contraseña, e inténtalo de nuevo.',
+  },
+  desconectado: {
+    icono: 'info',
+    titulo: 'Conexión finalizada',
+    mensaje: 'Te desconectaste. Los campos quedaron habilitados para editar los datos de conexión.',
   },
   perfilActivado: {
     icono: 'exito',
@@ -203,6 +208,12 @@ export default function IntegracionPos() {
     }
   };
 
+  // Desconectar: habilita los campos de nuevo para editarlos (no cambia el perfil activo)
+  const handleDesconectar = () => {
+    setConectado(false);
+    setModal({ tipo: 'desconectado' });
+  };
+
   // Activar sin editar: deja el perfil visible como el que usa la sincronización
   const handleActivar = async () => {
     try {
@@ -304,7 +315,7 @@ export default function IntegracionPos() {
             <p>Datos de acceso a MySQL (los mismos que usas en MySQL Workbench).</p>
           </div>
           <span className={`pos-chip ${conectado ? 'on' : 'off'}`}>
-            ● {conectado ? 'Conecta' : 'Sin conexión'}
+            ● {conectado ? 'Conectado' : 'Desconectado'}
           </span>
         </div>
 
@@ -332,19 +343,19 @@ export default function IntegracionPos() {
           <div className="config-item">
             <label>Host / IP</label>
             <div className="config-input">
-              <input type="text" value={form.host} onChange={(e) => handle('host', e.target.value)} placeholder="localhost" />
+              <input type="text" value={form.host} disabled={conectado} onChange={(e) => handle('host', e.target.value)} placeholder="localhost" />
             </div>
           </div>
           <div className="config-item">
             <label>Puerto</label>
             <div className="config-input">
-              <input type="number" value={form.puerto} onChange={(e) => handle('puerto', e.target.value)} placeholder="3306" />
+              <input type="number" value={form.puerto} disabled={conectado} onChange={(e) => handle('puerto', e.target.value)} placeholder="3306" />
             </div>
           </div>
           <div className="config-item">
             <label>Usuario</label>
             <div className="config-input">
-              <input type="text" value={form.usuario} onChange={(e) => handle('usuario', e.target.value)} placeholder="root" />
+              <input type="text" value={form.usuario} disabled={conectado} onChange={(e) => handle('usuario', e.target.value)} placeholder="root" />
             </div>
           </div>
           <div className="config-item">
@@ -353,6 +364,7 @@ export default function IntegracionPos() {
               <input
                 type="password"
                 value={form.password}
+                disabled={conectado}
                 onChange={(e) => handle('password', e.target.value)}
                 placeholder={tienePassword ? '•••••• (guardada — escribe para cambiarla)' : 'Contraseña de MySQL'}
               />
@@ -361,21 +373,21 @@ export default function IntegracionPos() {
           <div className="config-item">
             <label>Base de datos</label>
             <div className="config-input">
-              <input type="text" value={form.base_datos} onChange={(e) => handle('base_datos', e.target.value)} placeholder="eorderback" />
+              <input type="text" value={form.base_datos} disabled={conectado} onChange={(e) => handle('base_datos', e.target.value)} placeholder="eorderback" />
             </div>
           </div>
         </div>
 
         <div className="config-actions" style={{ gap: 10 }}>
-          <button type="button" className="btn-primary" onClick={handleConectar}>
-            Probar y conectar
+          <button type="button" className="btn-primary" onClick={conectado ? handleDesconectar : handleConectar}>
+            {conectado ? 'Desconectar' : 'Conectar'}
           </button>
           {perfilSel !== perfilActivo && (
             <button type="button" className="btn-pos" onClick={handleActivar}>
               Activar este perfil
             </button>
           )}
-          <button type="button" className="btn-pos" onClick={handleGuardar} disabled={guardando}>
+          <button type="button" className="btn-pos" onClick={handleGuardar} disabled={guardando || conectado}>
             {guardando ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
