@@ -67,6 +67,69 @@
 [data-theme="dark"] .pos-chip.on  { background: rgba(22, 163, 74, 0.2);  color: #4ade80; }
 [data-theme="dark"] .pos-chip.off { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
 
+/* Selector de perfil Local / Web */
+.pos-perfiles {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 8px;
+  flex-wrap: wrap;
+}
+.pos-perfil-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 2px solid #0D1BB8;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0D1BB8;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pos-perfil-btn:hover { background: #EEF0FC; }
+.pos-perfil-btn.sel { background: #0D1BB8; color: #ffffff; }
+.pos-perfil-activo {
+  font-size: 11px;
+  font-weight: 800;
+  color: #16a34a;
+}
+.pos-perfil-btn.sel .pos-perfil-activo { color: #4ade80; }
+[data-theme="dark"] .pos-perfil-btn { background: #ffffff; color: #111827; }
+[data-theme="dark"] .pos-perfil-btn:hover { background: #e8ebff; }
+[data-theme="dark"] .pos-perfil-btn.sel { background: #0D1BB8; color: #ffffff; }
+
+/* Texto de ayuda del selector de perfil.
+   OJO: las tarjetas del panel son BLANCAS en tema claro y oscuro, así que el texto
+   debe quedar OSCURO en ambos (nada de aclararlo en dark: se perdería sobre el blanco). */
+.pos-page .pos-perfil-ayuda,
+[data-theme="dark"] .pos-page .pos-perfil-ayuda {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827 !important;   /* casi negro: se lee sólido sobre la tarjeta blanca */
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+.pos-page .pos-perfil-ayuda strong,
+[data-theme="dark"] .pos-page .pos-perfil-ayuda strong {
+  color: #0D1BB8 !important;   /* palabras clave en azul de marca */
+  font-weight: 800;
+}
+
+/* Descripción de la tarjeta "Modo de las transacciones": mismo criterio.
+   Texto oscuro en ambos temas (tarjeta blanca) y palabras clave en azul de marca. */
+.pos-page .pos-modo-desc,
+[data-theme="dark"] .pos-page .pos-modo-desc {
+  color: #111827 !important;
+}
+.pos-page .pos-modo-desc strong,
+[data-theme="dark"] .pos-page .pos-modo-desc strong {
+  color: #0D1BB8 !important;   /* Automático / Manual / perfil activo en azul de marca */
+  font-weight: 800;
+}
+
 /* Modal de conexión (Conectando… / Conexión exitosa / Error / Desconexión) */
 .pos-modal-fondo {
   position: fixed;

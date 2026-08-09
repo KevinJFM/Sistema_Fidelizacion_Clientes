@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  obtenerConfig, guardarConfig, cambiarModo, probarConexion, sincronizarAhora, obtenerEstado,
+  obtenerConfig, listarPerfilesPos, cambiarPerfil, guardarConfig, cambiarModo, probarConexion, sincronizarAhora, obtenerEstado,
 } from './pos.controlador.js';
 import { verificarToken } from '../middlewares/autenticacion.middleware.js';
 import { autorizarRoles } from '../middlewares/rol.middleware.js';
@@ -11,6 +11,8 @@ const router = Router();
 router.use(verificarToken, autorizarRoles('admin'));
 
 router.get('/config', obtenerConfig);
+router.get('/perfiles', listarPerfilesPos);
+router.put('/perfil', cambiarPerfil);
 router.put('/config', guardarConfig);
 router.put('/modo', cambiarModo);
 router.post('/probar', probarConexion);

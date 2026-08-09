@@ -45,20 +45,52 @@ const descifrarPassword = (texto) => {
   return Buffer.concat([decipher.update(cifrado), decipher.final()]).toString('utf8');
 };
 
-// Lee la única fila de configuración del POS (crea el objeto por defecto si no existe)
-export const obtenerConfigPos = async () => {
-  // Columnas servidor/contrasena (host/password son reservadas en MySQL); con alias el resto usa .host/.password.
+// Perfiles de conexión: 'local' (POS en esta máquina) y 'web' (POS en el hosting/remoto).
+// La sincronización usa siempre el perfil ACTIVO; los dos guardan credenciales por separado.
+export const PERFILES_VALIDOS = ['local', 'web'];
+
+// Lee un perfil del POS. Sin argumento devuelve el ACTIVO (el que usa la sincronización);
+// con `perfil` devuelve ese en concreto. Columnas servidor/contrasena tienen alias host/password.
+export const obtenerConfigPos = async (perfil = null) => {
+  const filtro = perfil ? 'WHERE perfil = ?' : 'WHERE activo = 1';
+  const args = perfil ? [perfil] : [];
   const [filas] = await pool.query(
-    `SELECT id, servidor AS host, puerto, usuario, contrasena AS password, base_datos, modo
-       FROM pos_configuracion ORDER BY id LIMIT 1`
+    `SELECT id, perfil, servidor AS host, puerto, usuario, contrasena AS password, base_datos, modo, activo
+       FROM pos_configuracion ${filtro} ORDER BY id LIMIT 1`,
+    args
   );
   if (filas.length) return filas[0];
-  return { host: 'localhost', puerto: 3306, usuario: 'root', password: '', base_datos: 'eorderback', modo: 'manual' };
+  // Respaldo: si aún no hay un perfil marcado como activo, toma el de menor id
+  if (!perfil) {
+    const [f2] = await pool.query(
+      `SELECT id, perfil, servidor AS host, puerto, usuario, contrasena AS password, base_datos, modo, activo
+         FROM pos_configuracion ORDER BY id LIMIT 1`
+    );
+    if (f2.length) return f2[0];
+  }
+  return { perfil: perfil || 'local', host: 'localhost', puerto: 3306, usuario: 'root', password: '', base_datos: 'eorderback', modo: 'manual', activo: 1 };
 };
 
-// Guarda (o crea) la configuración del POS
-export const guardarConfigPos = async ({ host, puerto, usuario, password, base_datos, modo, idUsuario = null }) => {
-  const actual = await obtenerConfigPos();
+// Lista los dos perfiles (sin la contraseña) para pintar el selector Local/Web
+export const listarPerfiles = async () => {
+  const [filas] = await pool.query(
+    `SELECT perfil, servidor AS host, puerto, usuario, base_datos, modo, activo,
+            (contrasena IS NOT NULL AND contrasena <> '') AS tiene_password
+       FROM pos_configuracion`
+  );
+  const porPerfil = new Map(filas.map((f) => [f.perfil, f]));
+  // Devolver SIEMPRE los dos perfiles, aunque alguno no exista todavía en la tabla
+  return PERFILES_VALIDOS.map((perfil) => {
+    const f = porPerfil.get(perfil);
+    if (f) return { ...f, activo: !!f.activo, tiene_password: !!f.tiene_password };
+    return { perfil, host: 'localhost', puerto: 3306, usuario: 'root', base_datos: 'eorderback', modo: 'manual', activo: false, tiene_password: false };
+  });
+};
+
+// Guarda (o crea) un perfil del POS. Sin `perfil`, actúa sobre el ACTIVO.
+export const guardarConfigPos = async ({ host, puerto, usuario, password, base_datos, modo, perfil, idUsuario = null }) => {
+  const perfilDestino = PERFILES_VALIDOS.includes(perfil) ? perfil : (await obtenerConfigPos()).perfil;
+  const actual = await obtenerConfigPos(perfilDestino);
   const nuevo = {
     host: host ?? actual.host,
     puerto: Number(puerto ?? actual.puerto),
@@ -71,26 +103,44 @@ export const guardarConfigPos = async ({ host, puerto, usuario, password, base_d
     modo: modo ?? actual.modo,
   };
 
-  const [filas] = await pool.query('SELECT id FROM pos_configuracion ORDER BY id LIMIT 1');
+  const [filas] = await pool.query('SELECT id FROM pos_configuracion WHERE perfil = ? LIMIT 1', [perfilDestino]);
   if (filas.length) {
     await pool.query(
       'UPDATE pos_configuracion SET servidor=?, puerto=?, usuario=?, contrasena=?, base_datos=?, modo=?, configurado_por=? WHERE id=?',
       [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, idUsuario, filas[0].id]
     );
   } else {
+    // Primera vez que se guarda este perfil: si aún no hay ninguno activo, este queda activo.
+    const [hayActivo] = await pool.query('SELECT id FROM pos_configuracion WHERE activo = 1 LIMIT 1');
     await pool.query(
-      'INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, idUsuario]
+      'INSERT INTO pos_configuracion (perfil, servidor, puerto, usuario, contrasena, base_datos, modo, activo, configurado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [perfilDestino, nuevo.host, nuevo.puerto, nuevo.usuario, nuevo.password, nuevo.base_datos, nuevo.modo, hayActivo.length ? 0 : 1, idUsuario]
     );
   }
   poolPos = null; // fuerza reconstruir el pool con los datos nuevos
-  return nuevo;
+  return { ...nuevo, perfil: perfilDestino };
+};
+
+// Marca un perfil como activo (el que usará la sincronización). Devuelve la config activa.
+export const activarPerfil = async (perfil) => {
+  if (!PERFILES_VALIDOS.includes(perfil)) throw new Error('Perfil inválido');
+  // Si el perfil aún no existe en la tabla, créalo con valores por defecto (inactivo por ahora)
+  const [existe] = await pool.query('SELECT id FROM pos_configuracion WHERE perfil = ? LIMIT 1', [perfil]);
+  if (!existe.length) {
+    await pool.query(
+      "INSERT INTO pos_configuracion (perfil, servidor, puerto, usuario, contrasena, base_datos, modo, activo) VALUES (?, 'localhost', 3306, 'root', '', 'eorderback', 'manual', 0)",
+      [perfil]
+    );
+  }
+  await pool.query('UPDATE pos_configuracion SET activo = IF(perfil = ?, 1, 0)', [perfil]);
+  poolPos = null; // fuerza reconstruir el pool con el perfil nuevo
+  return obtenerConfigPos();
 };
 
 // Devuelve un pool hacia el POS, reconstruyéndolo si cambió la configuración
 export const obtenerPoolPos = async () => {
   const cfg = await obtenerConfigPos();
-  const firma = `${cfg.host}:${cfg.puerto}:${cfg.usuario}:${cfg.password}:${cfg.base_datos}`;
+  const firma = `${cfg.perfil}:${cfg.host}:${cfg.puerto}:${cfg.usuario}:${cfg.password}:${cfg.base_datos}`;
   if (!poolPos || firma !== firmaActual) {
     if (poolPos) { try { await poolPos.end(); } catch { /* ignorar */ } }
     poolPos = mysql.createPool({

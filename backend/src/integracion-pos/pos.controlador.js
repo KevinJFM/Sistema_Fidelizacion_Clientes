@@ -1,13 +1,16 @@
 // Endpoints del módulo de Integración POS (solo admin).
 import pool from '../configuracion/bd.js';
-import { obtenerConfigPos, guardarConfigPos, probarConexionPos } from './conexionPos.js';
+import {
+  obtenerConfigPos, guardarConfigPos, probarConexionPos, listarPerfiles, activarPerfil, PERFILES_VALIDOS,
+} from './conexionPos.js';
 import { sincronizarTodo, aplicarModoPos } from './pos.servicio.js';
 
-// GET /api/pos/config  -> configuración actual SIN la contraseña
+// GET /api/pos/config  -> configuración del perfil ACTIVO, SIN la contraseña
 export const obtenerConfig = async (req, res) => {
   try {
     const cfg = await obtenerConfigPos();
     return res.status(200).json({
+      perfil: cfg.perfil,
       host: cfg.host,
       puerto: cfg.puerto,
       usuario: cfg.usuario,
@@ -20,18 +23,47 @@ export const obtenerConfig = async (req, res) => {
   }
 };
 
-// PUT /api/pos/config  -> guarda los datos de conexión (no cambia el modo)
+// GET /api/pos/perfiles  -> los dos perfiles (Local/Web) sin contraseña + cuál está activo
+export const listarPerfilesPos = async (req, res) => {
+  try {
+    const perfiles = await listarPerfiles();
+    const activo = perfiles.find((p) => p.activo)?.perfil || 'local';
+    return res.status(200).json({ perfiles, activo });
+  } catch {
+    return res.status(500).json({ message: 'Error al listar los perfiles del POS' });
+  }
+};
+
+// PUT /api/pos/perfil  -> cambia el perfil activo (Local <-> Web)
+export const cambiarPerfil = async (req, res) => {
+  try {
+    const { perfil } = req.body;
+    if (!PERFILES_VALIDOS.includes(perfil)) {
+      return res.status(400).json({ message: 'Perfil inválido (debe ser "local" o "web")' });
+    }
+    const cfg = await activarPerfil(perfil);
+    await aplicarModoPos(); // el poller sigue el modo del perfil recién activado
+    return res.status(200).json({ message: `Perfil activo: ${perfil}`, perfil: cfg.perfil, modo: cfg.modo });
+  } catch {
+    return res.status(500).json({ message: 'Error al cambiar el perfil del POS' });
+  }
+};
+
+// PUT /api/pos/config  -> guarda los datos de conexión de un perfil (no cambia el modo)
 export const guardarConfig = async (req, res) => {
   try {
-    const { host, puerto, usuario, password, base_datos } = req.body;
+    const { host, puerto, usuario, password, base_datos, perfil } = req.body;
+    if (perfil !== undefined && !PERFILES_VALIDOS.includes(perfil)) {
+      return res.status(400).json({ message: 'Perfil inválido (debe ser "local" o "web")' });
+    }
     if (puerto !== undefined) {
       const p = Number(puerto);
       if (!Number.isInteger(p) || p < 1 || p > 65535) {
         return res.status(400).json({ message: 'Puerto inválido (debe estar entre 1 y 65535)' });
       }
     }
-    const guardado = await guardarConfigPos({ host, puerto, usuario, password, base_datos, idUsuario: req.usuario?.id_usuario ?? null });
-    return res.status(200).json({ message: 'Configuración guardada', usuario: guardado.usuario });
+    const guardado = await guardarConfigPos({ host, puerto, usuario, password, base_datos, perfil, idUsuario: req.usuario?.id_usuario ?? null });
+    return res.status(200).json({ message: 'Configuración guardada', perfil: guardado.perfil, usuario: guardado.usuario });
   } catch {
     return res.status(500).json({ message: 'Error al guardar la configuración del POS' });
   }
@@ -52,10 +84,11 @@ export const cambiarModo = async (req, res) => {
   }
 };
 
-// POST /api/pos/probar  -> prueba la conexión (si no mandan contraseña, usa la guardada)
+// POST /api/pos/probar  -> prueba la conexión (si no mandan contraseña, usa la guardada del perfil)
 export const probarConexion = async (req, res) => {
   try {
-    const cfg = await obtenerConfigPos();
+    const perfil = PERFILES_VALIDOS.includes(req.body.perfil) ? req.body.perfil : null;
+    const cfg = await obtenerConfigPos(perfil);
     const datos = {
       host: req.body.host ?? cfg.host,
       puerto: req.body.puerto ?? cfg.puerto,

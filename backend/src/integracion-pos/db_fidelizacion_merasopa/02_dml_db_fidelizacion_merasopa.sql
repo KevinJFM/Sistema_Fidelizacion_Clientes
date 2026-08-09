@@ -194,6 +194,8 @@ VALUES ('Admin', 'Empresa', 'admin@empresa.com', '$2a$10$ts0FfQJEVaVhWns0GtKMS.5
         (SELECT id_rol    FROM roles   WHERE rol    = 'admin'   LIMIT 1),
         (SELECT id_estado FROM estados WHERE estado = 'activo' LIMIT 1));
 
--- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
-INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por)
-VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual', NULL);
+-- Dos perfiles de conexión (se editan desde la pantalla de Integración POS):
+--   'local' = POS en esta máquina (arranca ACTIVO)   ·   'web' = POS en el hosting/remoto
+INSERT INTO pos_configuracion (perfil, servidor, puerto, usuario, contrasena, base_datos, modo, activo, configurado_por) VALUES
+  ('local', 'localhost', 3306, 'root', '', 'eorderback', 'manual', 1, NULL),
+  ('web',   'localhost', 3306, 'root', '', 'eorderback', 'manual', 0, NULL);

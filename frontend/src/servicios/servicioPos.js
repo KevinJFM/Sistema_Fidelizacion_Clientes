@@ -1,8 +1,20 @@
 import api from '../api/api';
 
-// Configuración de conexión (sin la contraseña)
+// Configuración del perfil activo (sin la contraseña)
 export const getPosConfig = async () => {
   const { data } = await api.get('/pos/config');
+  return data;
+};
+
+// Lista los perfiles Local/Web (sin contraseña) y cuál está activo
+export const getPosPerfiles = async () => {
+  const { data } = await api.get('/pos/perfiles');
+  return data;
+};
+
+// Cambia el perfil activo: 'local' | 'web'
+export const setPosPerfil = async (perfil) => {
+  const { data } = await api.put('/pos/perfil', { perfil });
   return data;
 };
 

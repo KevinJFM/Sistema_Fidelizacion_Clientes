@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
-  getPosConfig, savePosConfig, setPosModo, probarPos, sincronizarPos, getPosEstado,
+  getPosPerfiles, setPosPerfil, savePosConfig, setPosModo, probarPos, sincronizarPos, getPosEstado,
 } from '../../servicios/servicioPos';
 import { SkeletonConfig } from '../../componentes/Skeleton/Skeleton';
 import '../Administracion/PaginasAdmin.css';
@@ -20,17 +20,17 @@ const MODAL_TEXTOS = {
   exito: {
     icono: 'exito',
     titulo: 'Conexión exitosa',
-    mensaje: 'El sistema quedó conectado a la base de datos del POS. Los datos de conexión se bloquearon para evitar cambios accidentales.',
+    mensaje: 'La conexión funcionó y este perfil quedó como activo. La sincronización usará esta base de datos.',
   },
   error: {
     icono: 'error',
     titulo: 'No se pudo conectar',
     mensaje: 'Revisa el host, el puerto, el usuario y la contraseña, e inténtalo de nuevo.',
   },
-  desconectado: {
-    icono: 'info',
-    titulo: 'Conexión finalizada',
-    mensaje: 'Te desconectaste del POS. Los campos quedaron habilitados para editar los datos de conexión.',
+  perfilActivado: {
+    icono: 'exito',
+    titulo: 'Perfil activado',
+    mensaje: 'Este perfil quedó como activo. La sincronización usará su base de datos.',
   },
   guardadoExito: {
     icono: 'exito',
@@ -97,26 +97,36 @@ const COOLDOWN_KEY = 'posSyncCooldownHasta';    // guarda el fin del cooldown (s
 export default function IntegracionPos() {
   const [form, setForm] = useState(FORM_VACIO);
   const [tienePassword, setTienePassword] = useState(false);
-  const [modo, setModo] = useState('manual');
+  const [modo, setModo] = useState('manual');           // modo del perfil ACTIVO (auto/manual)
   const [estado, setEstado] = useState(null);
-  const [conectado, setConectado] = useState(false);
-  const [cfgGuardada, setCfgGuardada] = useState(null); // última config guardada (para detectar cambios)
+  const [conectado, setConectado] = useState(false);    // ¿conecta el perfil que estás viendo?
+  const [perfiles, setPerfiles] = useState({});         // { local: {...}, web: {...} } sin contraseña
+  const [perfilSel, setPerfilSel] = useState('local');  // perfil que estás viendo/editando
+  const [perfilActivo, setPerfilActivo] = useState('local'); // perfil que usa la sincronización
 
   const [guardando, setGuardando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [cargandoPagina, setCargandoPagina] = useState(true); // primera carga: mostrar skeleton
   const [esperaSync, setEsperaSync] = useState(0); // segundos de bloqueo tras sincronizar (anti-spam)
-  const [modal, setModal] = useState(null); // { tipo: 'conectando'|'exito'|'error'|'desconectado', detalle? }
+  const [modal, setModal] = useState(null); // { tipo, detalle? }
+
+  // Vuelca la config de un perfil en el formulario (sin la contraseña)
+  const volcarPerfilEnForm = (cfg) => {
+    setForm({ host: cfg.host, puerto: cfg.puerto, usuario: cfg.usuario, password: '', base_datos: cfg.base_datos });
+    setTienePassword(!!cfg.tiene_password);
+  };
 
   const cargar = async () => {
     try {
-      const cfg = await getPosConfig();
-      setForm({ host: cfg.host, puerto: cfg.puerto, usuario: cfg.usuario, password: '', base_datos: cfg.base_datos });
-      setCfgGuardada({ host: cfg.host, puerto: Number(cfg.puerto), usuario: cfg.usuario, base_datos: cfg.base_datos });
-      setTienePassword(cfg.tiene_password);
-      setModo(cfg.modo);
-      // Comprobación silenciosa: si la conexión guardada funciona, arranca como "Conectado"
-      probarPos({}).then((r) => setConectado(!!r.ok)).catch(() => {});
+      const { perfiles: lista, activo } = await getPosPerfiles();
+      const mapa = Object.fromEntries(lista.map((p) => [p.perfil, p]));
+      setPerfiles(mapa);
+      setPerfilActivo(activo);
+      setPerfilSel(activo);
+      volcarPerfilEnForm(mapa[activo] || FORM_VACIO);
+      setModo(mapa[activo]?.modo || 'manual');
+      // Comprobación silenciosa: ¿el perfil activo conecta?
+      probarPos({ perfil: activo }).then((r) => setConectado(!!r.ok)).catch(() => {});
     } catch {
       toast.error('No se pudo cargar la configuración del POS');
     }
@@ -142,46 +152,76 @@ export default function IntegracionPos() {
 
   const handle = (campo, valor) => setForm((p) => ({ ...p, [campo]: valor }));
 
-  // Construye el payload; solo manda la contraseña si el usuario escribió una
+  // Construye el payload del perfil que estás viendo; solo manda la contraseña si escribiste una
   const payload = () => {
-    const p = { host: form.host, puerto: Number(form.puerto), usuario: form.usuario, base_datos: form.base_datos };
+    const p = { perfil: perfilSel, host: form.host, puerto: Number(form.puerto), usuario: form.usuario, base_datos: form.base_datos };
     if (form.password) p.password = form.password;
     return p;
   };
 
-  // Conectar: prueba la conexión y, si funciona, guarda los datos y bloquea los campos
+  // Guarda en memoria (cache local) los datos del perfil recién editado
+  const refrescarCachePerfil = () => {
+    setPerfiles((prev) => ({
+      ...prev,
+      [perfilSel]: {
+        ...prev[perfilSel],
+        perfil: perfilSel,
+        host: form.host, puerto: Number(form.puerto), usuario: form.usuario, base_datos: form.base_datos,
+        tiene_password: (prev[perfilSel]?.tiene_password) || !!form.password,
+      },
+    }));
+    if (form.password) setTienePassword(true);
+  };
+
+  // Cambiar de pestaña (Local/Web): carga ese perfil en el formulario y prueba si conecta
+  const seleccionarPerfil = (p) => {
+    if (p === perfilSel) return;
+    setPerfilSel(p);
+    volcarPerfilEnForm(perfiles[p] || FORM_VACIO);
+    setConectado(false);
+    probarPos({ perfil: p }).then((r) => setConectado(!!r.ok)).catch(() => setConectado(false));
+  };
+
+  // Probar y activar: prueba el perfil visible; si funciona, lo guarda y lo deja como activo
   const handleConectar = async () => {
     setModal({ tipo: 'conectando' });
     try {
       const r = await probarPos(payload());
-      if (r.ok) {
-        try { await savePosConfig(payload()); } catch { /* la conexión igual funcionó */ }
-        setCfgGuardada({ host: form.host, puerto: Number(form.puerto), usuario: form.usuario, base_datos: form.base_datos });
-        setForm((p) => ({ ...p, password: '' }));
-        setTienePassword(true);
-        setConectado(true);
-        setModal({ tipo: 'exito' });
-      } else {
-        setModal({ tipo: 'error', detalle: r.mensaje });
-      }
+      if (!r.ok) { setModal({ tipo: 'error', detalle: r.mensaje }); return; }
+      try { await savePosConfig(payload()); } catch { /* la conexión igual funcionó */ }
+      refrescarCachePerfil();
+      try {
+        const act = await setPosPerfil(perfilSel);
+        setPerfilActivo(perfilSel);
+        if (act?.modo) setModo(act.modo);
+      } catch { /* la conexión funcionó; el activar se puede reintentar */ }
+      setForm((p) => ({ ...p, password: '' }));
+      setConectado(true);
+      setModal({ tipo: 'exito' });
     } catch {
       setModal({ tipo: 'error' });
     }
   };
 
-  // Desconectar: habilita los campos de nuevo
-  const handleDesconectar = () => {
-    setConectado(false);
-    setModal({ tipo: 'desconectado' });
+  // Activar sin editar: deja el perfil visible como el que usa la sincronización
+  const handleActivar = async () => {
+    try {
+      const act = await setPosPerfil(perfilSel);
+      setPerfilActivo(perfilSel);
+      if (act?.modo) setModo(act.modo);
+      setModal({ tipo: 'perfilActivado' });
+    } catch {
+      setModal({ tipo: 'errorGuardar' });
+    }
   };
 
+  // Guardar el perfil visible SIN activarlo
   const handleGuardar = async () => {
-    // Verifica primero: si no hay ningún cambio, avisa en vez de guardar de nuevo
-    const sinCambios = cfgGuardada
-      && form.host === cfgGuardada.host
-      && Number(form.puerto) === Number(cfgGuardada.puerto)
-      && form.usuario === cfgGuardada.usuario
-      && form.base_datos === cfgGuardada.base_datos
+    const base = perfiles[perfilSel] || {};
+    const sinCambios = form.host === base.host
+      && Number(form.puerto) === Number(base.puerto)
+      && form.usuario === base.usuario
+      && form.base_datos === base.base_datos
       && !form.password; // no escribió una contraseña nueva
     if (sinCambios) {
       setModal({ tipo: 'yaGuardado' });
@@ -191,8 +231,7 @@ export default function IntegracionPos() {
     setGuardando(true);
     try {
       await savePosConfig(payload());
-      setCfgGuardada({ host: form.host, puerto: Number(form.puerto), usuario: form.usuario, base_datos: form.base_datos });
-      if (form.password) setTienePassword(true);
+      refrescarCachePerfil();
       setForm((p) => ({ ...p, password: '' }));
       setModal({ tipo: 'guardadoExito' });
     } catch {
@@ -265,27 +304,47 @@ export default function IntegracionPos() {
             <p>Datos de acceso a MySQL (los mismos que usas en MySQL Workbench).</p>
           </div>
           <span className={`pos-chip ${conectado ? 'on' : 'off'}`}>
-            ● {conectado ? 'Conectado' : 'Desconectado'}
+            ● {conectado ? 'Conecta' : 'Sin conexión'}
           </span>
         </div>
+
+        {/* Selector de perfil: Local (POS en esta PC) o Web (POS en el hosting/remoto) */}
+        <div className="pos-perfiles">
+          {['local', 'web'].map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`pos-perfil-btn ${perfilSel === p ? 'sel' : ''}`}
+              onClick={() => seleccionarPerfil(p)}
+            >
+              {p === 'local' ? 'Local' : 'Web'}
+              {perfilActivo === p && <span className="pos-perfil-activo">● Activo</span>}
+            </button>
+          ))}
+        </div>
+        <p className="pos-perfil-ayuda">
+          <strong>Local:</strong> el POS en esta computadora (localhost).<br />
+          <strong>Web:</strong> el POS en el hosting o en otra red (por IP/dominio).<br />
+          La sincronización usa siempre el perfil marcado como <strong>Activo</strong>.
+        </p>
 
         <div className="config-grid">
           <div className="config-item">
             <label>Host / IP</label>
             <div className="config-input">
-              <input type="text" value={form.host} disabled={conectado} onChange={(e) => handle('host', e.target.value)} placeholder="localhost" />
+              <input type="text" value={form.host} onChange={(e) => handle('host', e.target.value)} placeholder="localhost" />
             </div>
           </div>
           <div className="config-item">
             <label>Puerto</label>
             <div className="config-input">
-              <input type="number" value={form.puerto} disabled={conectado} onChange={(e) => handle('puerto', e.target.value)} placeholder="3306" />
+              <input type="number" value={form.puerto} onChange={(e) => handle('puerto', e.target.value)} placeholder="3306" />
             </div>
           </div>
           <div className="config-item">
             <label>Usuario</label>
             <div className="config-input">
-              <input type="text" value={form.usuario} disabled={conectado} onChange={(e) => handle('usuario', e.target.value)} placeholder="root" />
+              <input type="text" value={form.usuario} onChange={(e) => handle('usuario', e.target.value)} placeholder="root" />
             </div>
           </div>
           <div className="config-item">
@@ -294,7 +353,6 @@ export default function IntegracionPos() {
               <input
                 type="password"
                 value={form.password}
-                disabled={conectado}
                 onChange={(e) => handle('password', e.target.value)}
                 placeholder={tienePassword ? '•••••• (guardada — escribe para cambiarla)' : 'Contraseña de MySQL'}
               />
@@ -303,17 +361,22 @@ export default function IntegracionPos() {
           <div className="config-item">
             <label>Base de datos</label>
             <div className="config-input">
-              <input type="text" value={form.base_datos} disabled={conectado} onChange={(e) => handle('base_datos', e.target.value)} placeholder="eorderback" />
+              <input type="text" value={form.base_datos} onChange={(e) => handle('base_datos', e.target.value)} placeholder="eorderback" />
             </div>
           </div>
         </div>
 
         <div className="config-actions" style={{ gap: 10 }}>
-          <button type="button" className="btn-pos" onClick={conectado ? handleDesconectar : handleConectar}>
-            {conectado ? 'Desconectar' : 'Conectar'}
+          <button type="button" className="btn-primary" onClick={handleConectar}>
+            Probar y conectar
           </button>
-          <button type="button" className="btn-primary" onClick={handleGuardar} disabled={guardando || conectado}>
-            {guardando ? 'Guardando…' : 'Guardar conexión'}
+          {perfilSel !== perfilActivo && (
+            <button type="button" className="btn-pos" onClick={handleActivar}>
+              Activar este perfil
+            </button>
+          )}
+          <button type="button" className="btn-pos" onClick={handleGuardar} disabled={guardando}>
+            {guardando ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </div>
@@ -323,10 +386,11 @@ export default function IntegracionPos() {
         <div className="config-head">
           <div>
             <h3>Modo de las transacciones</h3>
-            <p>
+            <p className="pos-modo-desc">
               <strong>Automático:</strong> cada pago en el POS genera la transacción y otorga los puntos solo; si el
               cliente trae DUI y no existe, se agrega al módulo de clientes.<br />
-              <strong>Manual:</strong> el recepcionista registra las transacciones a mano, como hasta ahora (sin sincronización con el POS).
+              <strong>Manual:</strong> el recepcionista registra las transacciones a mano, como hasta ahora (sin sincronización con el POS).<br />
+              <em>Aplica al perfil activo: <strong>{perfilActivo === 'local' ? 'Local' : 'Web'}</strong>.</em>
             </p>
           </div>
         </div>

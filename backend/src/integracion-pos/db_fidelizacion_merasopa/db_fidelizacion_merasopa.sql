@@ -292,14 +292,17 @@ CREATE TABLE configuracion (
 -- ============================================================
 CREATE TABLE pos_configuracion (
   id              INT          NOT NULL AUTO_INCREMENT,
+  perfil          VARCHAR(10)  NOT NULL DEFAULT 'local', -- 'local' (POS en esta máquina) | 'web' (POS en el hosting/remoto)
   servidor        VARCHAR(120) NOT NULL DEFAULT 'localhost',
   puerto          INT          NOT NULL DEFAULT 3306,
   usuario         VARCHAR(60)  NOT NULL DEFAULT 'root',
   contrasena      VARCHAR(512) NULL,            -- cifrada con AES-256-GCM si POS_ENCRYPTION_KEY está configurada
   base_datos      VARCHAR(60)  NOT NULL DEFAULT 'eorderback',
   modo            VARCHAR(20)  NOT NULL DEFAULT 'manual', -- 'manual' | 'automatico'
+  activo          TINYINT(1)   NOT NULL DEFAULT 0,        -- 1 = perfil que usa la sincronización (solo uno a la vez)
   configurado_por INT          NULL,            -- último usuario que modificó la configuración del POS
   PRIMARY KEY (id),
+  UNIQUE KEY uq_pos_perfil (perfil),            -- un solo perfil 'local' y uno 'web'
   CONSTRAINT fk_posconfig_usuario FOREIGN KEY (configurado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
@@ -574,5 +577,7 @@ VALUES ('Admin', 'Empresa', 'admin@empresa.com', '$2a$10$ts0FfQJEVaVhWns0GtKMS.5
         (SELECT id_estado FROM estados WHERE estado = 'activo' LIMIT 1));
 
 -- Fila inicial con los valores por defecto (se edita desde la pantalla de Integración POS)
-INSERT INTO pos_configuracion (servidor, puerto, usuario, contrasena, base_datos, modo, configurado_por)
-VALUES ('localhost', 3306, 'root', '', 'eorderback', 'manual', NULL);
+-- Dos perfiles de conexión: 'local' (POS en esta máquina, arranca ACTIVO) y 'web' (POS en el hosting/remoto)
+INSERT INTO pos_configuracion (perfil, servidor, puerto, usuario, contrasena, base_datos, modo, activo, configurado_por) VALUES
+  ('local', 'localhost', 3306, 'root', '', 'eorderback', 'manual', 1, NULL),
+  ('web',   'localhost', 3306, 'root', '', 'eorderback', 'manual', 0, NULL);
