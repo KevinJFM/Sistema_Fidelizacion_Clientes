@@ -435,7 +435,7 @@ export default function IntegracionPos() {
         </div>
 
         <div className="config-actions" style={{ marginTop: 18, alignItems: 'center', gap: 12 }}>
-          {!auto && <span className="pos-nota-sync">Cambia a Automático para poder sincronizar.</span>}
+          {!auto && <span className="pos-nota-sync" style={{ color: '#374151' }}>Cambia a Automático para poder sincronizar.</span>}
           {auto && esperaSync > 0 && (
             <span className="pos-nota-sync">El sistema sincroniza solo cada 2 min. Espera para volver a sincronizar.</span>
           )}
