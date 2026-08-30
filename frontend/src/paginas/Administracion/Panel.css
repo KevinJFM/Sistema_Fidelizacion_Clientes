@@ -84,7 +84,7 @@
   gap: 11px;
   padding: 11px 12px;
   border-radius: 13px;
-  color: #5fd4c6;
+  color: #ffffff;
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
@@ -120,7 +120,7 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  color: #5fd4c6;
+  color: #ffffff;
 }
 .sidebar-link:hover .nav-icon { color: #8fe9dc; }
 .sidebar-link.active .nav-icon { color: #fff; }
