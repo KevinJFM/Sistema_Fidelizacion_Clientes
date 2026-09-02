@@ -48,7 +48,7 @@ backend/
 │   ├── configuracion/
 │   │   ├── bd.js             Pool de MySQL (fija la zona horaria El Salvador)
 │   │   ├── correo.js         Envío de correos + marco de marca y plantillas (nodemailer)
-│   │   ├── push.js           Notificaciones push a la app móvil (Expo)
+│   │   ├── push.js           Notificaciones push
 │   │   ├── recompensas.js    Valor del punto ($0.05) y utilidades de recompensas
 │   │   └── logo-correo.png   Logo incrustado (CID) en los correos
 │   │
