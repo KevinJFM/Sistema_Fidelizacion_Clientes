@@ -7,11 +7,21 @@ const CLAVE_VISTO = 'notif_ultimo_visto';
 // Convierte un movimiento de puntos en un mensaje de notificación amigable
 function aNotificacion(movimiento) {
   const puntos = Number(movimiento.puntos) || 0;
-  const esCanje = movimiento.tipo === 'canjeado' || puntos < 0;
   const abs = Math.abs(puntos);
   const plural = abs === 1 ? 'punto' : 'puntos';
 
-  if (esCanje) {
+  // Ajuste (ej. anulación de una transacción): no es un canje. Lleva su propio ícono y texto.
+  if (movimiento.tipo === 'ajuste') {
+    return {
+      color: '#dc2626',
+      icono: 'anulado',
+      titulo: puntos < 0 ? `Se revirtieron ${abs} ${plural}` : `Se te devolvieron ${abs} ${plural}`,
+      detalle: movimiento.descripcion || 'Ajuste de puntos',
+    };
+  }
+
+  // Canje real: tipo 'canjeado' (los puntos negativos que no son ajuste).
+  if (movimiento.tipo === 'canjeado') {
     return { color: '#E5388A', icono: 'gift', titulo: `Canjeaste ${abs} ${plural}`, detalle: movimiento.descripcion || 'Canje de puntos en recepción' };
   }
   return { color: '#16a34a', icono: 'mas', titulo: `Acumulaste ${abs} ${plural}`, detalle: movimiento.descripcion || 'Puntos ganados por tu consumo' };
@@ -32,6 +42,8 @@ const IconoMov = ({ tipo, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     {tipo === 'gift' ? (
       <><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></>
+    ) : tipo === 'anulado' ? (
+      <><circle cx="12" cy="12" r="10" /><line x1="4.9" y1="4.9" x2="19.1" y2="19.1" /></>
     ) : (
       <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></>
     )}
