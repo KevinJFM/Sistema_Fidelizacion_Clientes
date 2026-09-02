@@ -191,6 +191,18 @@ VALUES (504, 504, NOW(), 30.00, 30.00, 1, 0);
 INSERT INTO pago_combinado (monto, fechaPago, idPedido, idCuenta, referencia)
 VALUES (30.00, NOW(), 504, 1, '');
 
+-- ============================================================
+--  REGULARIZAR AL "CONSUMIDOR FINAL" (504) — PROBAR EL REINTENTO
+--  Le agregas su DUI en el POS. En la siguiente sincronización el cliente 504
+--  se CREA solo, su pago de $30 se vuelve transacción (30 pts) y BAJA el
+--  contador "Pagos sin cliente". Corre este UPDATE y luego "Sincronizar":
+-- ============================================================
+UPDATE cliente
+   SET nombre = 'Cliente Regularizado',   -- opcional: ponle su nombre real
+       NIT = '29304050-1',                -- DUI de 9 dígitos
+       idDocumento = 2                    -- 2 = DUI
+ WHERE idCliente = 504;
+
 -- ---------- 6) Elena Portillo (DUI) — $33 -> 33 pts ----------
 -- PASO A:
 INSERT INTO cliente (idCliente, nombre, telefono, email, NIT, idDocumento)
@@ -272,3 +284,16 @@ VALUES (220.00, NOW(), 511, 1, '');
 --    Andres  -> 7 pts     Patricia -> 45 pts  Marcos -> 220 pts
 --  (Los decimales se redondean hacia abajo: $15.99 -> 15 pts)
 -- ============================================================
+
+
+-- ============================================================
+--  REGULARIZAR AL "CONSUMIDOR FINAL" (504) — PROBAR EL REINTENTO
+--  Le agregas su DUI en el POS. En la siguiente sincronización el cliente 504
+--  se CREA solo, su pago de $30 se vuelve transacción (30 pts) y BAJA el
+--  contador "Pagos sin cliente". Corre este UPDATE y luego "Sincronizar":
+-- ============================================================
+UPDATE cliente
+   SET nombre = 'Cliente Regularizado',   -- opcional: ponle su nombre real
+       NIT = '29304050-1',                -- DUI de 9 dígitos
+       idDocumento = 2                    -- 2 = DUI
+ WHERE idCliente = 504;

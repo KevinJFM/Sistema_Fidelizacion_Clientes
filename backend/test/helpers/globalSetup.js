@@ -1,6 +1,6 @@
 // Preparación GLOBAL de las pruebas de integración (se ejecuta UNA vez).
 // Crea la base de datos de prueba EN LIMPIO cargando el esquema real de
-// producción (backend/src/semillas/bd_fidelizacion.sql), que es la fuente de
+// producción (backend/db_fidelizacion/bd_fidelizacion.sql), que es la fuente de
 // verdad. Así los tests validan el mismo esquema que se desplegará.
 import './env.js';
 import fs from 'node:fs';
@@ -32,7 +32,7 @@ export default async function () {
 
   // Cargamos el esquema real, quitando las líneas CREATE DATABASE / USE que
   // apuntan a la BD de producción (db_fidelizacion).
-  const rutaSql = path.resolve(__dirname, '../../src/semillas/bd_fidelizacion.sql');
+  const rutaSql = path.resolve(__dirname, '../../db_fidelizacion/bd_fidelizacion.sql');
   const sqlCompleto = fs.readFileSync(rutaSql, 'utf8');
   const partes = sqlCompleto.split(/USE\s+db_fidelizacion\s*;/i);
   const sqlEsquema = partes[1] ?? sqlCompleto;

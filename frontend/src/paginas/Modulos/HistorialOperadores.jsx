@@ -9,6 +9,8 @@ import Boton from '../../componentes/UI/Boton';
 import Campo from '../../componentes/UI/Campo';
 import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import Resumen from '../../componentes/UI/Resumen';
+import ModalAnularOperador from '../../componentes/UI/ModalAnularOperador';
+import ModalExito from '../../componentes/UI/ModalExito';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -40,6 +42,15 @@ function ModalDetalleOperador({ t, onClose }) {
           {t.telefono && <p style={{ margin: '6px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Tel: {t.telefono}</p>}
           {t.correo && <p style={{ margin: '2px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Correo: {t.correo}</p>}
         </div>
+
+        {/* Aviso si el registro está anulado */}
+        {t.anulada && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 14, padding: '10px 16px', marginBottom: 16 }}>
+            <p style={{ margin: 0, fontWeight: 800, color: '#b91c1c', fontSize: 13 }}>Registro anulado</p>
+            {t.motivo_anulacion && <p style={{ margin: '4px 0 0', fontSize: 13, color: '#374151', fontWeight: 600 }}>Motivo: {t.motivo_anulacion}</p>}
+            {t.anulada_por && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Anulada por: {t.anulada_por}</p>}
+          </div>
+        )}
 
         {/* Detalles */}
         {[
@@ -79,6 +90,8 @@ export default function HistorialOperadores() {
   const [inicial, setInicial]     = useState(true);
   const [filtros, setFiltros]     = useState({ tipo: '', desde: '', hasta: '' });
   const [detalle, setDetalle]     = useState(null);
+  const [anulando, setAnulando]   = useState(null); // registro que se está anulando
+  const [exito, setExito]         = useState('');
   const [page, setPage]           = useState(1);
 
   const cargar = async (f = {}) => {
@@ -118,8 +131,9 @@ export default function HistorialOperadores() {
     cargar();
   };
 
-  const totalPersonas = historial.reduce((s, t) => s + Number(t.num_personas), 0);
-  const totalPuntos   = historial.reduce((s, t) => s + Number(t.puntos_otorgados), 0);
+  // Los registros anulados no cuentan en los totales.
+  const totalPersonas = historial.reduce((s, t) => s + (t.anulada ? 0 : Number(t.num_personas)), 0);
+  const totalPuntos   = historial.reduce((s, t) => s + (t.anulada ? 0 : Number(t.puntos_otorgados)), 0);
   const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [historial]); // a la página 1 cuando cambia el resultado
 
@@ -127,7 +141,7 @@ export default function HistorialOperadores() {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
     const head = ['Operador', 'Tipo', 'Correo', 'Personas', 'Puntos', 'Registrado por', 'Fecha'];
     const body = historial.map((t) => [
-      t.operador,
+      t.anulada ? `${t.operador} (anulada)` : t.operador,
       t.tipo || '—',
       t.correo || '—',
       String(t.num_personas),
@@ -221,7 +235,7 @@ export default function HistorialOperadores() {
               {cargando ? (
                 <SkeletonFilas columnas={8} filas={8} />
               ) : pageItems.map((t) => (
-                <tr key={t.id_transaccion_op}>
+                <tr key={t.id_transaccion_op} className={t.anulada ? 'fila-anulada' : undefined}>
                   <td><strong>{t.operador}</strong></td>
                   <td>{t.tipo || '—'}</td>
                   <td>{t.correo || '—'}</td>
@@ -232,14 +246,27 @@ export default function HistorialOperadores() {
                       : <strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>}
                   </td>
                   <td>{t.registrado_por}</td>
-                  <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
                   <td>
-                    <button className="btn-icon-table" title="Ver detalle" onClick={() => setDetalle(t)}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
+                    <small>{new Date(t.fecha).toLocaleString()}</small>
+                    {t.anulada === 1 && <><br /><span className="badge-anulada">ANULADA</span></>}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="btn-icon-table" title="Ver detalle" onClick={() => setDetalle(t)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                      {!t.anulada && (
+                        <button className="btn-icon-table btn-icon-danger" title="Anular registro" onClick={() => setAnulando(t)}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -251,6 +278,24 @@ export default function HistorialOperadores() {
       <Paginacion total={historial.length} page={page} onChange={setPage} />
 
       <ModalDetalleOperador t={detalle} onClose={() => setDetalle(null)} />
+
+      {anulando && (
+        <ModalAnularOperador
+          transaccion={anulando}
+          onCerrar={() => setAnulando(null)}
+          onAnulada={() => {
+            const id = anulando.id_transaccion_op;
+            setAnulando(null);
+            // Marca el registro como anulado en la lista (así sale de los totales y se oculta el botón).
+            setHistorial((prev) => prev.map((x) =>
+              x.id_transaccion_op === id ? { ...x, anulada: 1, anulada_en: new Date().toISOString() } : x
+            ));
+            setExito('Registro anulado');
+          }}
+        />
+      )}
+
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito('')} />}
     </div>
   );
 }

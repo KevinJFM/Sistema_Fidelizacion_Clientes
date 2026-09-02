@@ -6,10 +6,7 @@ import { calcularBeneficios, DOLARES_POR_PUNTO } from '../../src/dominio/reglasP
 const CONFIG_TODO_ACTIVO = {
   bienvenidaPuntos: 20,
   bienvenidaDescuento: 2,
-  descuentoMontoMinimo: 30,
-  descuentoMontoValor: 1,
   bienvenidaActivo: true,
-  descuentoMontoActivo: true,
 };
 
 describe('calcularBeneficios — regla base (1 punto por $1)', () => {
@@ -85,30 +82,8 @@ describe('calcularBeneficios — promoción / fecha especial', () => {
   });
 });
 
-describe('calcularBeneficios — descuento por compra alta', () => {
-  it('aplica el descuento fijo cuando el monto alcanza el mínimo', () => {
-    const r = calcularBeneficios({ monto: 30, config: CONFIG_TODO_ACTIVO });
-    expect(r.descuento).toBe(1);
-    expect(r.promocionesAplicadas).toContain('Descuento por compra alta');
-  });
-
-  it('NO aplica si el monto está por debajo del mínimo', () => {
-    const r = calcularBeneficios({ monto: 29.99, config: CONFIG_TODO_ACTIVO });
-    expect(r.descuento).toBe(0);
-    expect(r.promocionesAplicadas).not.toContain('Descuento por compra alta');
-  });
-
-  it('NO aplica si la regla está apagada', () => {
-    const r = calcularBeneficios({
-      monto: 100,
-      config: { ...CONFIG_TODO_ACTIVO, descuentoMontoActivo: false },
-    });
-    expect(r.descuento).toBe(0);
-  });
-});
-
 describe('calcularBeneficios — prioridad del descuento (uno solo)', () => {
-  it('bienvenida gana a la promoción y a la compra alta (pero los puntos sí se acumulan)', () => {
+  it('la bienvenida gana a la promoción en el descuento (pero los puntos sí se acumulan)', () => {
     const r = calcularBeneficios({
       monto: 100,
       esPrimeraCompra: true,
@@ -123,15 +98,14 @@ describe('calcularBeneficios — prioridad del descuento (uno solo)', () => {
     expect(r.promocionesAplicadas).toContain('Promoción: Promo');
   });
 
-  it('la promoción gana a la compra alta cuando no hay bienvenida', () => {
+  it('aplica el descuento porcentual de la promoción cuando no hay bienvenida', () => {
     const r = calcularBeneficios({
       monto: 100,
       esPrimeraCompra: false,
       promocion: { nombre: 'Promo', puntos_extra: 0, descuento_extra: 5 },
       config: CONFIG_TODO_ACTIVO,
     });
-    expect(r.descuento).toBeCloseTo(5, 5); // 5% de 100, no el $1 de compra alta
-    expect(r.promocionesAplicadas).not.toContain('Descuento por compra alta');
+    expect(r.descuento).toBeCloseTo(5, 5); // 5% de 100
   });
 });
 

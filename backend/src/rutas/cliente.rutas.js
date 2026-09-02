@@ -7,6 +7,7 @@ import {
   crearCliente,
   actualizarCliente,
   eliminarCliente,
+  reenviarCodigoAcceso,
 } from '../controladores/cliente.controlador.js';
 import { verificarToken } from '../middlewares/autenticacion.middleware.js';
 import { autorizarRoles } from '../middlewares/rol.middleware.js';
@@ -27,5 +28,7 @@ router.get('/', autorizarRoles('admin', 'recepcionista'), obtenerClientes);
 router.post('/', autorizarRoles('admin', 'recepcionista'), crearCliente);
 router.put('/:id', autorizarRoles('admin', 'recepcionista'), actualizarCliente);
 router.delete('/:id', autorizarRoles('admin', 'recepcionista'), eliminarCliente);
+// Reenviar el código de acceso (OTP) al correo del cliente
+router.post('/:id/reenviar-codigo', autorizarRoles('admin', 'recepcionista'), reenviarCodigoAcceso);
 
 export default router;

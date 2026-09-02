@@ -12,10 +12,14 @@
 
 .trans-card {
   background: #ffffff;
+  border: 2px solid #0D1BB8;            /* borde azul de marca (igual que las tarjetas de Configuración) */
   border-radius: 22px;
   padding: 24px;
-  box-shadow: 0 12px 32px rgba(7, 159, 143, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);   /* sombra neutra (sin tinte de color) */
 }
+[data-theme="dark"] .trans-card { border-color: #2a3160; }
+/* Etiquetas del formulario de transacción: más en negrita y más oscuras para que se noten. */
+.trans-card .form-field label { font-weight: 800; color: #374151; }
 .trans-card-title {
   font-size: 17px;
   font-weight: 800;
@@ -186,6 +190,14 @@
 }
 .hist-resumen strong { color: var(--pd-teal); }
 
+/* Acciones (editar/anular) bajo el resultado de una transacción recién registrada */
+.resultado-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.resultado-acciones > button { flex: 1; justify-content: center; }
+
 /* Botón ojo en tabla */
 .btn-icon-table {
   background: var(--pd-teal-light);
@@ -199,6 +211,29 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .btn-icon-table:hover { background: var(--pd-teal); color: #fff; border-color: var(--pd-teal); }
+
+/* Variante editar (ámbar) para distinguirlo del ojo */
+.btn-icon-table.btn-icon-edit { background: #FEF3C7; border-color: #FCD34D; color: #B45309; }
+.btn-icon-table.btn-icon-edit:hover { background: #D4A843; border-color: #D4A843; color: #fff; }
+
+/* Variante peligro (anular) para los botones de la tabla del historial */
+.btn-icon-table.btn-icon-danger { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.btn-icon-table.btn-icon-danger:hover { background: #dc2626; border-color: #dc2626; color: #fff; }
+
+/* Fila de una transacción anulada: atenuada y con etiqueta */
+tr.fila-anulada > td { opacity: 0.55; }
+.badge-anulada {
+  display: inline-block;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
 
 /* Puntos otorgados (positivo) en la tabla de perfil */
 .puntos-pos { color: #16a34a; }
@@ -226,10 +261,10 @@
 
 /* Badge de promoción en tabla */
 .badge-promo {
-  background: var(--pd-teal-light);
-  color: var(--pd-teal-dark);
+  background: #0D1BB8;          /* fondo azul de marca */
+  color: #fff;                 /* letras blancas (igual en claro y oscuro) */
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   padding: 3px 8px;
   border-radius: 20px;
   white-space: nowrap;
@@ -238,14 +273,17 @@
 /* Perfil del cliente */
 .perfil-cliente-card {
   background: #fff;
+  border: 2px solid #0D1BB8;            /* borde azul de marca (solo modo claro; ver regla oscura abajo) */
   border-radius: 22px;
   padding: 24px 28px;
-  box-shadow: 0 12px 32px rgba(7, 159, 143, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);   /* sombra neutra (sin tinte de color) */
   display: flex;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
 }
+/* En modo oscuro no se muestra el borde azul (queda transparente). */
+[data-theme="dark"] .perfil-cliente-card { border-color: transparent; }
 .perfil-avatar {
   width: 64px;
   height: 64px;

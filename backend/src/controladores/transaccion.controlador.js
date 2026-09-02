@@ -1,5 +1,6 @@
 import pool from '../configuracion/bd.js';
 import { enviarPush } from '../configuracion/push.js';
+import { enviarComprobante } from '../configuracion/correo.js';
 import { calcularBeneficios } from '../dominio/reglasPuntos.js';
 
 // Lee varias claves de configuracion en una sola consulta. `defaults` = { clave: valorPorDefecto }; rellena con el default las que falten.
@@ -55,6 +56,66 @@ export const listarRecompensas = async (req, res) => {
   }
 };
 
+// Opciones de promoción que el cajero puede ELEGIR para este cliente (modelo manual):
+// la bienvenida (solo si es su primera compra y está activa) y las promociones vigentes HOY
+// que el cliente no haya agotado. Alimenta el select del panel.
+export const promocionesAplicables = async (req, res) => {
+  try {
+    const idCliente = Number(req.query.id_cliente);
+    if (!idCliente) return res.status(400).json({ message: 'Cliente no válido' });
+
+    const cfg = await obtenerConfigs({
+      bienvenida_puntos: '20',
+      bienvenida_descuento: '2',
+      bienvenida_activo: '1',
+    });
+
+    const [filasConteo] = await pool.query(
+      'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ?',
+      [idCliente]
+    );
+    const esPrimeraCompra = filasConteo[0].total === 0;
+    const bienvenidaActivo = Number(cfg.bienvenida_activo) === 1;
+
+    // Promociones vigentes hoy (fecha especial o dentro del rango).
+    const [promos] = await pool.query(
+      `SELECT id_escenario, nombre, puntos_extra, descuento_extra, max_usos_cliente
+       FROM promociones
+       WHERE activo = 1
+         AND ( fecha_especial = CURDATE()
+               OR (fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL AND CURDATE() BETWEEN fecha_inicio AND fecha_fin) )
+       ORDER BY id_escenario DESC`
+    );
+
+    // Descarta las que el cliente ya agotó (según su máximo de usos).
+    const promociones = [];
+    for (const p of promos) {
+      const maxUsos = Number(p.max_usos_cliente) || 0;
+      if (maxUsos > 0) {
+        const [usos] = await pool.query(
+          'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ?',
+          [idCliente, p.id_escenario]
+        );
+        if (usos[0].total >= maxUsos) continue;
+      }
+      promociones.push({
+        id_escenario: p.id_escenario,
+        nombre: p.nombre,
+        puntos_extra: Number(p.puntos_extra),
+        descuento_extra: Number(p.descuento_extra),
+      });
+    }
+
+    return res.status(200).json({
+      bienvenida_aplica: esPrimeraCompra && bienvenidaActivo,
+      bienvenida: { puntos: Number(cfg.bienvenida_puntos), descuento: Number(cfg.bienvenida_descuento) },
+      promociones,
+    });
+  } catch {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Registrar una transacción (otorga/canjea puntos de forma atómica)
 export const crearTransaccion = async (req, res) => {
   try {
@@ -78,45 +139,62 @@ export const crearTransaccion = async (req, res) => {
     const cfg = await obtenerConfigs({
       bienvenida_puntos: '20',
       bienvenida_descuento: '2',
-      descuento_monto_minimo: '30',
-      descuento_monto_valor: '1',
       bienvenida_activo: '1',
-      descuento_monto_activo: '1',
     });
     const bienvenidaPuntos     = Number(cfg.bienvenida_puntos);
     const bienvenidaDescuento  = Number(cfg.bienvenida_descuento);
-    const descuentoMontoMinimo = Number(cfg.descuento_monto_minimo);
-    const descuentoMontoValor  = Number(cfg.descuento_monto_valor);
     const bienvenidaActivo     = Number(cfg.bienvenida_activo) === 1;
-    const descuentoMontoActivo = Number(cfg.descuento_monto_activo) === 1;
 
-    // ¿Es la primera compra registrada del cliente?
+    // ¿Es la primera compra registrada del cliente? (para validar la bienvenida)
     const [filasConteo] = await pool.query(
       'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ?',
       [id_cliente]
     );
     const esPrimeraCompra = filasConteo[0].total === 0;
 
-    // Promoción activa según la fecha de hoy (fecha especial o dentro del rango)
-    const [filasPromocion] = await pool.query(
-      `SELECT * FROM promociones
-       WHERE activo = 1
-         AND ( fecha_especial = CURDATE()
-               OR (fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL AND CURDATE() BETWEEN fecha_inicio AND fecha_fin) )
-       LIMIT 1`
-    );
-    let promocion = filasPromocion[0] || null;
+    // Promoción ELEGIDA por el cajero (modelo manual): '' o 'ninguna' = nada,
+    // 'bienvenida' = beneficio de primera compra, o el id de una promoción vigente hoy.
+    // Se valida SIEMPRE en el backend (no se confía en el cliente). En un canje no aplica.
+    const seleccion = String(req.body.promocion ?? '').trim();
+    let promocion = null;
+    let usarBienvenida = false;
 
-    // Respeta el máximo de usos por cliente: si ya lo alcanzó, no se aplica la promoción.
-    if (promocion) {
-      const maxUsos = Number(promocion.max_usos_cliente) || 0;
-      if (maxUsos > 0) {
-        const [usos] = await pool.query(
-          'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ?',
-          [id_cliente, promocion.id_escenario]
+    if (!id_recompensa && seleccion && seleccion !== 'ninguna') {
+      if (seleccion === 'bienvenida') {
+        if (!esPrimeraCompra) {
+          return res.status(400).json({ message: 'La bienvenida solo aplica en la primera compra del cliente' });
+        }
+        if (!bienvenidaActivo) {
+          return res.status(400).json({ message: 'La bienvenida está desactivada en Configuración' });
+        }
+        usarBienvenida = true;
+      } else {
+        const idEscenario = Number(seleccion);
+        if (!idEscenario) {
+          return res.status(400).json({ message: 'Promoción no válida' });
+        }
+        const [filasPromocion] = await pool.query(
+          `SELECT * FROM promociones
+           WHERE id_escenario = ? AND activo = 1
+             AND ( fecha_especial = CURDATE()
+                   OR (fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL AND CURDATE() BETWEEN fecha_inicio AND fecha_fin) )
+           LIMIT 1`,
+          [idEscenario]
         );
-        if (usos[0].total >= maxUsos) {
-          promocion = null; // ya alcanzó el máximo de usos de esta promoción
+        if (!filasPromocion.length) {
+          return res.status(400).json({ message: 'La promoción no está vigente hoy' });
+        }
+        promocion = filasPromocion[0];
+        // Respeta el máximo de usos por cliente.
+        const maxUsos = Number(promocion.max_usos_cliente) || 0;
+        if (maxUsos > 0) {
+          const [usos] = await pool.query(
+            'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ?',
+            [id_cliente, promocion.id_escenario]
+          );
+          if (usos[0].total >= maxUsos) {
+            return res.status(400).json({ message: 'El cliente ya alcanzó el máximo de usos de esa promoción' });
+          }
         }
       }
     }
@@ -149,16 +227,13 @@ export const crearTransaccion = async (req, res) => {
     } = calcularBeneficios({
       monto: montoNumerico,
       saldoPuntos: cliente.puntos_acumulados,
-      esPrimeraCompra,
+      esPrimeraCompra: usarBienvenida, // la bienvenida se aplica solo si el cajero la eligió (ya validada)
       promocion,
       recompensa,
       config: {
         bienvenidaPuntos,
         bienvenidaDescuento,
-        descuentoMontoMinimo,
-        descuentoMontoValor,
         bienvenidaActivo,
-        descuentoMontoActivo,
       },
     });
 
@@ -229,6 +304,21 @@ export const crearTransaccion = async (req, res) => {
         }
       }
 
+      // Comprobante por correo (si el cliente tiene correo y la plantilla está activa). No bloquea la respuesta.
+      if (cliente.correo) {
+        enviarComprobante({
+          destino: cliente.correo,
+          nombre: cliente.nombres,
+          monto: montoNumerico.toFixed(2),
+          descuento: Number(descuento).toFixed(2),
+          total: (montoNumerico - descuento).toFixed(2),
+          puntosOtorgados,
+          puntosCanjeados,
+          saldo: saldoFinal,
+          recompensa: recompensa?.nombre || '',
+        }).catch(() => {});
+      }
+
       return res.status(201).json({
         message: 'Transacción registrada correctamente',
         id_transaccion: idTransaccion,
@@ -256,6 +346,121 @@ export const crearTransaccion = async (req, res) => {
   }
 };
 
+// Editar SOLO los datos seguros de una transacción: folio/referencia y fechas de hospedaje.
+// A propósito NO deja tocar monto ni puntos: para corregir eso se ANULA y se vuelve a registrar
+// (así el saldo del cliente nunca queda inconsistente). No mueve puntos ni saldo.
+export const editarTransaccion = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ message: 'Transacción no válida' });
+
+    const { referencia_venta, fecha_ingreso, fecha_salida } = req.body;
+
+    const [filas] = await pool.query(
+      'SELECT id_transaccion, anulada FROM transacciones WHERE id_transaccion = ?',
+      [id]
+    );
+    if (filas.length === 0) return res.status(404).json({ message: 'Transacción no encontrada' });
+    if (filas[0].anulada) return res.status(400).json({ message: 'No se puede editar una transacción anulada' });
+
+    await pool.query(
+      'UPDATE transacciones SET referencia_venta = ?, fecha_ingreso = ?, fecha_salida = ? WHERE id_transaccion = ?',
+      [referencia_venta || null, fecha_ingreso || null, fecha_salida || null, id]
+    );
+
+    return res.status(200).json({ message: 'Transacción actualizada correctamente' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// Anular una transacción: revierte los puntos al cliente (le devuelve lo canjeado y le quita lo
+// otorgado), la marca como anulada (quién/cuándo/por qué) y la deja fuera de los totales. La
+// transacción NO se borra: queda en el historial como rastro. Todo de forma atómica y con la
+// fila del cliente bloqueada, igual que al registrar.
+export const anularTransaccion = async (req, res) => {
+  const conexion = await pool.getConnection();
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ message: 'Transacción no válida' });
+
+    const motivo = (req.body?.motivo || '').trim();
+    if (!motivo) return res.status(400).json({ message: 'El motivo de anulación es obligatorio' });
+
+    await conexion.beginTransaction();
+
+    // Bloquea la transacción y relee su estado dentro de la transacción SQL.
+    const [filas] = await conexion.query(
+      'SELECT id_cliente, puntos_otorgados, puntos_canjeados, anulada FROM transacciones WHERE id_transaccion = ? FOR UPDATE',
+      [id]
+    );
+    if (filas.length === 0) {
+      await conexion.rollback();
+      return res.status(404).json({ message: 'Transacción no encontrada' });
+    }
+    const t = filas[0];
+    if (t.anulada) {
+      await conexion.rollback();
+      return res.status(400).json({ message: 'La transacción ya está anulada' });
+    }
+
+    // Reversión del saldo: deshace exactamente lo que hizo la transacción original
+    // (le sumó otorgados y le restó canjeados). Delta = -otorgados + canjeados.
+    const delta = -Number(t.puntos_otorgados) + Number(t.puntos_canjeados);
+
+    // Saldo bloqueado del cliente hasta el commit.
+    const [filasSaldo] = await conexion.query(
+      'SELECT puntos_acumulados FROM clientes WHERE id_cliente = ? FOR UPDATE',
+      [t.id_cliente]
+    );
+    const saldoActual = Number(filasSaldo[0].puntos_acumulados);
+    const saldoFinal = saldoActual + delta;
+
+    // Integridad: no dejamos el saldo negativo. Pasa si el cliente ya gastó los puntos
+    // que había ganado con esta transacción. En ese caso no se puede anular sin más.
+    if (saldoFinal < 0) {
+      await conexion.rollback();
+      return res.status(400).json({
+        message: 'No se puede anular: el cliente ya usó parte de esos puntos (el saldo quedaría negativo).',
+      });
+    }
+
+    // Marca la transacción como anulada (con auditoría).
+    await conexion.query(
+      'UPDATE transacciones SET anulada = 1, anulada_por = ?, anulada_en = NOW(), motivo_anulacion = ? WHERE id_transaccion = ?',
+      [req.usuario.id_usuario, motivo, id]
+    );
+
+    // Aplica la reversión al saldo (relativa, sobre la fila bloqueada).
+    await conexion.query(
+      'UPDATE clientes SET puntos_acumulados = puntos_acumulados + ? WHERE id_cliente = ?',
+      [delta, t.id_cliente]
+    );
+
+    // Deja el asiento de reversión en el libro mayor de puntos (no borra los movimientos originales).
+    if (delta !== 0) {
+      await conexion.query(
+        'INSERT INTO movimientos_puntos (id_cliente, id_transaccion, tipo, puntos, descripcion) VALUES (?, ?, ?, ?, ?)',
+        [t.id_cliente, id, 'ajuste', delta, `Anulación transacción #${id}: ${motivo}`.slice(0, 150)]
+      );
+    }
+
+    // Bitácora de auditoría.
+    await conexion.query(
+      'INSERT INTO bitacora (id_usuario, accion, entidad, id_registro, detalle, ip) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.usuario.id_usuario, 'anular', 'transaccion', id, `Motivo: ${motivo}`.slice(0, 255), req.ip || null]
+    );
+
+    await conexion.commit();
+    return res.status(200).json({ message: 'Transacción anulada correctamente', saldo_puntos: saldoFinal });
+  } catch (error) {
+    await conexion.rollback();
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  } finally {
+    conexion.release();
+  }
+};
+
 // Listar transacciones con filtros (documento y rango de fecha de hospedaje)
 export const listarTransacciones = async (req, res) => {
   try {
@@ -264,13 +469,16 @@ export const listarTransacciones = async (req, res) => {
     let sql = `
       SELECT t.id_transaccion, t.id_cliente, t.monto, t.descuento_aplicado, t.puntos_otorgados, t.puntos_canjeados,
              t.referencia_venta, t.fecha_ingreso, t.fecha_salida, t.fecha,
+             t.anulada, t.anulada_en, t.motivo_anulacion,
              c.nombres, c.apellidos, c.numero_documento, c.telefono, c.correo,
              td.nombre AS tipo_documento, u.nombre AS cajero,
+             ua.nombre AS anulada_por,
              p.nombre AS nombre_promocion
       FROM transacciones t
       JOIN clientes c         ON t.id_cliente = c.id_cliente
       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
       JOIN usuarios u         ON t.id_usuario = u.id_usuario
+      LEFT JOIN usuarios ua   ON t.anulada_por = ua.id_usuario
       LEFT JOIN promociones p ON t.id_escenario = p.id_escenario
       WHERE 1 = 1`;
     const parametros = [];
@@ -326,6 +534,7 @@ export const getResumenSemanal = async (req, res) => {
               COALESCE(SUM(puntos_otorgados), 0)   AS puntos
        FROM transacciones
        WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+         AND anulada = 0
        GROUP BY DATE(fecha)
        ORDER BY dia ASC`
     );
@@ -344,7 +553,8 @@ export const obtenerResumen = async (req, res) => {
               COALESCE(SUM(monto), 0)            AS ventas,
               COALESCE(SUM(puntos_otorgados), 0) AS puntos
        FROM transacciones
-       WHERE DATE(fecha) = CURDATE()`
+       WHERE DATE(fecha) = CURDATE()
+         AND anulada = 0`
     );
 
     return res.status(200).json({

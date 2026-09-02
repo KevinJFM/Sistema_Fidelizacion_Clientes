@@ -226,6 +226,8 @@ input, select { font-family: inherit; }
 .pt-config-ayuda { font-size: 12px; color: var(--tenue); margin-top: 8px; }
 .pt-interruptor { width: 56px; height: 32px; border-radius: 20px; background: var(--ficha); padding: 3px; display: flex; align-items: center; transition: background 0.2s; }
 .pt-interruptor.encendido { background: var(--azul); justify-content: flex-end; }
+.pt-interruptor:disabled { background: #9ca3af; cursor: not-allowed; }
+.pt-interruptor:disabled .pt-perilla { background: #e5e7eb; }
 .pt-perilla { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: block; }
 
 .pt-salir-info { text-align: center; margin-bottom: 10px; }
@@ -235,7 +237,7 @@ input, select { font-family: inherit; }
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
   background: var(--rosa); color: #fff; border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 700;
 }
-.pt-btn-salir:disabled { opacity: 0.5; cursor: not-allowed; }
+.pt-btn-salir:disabled { background: #9ca3af; color: #f3f4f6; cursor: not-allowed; }
 .pt-salir-offline { text-align: center; font-size: 12.5px; color: var(--tenue); margin-top: 10px; }
 .pt-pie { margin-top: 30px; text-align: center; }
 .pt-pie p { font-size: 12px; color: var(--tenue); margin-top: 3px; }

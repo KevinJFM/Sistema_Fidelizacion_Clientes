@@ -5,6 +5,18 @@ export const crearTransaccion = async (transaccion) => {
   return data;
 };
 
+// Editar solo datos seguros: folio/referencia y fechas de hospedaje (no toca puntos).
+export const editarTransaccion = async (id, datos) => {
+  const { data } = await api.put(`/transacciones/${id}`, datos);
+  return data;
+};
+
+// Anular: revierte los puntos y deja rastro. Requiere motivo.
+export const anularTransaccion = async (id, motivo) => {
+  const { data } = await api.put(`/transacciones/${id}/anular`, { motivo });
+  return data;
+};
+
 export const listarTransacciones = async (filtros = {}) => {
   const resp = await api.get('/transacciones', { params: filtros });
   const datos = resp.data; // sigue siendo el arreglo de transacciones
@@ -22,6 +34,12 @@ export const getResumen = async () => {
 
 export const getRecompensas = async () => {
   const { data } = await api.get('/transacciones/recompensas');
+  return data;
+};
+
+// Promociones/bienvenida que el cajero puede elegir para un cliente (para el select).
+export const getPromocionesAplicables = async (idCliente) => {
+  const { data } = await api.get('/transacciones/promociones-aplicables', { params: { id_cliente: idCliente } });
   return data;
 };
 

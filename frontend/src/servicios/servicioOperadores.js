@@ -34,3 +34,9 @@ export const listarTransaccionesOperador = async (filtros = {}) => {
   const { data } = await api.get('/operadores/transacciones', { params: filtros });
   return data;
 };
+
+// Anular un registro de operador: revierte los puntos y deja rastro. Requiere motivo.
+export const anularTransaccionOperador = async (id, motivo) => {
+  const { data } = await api.put(`/operadores/transacciones/${id}/anular`, { motivo });
+  return data;
+};

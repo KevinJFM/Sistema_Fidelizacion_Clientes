@@ -383,3 +383,52 @@ CREATE TABLE bitacora (
   CONSTRAINT fk_bitacora_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_bitacora_fecha (fecha)
 );
+
+
+-- ============================================================
+--  MIGRACIONES INCORPORADAS — ESTRUCTURA (esquema al día, 2025-09-01)
+--  Anulación de transacciones y de registros de operador, tabla de
+--  plantillas de correo, y marca de aviso de inicio de promoción.
+-- ============================================================
+
+-- Anular transacción (cliente): columnas de anulación + auditoría.
+ALTER TABLE transacciones
+  ADD COLUMN anulada          TINYINT(1)   NOT NULL DEFAULT 0 AFTER puntos_canjeados,
+  ADD COLUMN anulada_por      INT          NULL              AFTER anulada,
+  ADD COLUMN anulada_en       DATETIME     NULL              AFTER anulada_por,
+  ADD COLUMN motivo_anulacion VARCHAR(255) NULL              AFTER anulada_en,
+  ADD CONSTRAINT fk_trans_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+
+-- Tabla de plantillas de correo (contenido editable de cada correo al cliente).
+CREATE TABLE IF NOT EXISTS plantillas_correo (
+  id_plantilla    INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(40)  NOT NULL,
+  nombre          VARCHAR(80)  NOT NULL,
+  descripcion     VARCHAR(200) NULL,
+  obligatorio     TINYINT(1)   NOT NULL DEFAULT 0,
+  activo          TINYINT(1)   NOT NULL DEFAULT 1,
+  asunto          VARCHAR(160) NOT NULL,
+  titulo          VARCHAR(160) NOT NULL,
+  intro           VARCHAR(255) NULL,
+  cuerpo          TEXT         NULL,
+  boton           VARCHAR(60)  NULL,
+  variables       VARCHAR(255) NULL,
+  dias            INT NULL,
+  actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  actualizado_por INT NULL,
+  PRIMARY KEY (id_plantilla),
+  UNIQUE KEY uq_plantilla_clave (clave),
+  CONSTRAINT fk_plantilla_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- Aviso de "promoción nueva" el día que inicia (marca para no reenviar).
+ALTER TABLE promociones
+  ADD COLUMN aviso_inicio_enviado TINYINT(1) NOT NULL DEFAULT 0 AFTER activo;
+
+-- Anular registro de Tour Operador: columnas de anulación + auditoría.
+ALTER TABLE transacciones_operador
+  ADD COLUMN anulada          TINYINT(1)   NOT NULL DEFAULT 0 AFTER descuento_aplicado,
+  ADD COLUMN anulada_por      INT          NULL              AFTER anulada,
+  ADD COLUMN anulada_en       DATETIME     NULL              AFTER anulada_por,
+  ADD COLUMN motivo_anulacion VARCHAR(255) NULL              AFTER anulada_en,
+  ADD CONSTRAINT fk_transop_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;

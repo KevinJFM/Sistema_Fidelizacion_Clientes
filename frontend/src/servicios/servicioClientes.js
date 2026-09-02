@@ -36,3 +36,9 @@ export const deleteCliente = async (id) => {
   const { data } = await api.delete(`/clientes/${id}`);
   return data;
 };
+
+// Reenvía el código de acceso (OTP) al correo del cliente.
+export const reenviarCodigo = async (id) => {
+  const { data } = await api.post(`/clientes/${id}/reenviar-codigo`);
+  return data;
+};

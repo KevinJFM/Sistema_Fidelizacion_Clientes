@@ -5,6 +5,7 @@ import {
   getClientes,
   createCliente,
   updateCliente,
+  reenviarCodigo,
 } from '../../servicios/servicioClientes';
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
 import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
@@ -56,8 +57,23 @@ export default function Clientes() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [departamentos, setDepartamentos] = useState([]);
   const [distritos, setDistritos]         = useState([]);
+  const [reenviandoId, setReenviandoId]   = useState(null); // cliente al que se le está reenviando el código
 
   const navigate = useNavigate();
+
+  // Reenvía el código de acceso (OTP) al correo del cliente.
+  const reenviar = async (c) => {
+    if (!c.correo) { toast.error('El cliente no tiene correo registrado'); return; }
+    setReenviandoId(c.id_cliente);
+    try {
+      const { message } = await reenviarCodigo(c.id_cliente);
+      toast.success(message || 'Código enviado');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo enviar el código');
+    } finally {
+      setReenviandoId(null);
+    }
+  };
 
   const cargar = async () => {
     setLoading(true);
@@ -240,9 +256,10 @@ export default function Clientes() {
               placeholder="Buscar por documento o nombre..."
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
-              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
+              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, fontSize: 14, outline: 'none' }}
             />
             <svg
+              className="filtro-lupa"
               width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
             >
@@ -297,6 +314,19 @@ export default function Clientes() {
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                         </svg>
                       </button>
+                      {c.correo && (
+                        <button
+                          className="icon-btn historial"
+                          onClick={() => reenviar(c)}
+                          disabled={reenviandoId === c.id_cliente}
+                          title="Reenviar código de acceso al correo"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="m22 7-10 5L2 7" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

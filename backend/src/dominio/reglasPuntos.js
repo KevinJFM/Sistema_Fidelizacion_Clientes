@@ -3,7 +3,7 @@
 // Regla fija: $1 de consumo = 1 punto. El valor del punto y el catálogo de canje viven en recompensas.js.
 export const DOLARES_POR_PUNTO = 1;
 
-// Calcula puntos y descuento de una transacción. Los puntos se acumulan (base + bienvenida + promoción); el descuento es uno solo por prioridad: canje > bienvenida > promoción > compra alta, y nunca supera el monto.
+// Calcula puntos y descuento de una transacción. Los puntos se acumulan (base + bienvenida + promoción); el descuento es uno solo por prioridad: canje > bienvenida > promoción, y nunca supera el monto.
 export function calcularBeneficios({
   monto,
   saldoPuntos = 0,
@@ -17,10 +17,7 @@ export function calcularBeneficios({
   const {
     bienvenidaPuntos = 0,
     bienvenidaDescuento = 0,
-    descuentoMontoMinimo = 0,
-    descuentoMontoValor = 0,
     bienvenidaActivo = false,
-    descuentoMontoActivo = false,
   } = config;
 
   const promocionesAplicadas = [];
@@ -59,9 +56,6 @@ export function calcularBeneficios({
       descuento = Number(bienvenidaDescuento);
     } else if (promocion) {
       descuento = (Number(promocion.descuento_extra) / 100) * montoNumerico;
-    } else if (descuentoMontoActivo && montoNumerico >= descuentoMontoMinimo) {
-      descuento = Number(descuentoMontoValor);
-      promocionesAplicadas.push('Descuento por compra alta');
     }
   }
 

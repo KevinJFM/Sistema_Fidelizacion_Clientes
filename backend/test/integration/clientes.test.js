@@ -118,3 +118,25 @@ describe('DELETE /api/clientes/:id (borrado lógico)', () => {
     expect(filas[0].id_estado).toBe(2); // inactivo, sigue existiendo
   });
 });
+
+describe('POST /api/clientes/:id/reenviar-codigo', () => {
+  it('404 si el cliente no existe', async () => {
+    const res = await auth(request(app).post('/api/clientes/999999/reenviar-codigo'));
+    expect(res.status).toBe(404);
+  });
+
+  it('400 si el cliente no tiene correo', async () => {
+    const id = await crearCliente({ numero_documento: 'SIN-MAIL', correo: null });
+    const res = await auth(request(app).post(`/api/clientes/${id}/reenviar-codigo`));
+    expect(res.status).toBe(400);
+  });
+
+  it('genera y guarda el OTP aunque el correo no esté configurado (503 en pruebas)', async () => {
+    const id = await crearCliente({ numero_documento: 'CON-MAIL', correo: 'cliente@test.com' });
+    const res = await auth(request(app).post(`/api/clientes/${id}/reenviar-codigo`));
+    // En pruebas el correo está desactivado → 503, pero el código SÍ se generó y guardó.
+    expect(res.status).toBe(503);
+    const [filas] = await pool.query('SELECT otp_hash FROM clientes WHERE id_cliente = ?', [id]);
+    expect(filas[0].otp_hash).not.toBeNull();
+  });
+});

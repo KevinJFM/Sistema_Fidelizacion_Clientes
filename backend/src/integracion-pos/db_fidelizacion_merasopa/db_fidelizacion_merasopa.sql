@@ -408,13 +408,10 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   -- catálogo de canje (tabla recompensas); operador = 1.5 puntos por persona. Fijas por código.
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
   ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
-  ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
-  ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
-  -- Bienvenida y descuento nacen APAGADOS; el admin los activa cuando quiera.
+  -- La bienvenida nace APAGADA; el admin la activa cuando quiera.
   ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
-  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '0',   'Activa el descuento por compra alta');
+  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)');
 
 -- ============================================================
 --  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)
@@ -581,3 +578,91 @@ VALUES ('Admin', 'Empresa', 'admin@empresa.com', '$2a$10$ts0FfQJEVaVhWns0GtKMS.5
 INSERT INTO pos_configuracion (perfil, servidor, puerto, usuario, contrasena, base_datos, modo, activo, configurado_por) VALUES
   ('local', 'localhost', 3306, 'root', '', 'eorderback', 'manual', 1, NULL),
   ('web',   'localhost', 3306, 'root', '', 'eorderback', 'manual', 0, NULL);
+
+
+-- ============================================================
+--  MIGRACIONES INCORPORADAS — ESTRUCTURA (esquema al día, 2025-09-01)
+--  Anulación de transacciones y de registros de operador, tabla de
+--  plantillas de correo, y marca de aviso de inicio de promoción.
+-- ============================================================
+
+-- Anular transacción (cliente): columnas de anulación + auditoría.
+ALTER TABLE transacciones
+  ADD COLUMN anulada          TINYINT(1)   NOT NULL DEFAULT 0 AFTER puntos_canjeados,
+  ADD COLUMN anulada_por      INT          NULL              AFTER anulada,
+  ADD COLUMN anulada_en       DATETIME     NULL              AFTER anulada_por,
+  ADD COLUMN motivo_anulacion VARCHAR(255) NULL              AFTER anulada_en,
+  ADD CONSTRAINT fk_trans_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+
+-- Tabla de plantillas de correo (contenido editable de cada correo al cliente).
+CREATE TABLE IF NOT EXISTS plantillas_correo (
+  id_plantilla    INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(40)  NOT NULL,
+  nombre          VARCHAR(80)  NOT NULL,
+  descripcion     VARCHAR(200) NULL,
+  obligatorio     TINYINT(1)   NOT NULL DEFAULT 0,
+  activo          TINYINT(1)   NOT NULL DEFAULT 1,
+  asunto          VARCHAR(160) NOT NULL,
+  titulo          VARCHAR(160) NOT NULL,
+  intro           VARCHAR(255) NULL,
+  cuerpo          TEXT         NULL,
+  boton           VARCHAR(60)  NULL,
+  variables       VARCHAR(255) NULL,
+  dias            INT NULL,
+  actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  actualizado_por INT NULL,
+  PRIMARY KEY (id_plantilla),
+  UNIQUE KEY uq_plantilla_clave (clave),
+  CONSTRAINT fk_plantilla_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- Aviso de "promoción nueva" el día que inicia (marca para no reenviar).
+ALTER TABLE promociones
+  ADD COLUMN aviso_inicio_enviado TINYINT(1) NOT NULL DEFAULT 0 AFTER activo;
+
+-- Anular registro de Tour Operador: columnas de anulación + auditoría.
+ALTER TABLE transacciones_operador
+  ADD COLUMN anulada          TINYINT(1)   NOT NULL DEFAULT 0 AFTER descuento_aplicado,
+  ADD COLUMN anulada_por      INT          NULL              AFTER anulada,
+  ADD COLUMN anulada_en       DATETIME     NULL              AFTER anulada_por,
+  ADD COLUMN motivo_anulacion VARCHAR(255) NULL              AFTER anulada_en,
+  ADD CONSTRAINT fk_transop_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+
+-- ============================================================
+--  MIGRACIONES INCORPORADAS — DATOS (plantillas de correo + limpieza)
+--  7 plantillas por defecto; promo_por_finalizar avisa con 2 días de antelación.
+-- ============================================================
+INSERT IGNORE INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, asunto, titulo, intro, cuerpo, boton, variables, dias) VALUES
+  ('otp', 'Código de acceso', 'Se envía cuando el cliente pide entrar al portal o la app con su documento.', 1, 1,
+   'Tu código de acceso · Punta Diamantes', 'Tu código de acceso', 'Úsalo para entrar a tu portal de puntos.',
+   'Vence en {minutos} minutos. No lo compartas con nadie.', NULL, '{codigo}, {minutos}', NULL),
+  ('cerca_canje', 'Casi llegas a tu canje', 'Automático: cuando el cliente alcanza el 80% de su próxima recompensa.', 0, 1,
+   '¡Casi llegas a "{recompensa}"! · Punta Diamantes', '¡Casi llegas, {nombre}!', 'Solo te faltan {faltan} puntos para tu próximo canje.',
+   'Con tu próxima visita al hotel puedes completar tus puntos y reclamar {recompensa} en recepción.', 'Ver mis puntos en el portal',
+   '{nombre}, {puntos}, {recompensa}, {recompensaPuntos}, {faltan}, {porcentaje}', NULL),
+  ('reactivacion', 'Reactivación (te extrañamos)', 'Automático: cliente con puntos y sin comprar en el último mes.', 0, 1,
+   'Te echamos de menos, {nombre} · Punta Diamantes', 'Hace tiempo que no te vemos, {nombre}', 'Tus puntos siguen aquí, esperándote.',
+   'Recuerda que en cada consumo en el hotel ganas puntos automáticamente. ¡Te esperamos pronto en Punta Diamantes!', 'Ver mi saldo en el portal',
+   '{nombre}, {puntos}', NULL),
+  ('bienvenida', 'Bienvenida (cliente nuevo)', 'Se envía cuando registras un cliente nuevo que tiene correo.', 0, 1,
+   '¡Bienvenido al programa de puntos! · Punta Diamantes', '¡Bienvenido, {nombre}!', 'Ya eres parte del programa de puntos de Punta Diamantes.',
+   'Desde ahora, cada consumo en el hotel te da puntos que puedes canjear por recompensas. ¡Nos vemos pronto!', 'Conocer mis puntos',
+   '{nombre}', NULL),
+  ('comprobante', 'Comprobante de consumo', 'Se envía al cliente al registrar su consumo (si tiene correo).', 0, 1,
+   'Tu comprobante de consumo · Punta Diamantes', '¡Gracias por tu visita, {nombre}!', 'Este es el detalle de tu consumo y tus puntos.',
+   'Tu saldo actual es de {saldo} puntos. ¡Te esperamos pronto!', 'Ver mis puntos',
+   '{nombre}, {monto}, {descuento}, {total}, {puntosOtorgados}, {puntosCanjeados}, {saldo}, {recompensa}', NULL),
+  ('promo_nueva', 'Promoción nueva', 'Se envía a todos los clientes con correo cuando creas una promoción.', 0, 1,
+   '¡Nueva promoción en Punta Diamantes! · {promo}', '¡Nueva promoción, {nombre}!', 'Tenemos algo nuevo para ti en Punta Diamantes.',
+   'Aprovecha {promo} en tu próxima visita. ¡Te esperamos!', 'Ver mis puntos',
+   '{nombre}, {promo}, {beneficio}, {vigencia}', NULL),
+  ('promo_por_finalizar', 'Promoción por finalizar', 'Automático: aviso a los clientes antes de que termine una promoción. Los días de antelación se configuran aquí abajo.', 0, 1,
+   '¡Últimos días para {promo}! · Punta Diamantes', '¡No te quedes sin {promo}, {nombre}!', 'Esta promoción está por terminar.',
+   'Te quedan pocos días para aprovechar {promo}. ¡Visítanos antes de que termine!', 'Ver mis puntos',
+   '{nombre}, {promo}, {beneficio}, {vigencia}, {dias}', 2);
+
+-- Retiro del "descuento por compra alta": ya no se usa.
+DELETE FROM configuracion WHERE clave IN ('descuento_monto_minimo', 'descuento_monto_valor', 'descuento_monto_activo');
+
+-- Las promociones sembradas no deben anunciarse retroactivamente.
+UPDATE promociones SET aviso_inicio_enviado = 1;

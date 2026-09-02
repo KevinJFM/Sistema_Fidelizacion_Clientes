@@ -1,0 +1,94 @@
+/* Lista de plantillas de correo dentro de Configuración */
+.plantilla-list { display: flex; flex-direction: column; gap: 10px; }
+
+.plantilla-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 2px solid #0D1BB8;               /* borde azul de marca (igual que las tarjetas de Configuración) */
+  border-radius: 14px;
+  background: var(--pd-surface, #fff);
+}
+[data-theme="dark"] .plantilla-item { border-color: #3a4275; background: #1e244a; }
+.plantilla-item.plantilla-off { opacity: 0.6; }
+.plantilla-item-info { flex: 1; min-width: 0; }
+.plantilla-item-nombre { font-weight: 800; color: var(--pd-teal-dark, #0A1259); font-size: 15px; }
+[data-theme="dark"] .plantilla-item-nombre { color: #dfe3fb; }
+.plantilla-item-desc { font-size: 13px; color: #374151; font-weight: 600; margin-top: 3px; line-height: 1.45; }
+[data-theme="dark"] .plantilla-item-desc { color: #c2c9ea; }
+.plantilla-item-acciones { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* En pantallas angostas (celular) se apila: texto arriba, acciones abajo (así no se aplasta). */
+@media (max-width: 600px) {
+  .plantilla-item { flex-direction: column; align-items: stretch; gap: 12px; }
+  .plantilla-item-acciones { justify-content: space-between; }
+}
+
+.plantilla-badge-oblig {
+  font-size: 11px; font-weight: 700; color: var(--pd-teal, #0D1BB8);
+  background: var(--pd-teal-light, #EEF0FC); border-radius: 20px; padding: 3px 10px; white-space: nowrap;
+}
+
+/* Editor: formulario + vista previa lado a lado.
+   La modal crece con su contenido (se ve completa) y la vista previa se
+   estira sola para igualar el alto del formulario. */
+.plantilla-modal { max-width: min(1040px, 94vw); }
+.plantilla-desc { font-size: 13px; font-weight: 600; color: #4b5563; margin: 0 0 2px; line-height: 1.5; }
+[data-theme="dark"] .plantilla-desc { color: #c2c9ea; }
+.plantilla-editor { display: grid; grid-template-columns: 1fr 1.1fr; gap: 22px; }
+@media (max-width: 760px) { .plantilla-editor { grid-template-columns: 1fr; } }
+
+.plantilla-form { gap: 12px; }
+.plantilla-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #0D1BB8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111827;
+  font-weight: 600;
+  outline: none;
+  resize: vertical;
+  min-height: 84px;
+}
+
+.plantilla-vars { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+.plantilla-var-chip {
+  font-family: ui-monospace, monospace;
+  font-size: 13px; font-weight: 800;
+  color: var(--pd-teal-dark, #0A1259);
+  background: var(--pd-teal-light, #EEF0FC);
+  border: 1px solid #D6DBF5;
+  border-radius: 7px; padding: 4px 9px; cursor: pointer; line-height: 1.2;
+  transition: background 0.12s, border-color 0.12s;
+}
+.plantilla-var-chip:hover { background: #dfe3fb; border-color: #b9c2f0; }
+[data-theme="dark"] .plantilla-var-chip { color: #eef0fc; background: #2a3160; border-color: #3a4275; }
+[data-theme="dark"] .plantilla-var-chip:hover { background: #3a4275; border-color: #4a5490; }
+.plantilla-var-hint { font-size: 13px; font-weight: 700; color: #4b5563; margin-bottom: 6px; }
+[data-theme="dark"] .plantilla-var-hint { color: #eef0fc; }
+
+/* Panel de vista previa: se estira para igualar el alto del formulario */
+.plantilla-preview {
+  display: flex; flex-direction: column;
+}
+.plantilla-preview-label { font-size: 12.5px; font-weight: 700; color: #4b5563; margin-bottom: 6px; }
+[data-theme="dark"] .plantilla-preview-label { color: #c2c9ea; }
+.plantilla-preview-asunto {
+  font-size: 13px; color: #111827; background: #f4f5fb; border: 1px solid #e5e7eb;
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; word-break: break-word;
+}
+.plantilla-preview-asunto strong { color: #6b7280; font-weight: 700; }
+.plantilla-preview iframe {
+  width: 100%; flex: 1; min-height: 300px;
+  border: 1px solid #e5e7eb; border-radius: 12px; background: #eef;
+}
+
+/* En celular (columnas apiladas) la vista previa usa una altura cómoda */
+@media (max-width: 760px) {
+  .plantilla-preview iframe { min-height: 380px; }
+}

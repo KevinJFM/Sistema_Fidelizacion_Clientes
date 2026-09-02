@@ -1,5 +1,5 @@
 import pool from '../configuracion/bd.js';
-import { notificarPromosDeHoy } from '../tareas/promociones.tarea.js';
+import { notificarPromosDeHoy, avisarPromosQueInician } from '../tareas/promociones.tarea.js';
 
 export const obtenerPromociones = async (req, res) => {
   try {
@@ -74,6 +74,10 @@ export const crearPromocion = async (req, res) => {
     } catch {
       // Silencioso: si falla el envío de notificaciones, la promoción igual queda creada.
     }
+
+    // Aviso masivo por correo: solo si la promo ARRANCA HOY (si empieza en el futuro, la tarea
+    // diaria lo enviará el día que inicie). Fire-and-forget; nunca rompe ni retrasa la creación.
+    avisarPromosQueInician({ soloId: result.insertId }).catch(() => {});
 
     return res.status(201).json({ message: 'Promoción creada correctamente', id_escenario: result.insertId });
   } catch {

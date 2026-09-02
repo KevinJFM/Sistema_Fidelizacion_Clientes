@@ -11,6 +11,9 @@ import Boton from '../../componentes/UI/Boton';
 import Campo from '../../componentes/UI/Campo';
 import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import Resumen from '../../componentes/UI/Resumen';
+import ModalEditarTransaccion from '../../componentes/UI/ModalEditarTransaccion';
+import ModalAnularTransaccion from '../../componentes/UI/ModalAnularTransaccion';
+import ModalExito from '../../componentes/UI/ModalExito';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -48,6 +51,21 @@ function ModalDetalle({ t, onClose }) {
             <strong style={{ color: '#111827', fontWeight: 700 }}>{t.numero_documento}</strong>
           </p>
         </div>
+
+        {/* Aviso de anulación */}
+        {t.anulada === 1 && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
+            <p style={{ margin: 0, fontWeight: 800, color: '#dc2626', fontSize: 14 }}>Transacción anulada</p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: '#7f1d1d' }}>
+              {t.motivo_anulacion || 'Sin motivo registrado'}
+              {t.anulada_por ? ` — ${t.anulada_por}` : ''}
+              {t.anulada_en ? ` · ${new Date(t.anulada_en).toLocaleString()}` : ''}
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#7f1d1d' }}>
+              Los puntos fueron revertidos y no cuenta en los totales.
+            </p>
+          </div>
+        )}
 
         {/* Detalles */}
         {[
@@ -113,6 +131,9 @@ export default function Historial() {
   const [inicial, setInicial]     = useState(true);
   const [filtros, setFiltros]     = useState({ numero_documento: '', tipo_documento: '', desde: '', hasta: '' });
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
+  const [editando, setEditando] = useState(null);   // transacción que se está editando (folio/fechas)
+  const [anulando, setAnulando] = useState(null);   // transacción que se está anulando
+  const [exito, setExito]       = useState('');      // mensaje del modal de éxito (check auto-cierre)
   const [page, setPage] = useState(1);
   const [searchParams] = useSearchParams();
   const ultimoFiltro = useRef({}); // último filtro aplicado (para el auto-refresco)
@@ -167,6 +188,10 @@ export default function Historial() {
     cargar();
   };
 
+  // Tras editar o anular: cierra el modal, recarga con el filtro activo y muestra el check de éxito.
+  const trasEditar = () => { setEditando(null); cargar(ultimoFiltro.current); setExito('Cambios guardados'); };
+  const trasAnular = () => { setAnulando(null); cargar(ultimoFiltro.current); setExito('Transacción anulada'); };
+
   const exportar = () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
     const columnas = [
@@ -185,6 +210,8 @@ export default function Historial() {
       { label: 'Puntos canjeados', valor: (t) => t.puntos_canjeados },
       { label: 'Cajero',           valor: (t) => t.cajero },
       { label: 'Registrado',       valor: (t) => new Date(t.fecha).toLocaleString() },
+      { label: 'Estado',           valor: (t) => (t.anulada ? 'Anulada' : 'Activa') },
+      { label: 'Motivo anulación', valor: (t) => t.motivo_anulacion || '' },
     ];
     const sufijo = filtros.numero_documento
       ? `_${filtros.numero_documento}`
@@ -197,7 +224,7 @@ export default function Historial() {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
     const head = ['Huésped', 'Documento', 'Teléfono', 'Correo', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Puntos', 'Registrado'];
     const body = historial.map((t) => [
-      `${t.nombres} ${t.apellidos}`,
+      `${t.nombres} ${t.apellidos}${t.anulada ? ' (ANULADA)' : ''}`,
       `${t.tipo_documento}: ${t.numero_documento}`,
       t.telefono || '—',
       t.correo || '—',
@@ -233,8 +260,10 @@ export default function Historial() {
     toast.success('PDF generado');
   };
 
-  const totalVentas = historial.reduce((s, t) => s + Number(t.monto), 0);
-  const totalPuntos = historial.reduce((s, t) => s + t.puntos_otorgados, 0);
+  // Las transacciones anuladas no suman en los totales (sus puntos fueron revertidos).
+  const activas     = historial.filter((t) => !t.anulada);
+  const totalVentas = activas.reduce((s, t) => s + Number(t.monto), 0);
+  const totalPuntos = activas.reduce((s, t) => s + t.puntos_otorgados, 0);
   const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [historial]); // a la página 1 cuando cambia el resultado
 
@@ -286,7 +315,7 @@ export default function Historial() {
       </form>
 
       <Resumen items={[
-        { etiqueta: 'Transacciones', valor: historial.length },
+        { etiqueta: 'Transacciones', valor: activas.length },
         { etiqueta: 'Ingresos', valor: `$${totalVentas.toFixed(2)}` },
         { etiqueta: 'Puntos otorgados', valor: totalPuntos },
       ]} />
@@ -331,7 +360,7 @@ export default function Historial() {
               {cargando ? (
                 <SkeletonFilas columnas={10} filas={8} />
               ) : pageItems.map((t) => (
-                <tr key={t.id_transaccion}>
+                <tr key={t.id_transaccion} className={t.anulada ? 'fila-anulada' : undefined}>
                   <td>{t.nombres} {t.apellidos}</td>
                   <td><span className="badge-rol badge-doc">{t.tipo_documento}</span> <strong>{t.numero_documento}</strong></td>
                   <td>
@@ -349,18 +378,47 @@ export default function Historial() {
                     <strong style={{ color: '#16a34a' }}>+{t.puntos_otorgados}</strong>
                     {t.puntos_canjeados > 0 && <span style={{ color: '#dc2626' }}> / -{t.puntos_canjeados}</span>}
                   </td>
-                  <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
                   <td>
-                    <button
-                      className="btn-icon-table"
-                      title="Ver detalle"
-                      onClick={() => setDetalleSeleccionado(t)}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
+                    <small>{new Date(t.fecha).toLocaleString()}</small>
+                    {t.anulada === 1 && <><br /><span className="badge-anulada">ANULADA</span></>}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button
+                        className="btn-icon-table"
+                        title="Ver detalle"
+                        onClick={() => setDetalleSeleccionado(t)}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                      {t.anulada !== 1 && (
+                        <>
+                          <button
+                            className="btn-icon-table btn-icon-edit"
+                            title="Editar folio y fechas"
+                            onClick={() => setEditando(t)}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                          <button
+                            className="btn-icon-table btn-icon-danger"
+                            title="Anular transacción"
+                            onClick={() => setAnulando(t)}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="4.9" y1="4.9" x2="19.1" y2="19.1" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -372,6 +430,24 @@ export default function Historial() {
       <Paginacion total={historial.length} page={page} onChange={setPage} />
 
       <ModalDetalle t={detalleSeleccionado} onClose={() => setDetalleSeleccionado(null)} />
+
+      {editando && (
+        <ModalEditarTransaccion
+          transaccion={editando}
+          onCerrar={() => setEditando(null)}
+          onGuardado={trasEditar}
+        />
+      )}
+
+      {anulando && (
+        <ModalAnularTransaccion
+          transaccion={anulando}
+          onCerrar={() => setAnulando(null)}
+          onAnulada={trasAnular}
+        />
+      )}
+
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito('')} />}
     </div>
   );
 }

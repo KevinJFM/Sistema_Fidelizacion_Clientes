@@ -7,6 +7,7 @@ import {
   registrarConsumoOperador,
   canjearOperador,
   listarTransaccionesOperador,
+  anularTransaccionOperador,
 } from '../controladores/operador.controlador.js';
 import { verificarToken } from '../middlewares/autenticacion.middleware.js';
 import { autorizarRoles } from '../middlewares/rol.middleware.js';
@@ -20,6 +21,8 @@ router.use(verificarToken, autorizarRoles('admin', 'recepcionista'));
 router.get('/transacciones', listarTransaccionesOperador);
 // Registrar un grupo y otorgar puntos
 router.post('/transacciones', registrarConsumoOperador);
+// Anular un registro (revierte puntos, deja rastro; por si se equivocaron con las personas)
+router.put('/transacciones/:id/anular', anularTransaccionOperador);
 // Canjear puntos por una recompensa (resta puntos)
 router.post('/canje', canjearOperador);
 

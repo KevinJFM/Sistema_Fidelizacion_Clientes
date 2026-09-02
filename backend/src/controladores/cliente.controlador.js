@@ -1,6 +1,9 @@
+import bcrypt from 'bcryptjs';
 import pool from '../configuracion/bd.js';
+import { enviarBienvenida, enviarCodigoAcceso } from '../configuracion/correo.js';
 
 const ESTADO_INACTIVO = 2; // estados: 1=activo, 2=inactivo, 3=suspendido
+const OTP_MINUTOS = 5;      // vigencia del código de acceso (igual que el portal)
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Longitud máxima por campo (igual que las columnas de clientes); frena cuerpos enormes y basura.
@@ -157,6 +160,11 @@ export const crearCliente = async (req, res) => {
       ]
     );
 
+    // Correo de bienvenida (si tiene correo y la plantilla está activa). No bloquea la respuesta.
+    if (correo) {
+      enviarBienvenida({ destino: correo, nombre: nombres }).catch(() => {});
+    }
+
     return res.status(201).json({
       message: 'Cliente registrado correctamente',
       id_cliente: resultado.insertId,
@@ -228,6 +236,38 @@ export const eliminarCliente = async (req, res) => {
     await pool.query('UPDATE clientes SET id_estado = ? WHERE id_cliente = ?', [ESTADO_INACTIVO, id]);
 
     return res.status(200).json({ message: 'Cliente desactivado correctamente' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// Reenviar el código de acceso (OTP) a un cliente desde el panel (recepción lo apoya si no le llegó).
+// Genera un código nuevo, lo guarda hasheado y lo envía al correo del cliente.
+export const reenviarCodigoAcceso = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [filas] = await pool.query(
+      'SELECT id_cliente, correo, id_estado FROM clientes WHERE id_cliente = ?', [id]
+    );
+    if (filas.length === 0) return res.status(404).json({ message: 'Cliente no encontrado' });
+
+    const cliente = filas[0];
+    if (!cliente.correo) return res.status(400).json({ message: 'El cliente no tiene correo registrado' });
+    if (cliente.id_estado !== 1) return res.status(400).json({ message: 'El cliente no está activo' });
+
+    const codigo = String(Math.floor(100000 + Math.random() * 900000));
+    const codigoHash = await bcrypt.hash(codigo, 10);
+    const expira = new Date(Date.now() + OTP_MINUTOS * 60 * 1000);
+    await pool.query(
+      'UPDATE clientes SET otp_hash = ?, otp_expira = ?, otp_intentos = 0 WHERE id_cliente = ?',
+      [codigoHash, expira, id]
+    );
+
+    const enviado = await enviarCodigoAcceso(cliente.correo, codigo, OTP_MINUTOS);
+    if (!enviado) {
+      return res.status(503).json({ message: 'No se pudo enviar el correo (revisa la configuración de correo del servidor)' });
+    }
+    return res.status(200).json({ message: `Código enviado a ${cliente.correo}` });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
   }

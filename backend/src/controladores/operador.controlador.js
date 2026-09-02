@@ -246,11 +246,14 @@ export const listarTransaccionesOperador = async (req, res) => {
       SELECT t.id_transaccion_op, t.id_operador, t.num_personas,
              t.puntos_personas, t.puntos_otorgados,
              t.puntos_canjeados, t.descuento_aplicado, t.fecha,
+             t.anulada, t.anulada_en, t.motivo_anulacion,
              o.nombre AS operador, o.tipo, o.telefono, o.correo,
-             u.nombre AS registrado_por
+             u.nombre AS registrado_por,
+             ua.nombre AS anulada_por
       FROM transacciones_operador t
       JOIN operadores_turisticos o ON t.id_operador = o.id_operador
       JOIN usuarios u              ON t.id_usuario  = u.id_usuario
+      LEFT JOIN usuarios ua        ON t.anulada_por = ua.id_usuario
       WHERE 1 = 1`;
     const parametros = [];
 
@@ -278,5 +281,82 @@ export const listarTransaccionesOperador = async (req, res) => {
     return res.status(200).json(filas);
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// Anular un registro de operador: revierte los puntos (le quita lo otorgado y le devuelve lo
+// canjeado), lo marca como anulado (quién/cuándo/por qué) y lo deja fuera de los totales. NO se
+// borra: queda como rastro. Útil si el recepcionista se equivocó con el número de personas.
+// Atómico y con la fila del operador bloqueada, igual que al anular una transacción de cliente.
+export const anularTransaccionOperador = async (req, res) => {
+  const conexion = await pool.getConnection();
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ message: 'Registro no válido' });
+
+    const motivo = (req.body?.motivo || '').trim();
+    if (!motivo) return res.status(400).json({ message: 'El motivo de anulación es obligatorio' });
+
+    await conexion.beginTransaction();
+
+    // Bloquea el registro y relee su estado dentro de la transacción SQL.
+    const [filas] = await conexion.query(
+      'SELECT id_operador, puntos_otorgados, puntos_canjeados, anulada FROM transacciones_operador WHERE id_transaccion_op = ? FOR UPDATE',
+      [id]
+    );
+    if (filas.length === 0) {
+      await conexion.rollback();
+      return res.status(404).json({ message: 'Registro no encontrado' });
+    }
+    const t = filas[0];
+    if (t.anulada) {
+      await conexion.rollback();
+      return res.status(400).json({ message: 'El registro ya está anulado' });
+    }
+
+    // Reversión: deshace lo que hizo (sumó otorgados, restó canjeados). Delta = -otorgados + canjeados.
+    const delta = -Number(t.puntos_otorgados) + Number(t.puntos_canjeados);
+
+    // Saldo bloqueado del operador hasta el commit.
+    const [filasOp] = await conexion.query(
+      'SELECT puntos_acumulados FROM operadores_turisticos WHERE id_operador = ? FOR UPDATE',
+      [t.id_operador]
+    );
+    const saldoActual = Number(filasOp[0].puntos_acumulados);
+    const saldoFinal = saldoActual + delta;
+
+    // Integridad: no dejamos el saldo negativo (pasa si ya gastó parte de esos puntos).
+    if (saldoFinal < 0) {
+      await conexion.rollback();
+      return res.status(400).json({
+        message: 'No se puede anular: el operador ya usó parte de esos puntos (el saldo quedaría negativo).',
+      });
+    }
+
+    // Marca el registro como anulado (con auditoría).
+    await conexion.query(
+      'UPDATE transacciones_operador SET anulada = 1, anulada_por = ?, anulada_en = NOW(), motivo_anulacion = ? WHERE id_transaccion_op = ?',
+      [req.usuario.id_usuario, motivo, id]
+    );
+
+    // Aplica la reversión al saldo (relativa, sobre la fila bloqueada).
+    await conexion.query(
+      'UPDATE operadores_turisticos SET puntos_acumulados = puntos_acumulados + ? WHERE id_operador = ?',
+      [delta, t.id_operador]
+    );
+
+    // Bitácora de auditoría.
+    await conexion.query(
+      'INSERT INTO bitacora (id_usuario, accion, entidad, id_registro, detalle, ip) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.usuario.id_usuario, 'anular', 'transaccion_operador', id, `Motivo: ${motivo}`.slice(0, 255), req.ip || null]
+    );
+
+    await conexion.commit();
+    return res.status(200).json({ message: 'Registro anulado correctamente', saldo_puntos: Number(saldoFinal.toFixed(2)) });
+  } catch (error) {
+    await conexion.rollback();
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  } finally {
+    conexion.release();
   }
 };

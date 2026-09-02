@@ -31,11 +31,8 @@ const TABLAS_MUTABLES = [
 const CONFIG_DEFECTO = {
   bienvenida_puntos: '20',
   bienvenida_descuento: '2',
-  descuento_monto_minimo: '30',
-  descuento_monto_valor: '1',
   canje_activo: '1',
   bienvenida_activo: '0',
-  descuento_monto_activo: '0',
 };
 
 // Deja la BD como recién sembrada: vacía las tablas mutables y restaura la

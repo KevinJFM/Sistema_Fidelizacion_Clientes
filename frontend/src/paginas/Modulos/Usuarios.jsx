@@ -276,12 +276,14 @@ export default function Usuarios() {
         <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6' }}>
           <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
             <input
+              className="filtro-input"
               placeholder="Buscar por nombre o correo..."
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
-              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 14, outline: 'none' }}
+              style={{ width: '100%', padding: '10px 40px 10px 14px', borderRadius: 12, fontSize: 14, outline: 'none' }}
             />
             <svg
+              className="filtro-lupa"
               width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
             >

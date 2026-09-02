@@ -72,6 +72,9 @@
 .switch-on .switch-label {
   color: var(--pd-teal);
 }
+/* En modo oscuro el azul de marca no se ve sobre el fondo navy: se aclara casi a blanco. */
+[data-theme="dark"] .switch-label { color: #aeb6e6; }
+[data-theme="dark"] .switch-on .switch-label { color: #eef0fc; }
 
 /* Tarjeta con la regla desactivada */
 .config-card-off .config-grid {

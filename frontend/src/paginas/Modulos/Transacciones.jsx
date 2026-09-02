@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { buscarCliente } from '../../servicios/servicioClientes';
-import { crearTransaccion, getRecompensas } from '../../servicios/servicioTransacciones';
+import { crearTransaccion, getRecompensas, getPromocionesAplicables } from '../../servicios/servicioTransacciones';
 import { formatDui, formatPasaporte } from '../../utilidades/formato';
 import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
+import ModalEditarTransaccion from '../../componentes/UI/ModalEditarTransaccion';
+import ModalAnularTransaccion from '../../componentes/UI/ModalAnularTransaccion';
+import ModalExito from '../../componentes/UI/ModalExito';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
 import './Transacciones.css';
@@ -19,6 +22,7 @@ const emptyForm = {
   fecha_salida: '',
   referencia_venta: '',
   id_recompensa: '',
+  promocion: '', // '' = ninguna, 'bienvenida', o el id de una promoción vigente hoy
 };
 
 export default function Transacciones() {
@@ -30,7 +34,14 @@ export default function Transacciones() {
   const [saving, setSaving]       = useState(false);
   const [resultado, setResultado] = useState(null);
   const [recompensas, setRecompensas] = useState([]);
+  const [promoInfo, setPromoInfo] = useState(null); // { bienvenida_aplica, bienvenida, promociones }
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Datos de la transacción recién registrada, para poder editarla o anularla sin salir de la pantalla.
+  const [ultima, setUltima] = useState(null);
+  const [editando, setEditando] = useState(false);
+  const [anulando, setAnulando] = useState(false);
+  const [exito, setExito] = useState('');
 
   useEffect(() => {
     getRecompensas().then(setRecompensas).catch(() => {});
@@ -52,10 +63,19 @@ export default function Transacciones() {
     setBuscando(true);
     setCliente(null);
     setResultado(null);
+    setUltima(null);
+    setPromoInfo(null);
+    setForm(emptyForm);
     try {
       const c = await buscarCliente(busqueda.id_tipo_documento, busqueda.numero_documento.trim());
       if (c.id_estado !== 1) toast.error('El cliente no está activo');
       setCliente(c);
+      // Trae lo que el cajero puede elegir para este cliente (bienvenida + promos vigentes hoy).
+      // Si es su primera compra, deja la Bienvenida PRE-SELECCIONADA (para no perderla por descuido).
+      getPromocionesAplicables(c.id_cliente).then((info) => {
+        setPromoInfo(info);
+        if (info?.bienvenida_aplica) setForm((f) => ({ ...f, promocion: 'bienvenida' }));
+      }).catch(() => setPromoInfo(null));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Cliente no encontrado');
     } finally {
@@ -81,9 +101,23 @@ export default function Transacciones() {
         fecha_ingreso: form.fecha_ingreso || null,
         fecha_salida: form.fecha_salida || null,
         id_recompensa: form.id_recompensa || null,
+        // En un canje no se aplican promociones; se manda vacío para evitar confusión.
+        promocion: form.id_recompensa ? '' : (form.promocion || ''),
       });
       setResultado(res);
       setCliente({ ...cliente, puntos_acumulados: res.saldo_puntos });
+      // Guardamos lo necesario para editar/anular esta transacción desde el resultado.
+      setUltima({
+        id_transaccion: res.id_transaccion,
+        nombres: cliente.nombres,
+        apellidos: cliente.apellidos,
+        monto,
+        referencia_venta: form.referencia_venta || '',
+        fecha_ingreso: form.fecha_ingreso || '',
+        fecha_salida: form.fecha_salida || '',
+        puntos_otorgados: res.puntos_otorgados,
+        puntos_canjeados: res.puntos_canjeados,
+      });
       setForm(emptyForm);
     } catch (err) {
       setModalOpen(false);
@@ -202,6 +236,47 @@ export default function Transacciones() {
                 </select>
               </div>
 
+              <div className="form-field">
+                <label>Promoción a aplicar <span className="optional">(opcional)</span></label>
+                <select
+                  value={form.promocion}
+                  disabled={!!form.id_recompensa}
+                  onChange={(e) => setForm({ ...form, promocion: e.target.value })}
+                >
+                  <option value="">Ninguna</option>
+                  {promoInfo?.bienvenida_aplica && (
+                    <option value="bienvenida">
+                      Bienvenida (primera compra) · +{promoInfo.bienvenida.puntos} pts
+                      {promoInfo.bienvenida.descuento > 0 ? ` y $${Number(promoInfo.bienvenida.descuento).toFixed(2)} desc.` : ''}
+                    </option>
+                  )}
+                  {promoInfo?.promociones?.map((p) => {
+                    const extras = [];
+                    if (p.puntos_extra > 0) extras.push(`+${p.puntos_extra} pts`);
+                    if (p.descuento_extra > 0) extras.push(`${p.descuento_extra}% desc.`);
+                    return (
+                      <option key={p.id_escenario} value={p.id_escenario}>
+                        {p.nombre}{extras.length ? ` · ${extras.join(' y ')}` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                {form.id_recompensa ? (
+                  <span className="optional" style={{ marginTop: 4, fontWeight: 700, color: '#6b7280', fontSize: 12 }}>En un canje no se aplican promociones.</span>
+                ) : (
+                  promoInfo && !promoInfo.bienvenida_aplica && promoInfo.promociones?.length === 0 && (
+                    <span className="optional" style={{ marginTop: 4, fontWeight: 700, color: '#6b7280', fontSize: 12 }}>No hay promociones vigentes hoy para este cliente.</span>
+                  )
+                )}
+                {/* Primera compra + eligió una promoción (no la bienvenida): avisa que se pierde la bienvenida. */}
+                {promoInfo?.bienvenida_aplica && !form.id_recompensa
+                  && form.promocion && form.promocion !== 'bienvenida' && (
+                  <span style={{ marginTop: 4, fontWeight: 700, color: '#b45309', fontSize: 12 }}>
+                    ⚠️ Es la primera compra: al elegir esta promoción, el cliente no recibirá el beneficio de bienvenida.
+                  </span>
+                )}
+              </div>
+
               <button type="submit" className="btn-primary" disabled={saving}
                 style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}>
                 {saving ? 'Registrando...' : 'Registrar transacción'}
@@ -252,6 +327,18 @@ export default function Transacciones() {
                 <li className="res-total"><span>Total a pagar</span><strong>${resultado.total_a_pagar.toFixed(2)}</strong></li>
                 <li><span>Saldo de puntos</span><strong>{resultado.saldo_puntos}</strong></li>
               </ul>
+
+              {/* ¿Te equivocaste? Corrige folio/fechas o anula esta transacción sin salir de aquí. */}
+              {ultima && (
+                <div className="resultado-acciones">
+                  <button type="button" className="btn-ghost" onClick={() => setEditando(true)}>
+                    Editar folio/fechas
+                  </button>
+                  <button type="button" className="btn-danger" onClick={() => setAnulando(true)}>
+                    Anular
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <p className="res-vacio">
@@ -285,6 +372,43 @@ export default function Transacciones() {
           </div>
         </div>
       )}
+
+      {/* Corregir folio/fechas de la transacción recién registrada */}
+      {editando && ultima && (
+        <ModalEditarTransaccion
+          transaccion={ultima}
+          onCerrar={() => setEditando(false)}
+          onGuardado={(datos) => {
+            setEditando(false);
+            setUltima((u) => ({
+              ...u,
+              referencia_venta: datos.referencia_venta || '',
+              fecha_ingreso: datos.fecha_ingreso || '',
+              fecha_salida: datos.fecha_salida || '',
+            }));
+            setExito('Cambios guardados');
+          }}
+        />
+      )}
+
+      {/* Anular la transacción recién registrada (revierte los puntos) */}
+      {anulando && ultima && (
+        <ModalAnularTransaccion
+          transaccion={ultima}
+          onCerrar={() => setAnulando(false)}
+          onAnulada={(data) => {
+            setAnulando(false);
+            setResultado(null);
+            setUltima(null);
+            if (data?.saldo_puntos != null && cliente) {
+              setCliente({ ...cliente, puntos_acumulados: data.saldo_puntos });
+            }
+            setExito('Transacción anulada');
+          }}
+        />
+      )}
+
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito('')} />}
     </div>
   );
 }

@@ -26,13 +26,45 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   -- catálogo de canje (tabla recompensas); operador = 1.5 puntos por persona. Fijas por código.
   ('bienvenida_puntos',      '20',  'Puntos extra en la primera compra (bienvenida)'),
   ('bienvenida_descuento',   '2',   'Descuento en $ en la primera compra (bienvenida)'),
-  ('descuento_monto_minimo', '30',  'Monto mínimo de compra para descuento por compra alta'),
-  ('descuento_monto_valor',  '1',   'Descuento en $ por compra alta'),
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
-  -- Bienvenida y descuento nacen APAGADOS; el admin los activa cuando quiera.
+  -- La bienvenida nace APAGADA; el admin la activa cuando quiera.
   ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
-  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
-  ('descuento_monto_activo', '0',   'Activa el descuento por compra alta');
+  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)');
+
+-- ============================================================
+--  DATOS INICIALES — PLANTILLAS DE CORREO (texto editable desde el panel)
+-- ============================================================
+INSERT INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, asunto, titulo, intro, cuerpo, boton, variables) VALUES
+  ('otp', 'Código de acceso', 'Se envía cuando el cliente pide entrar al portal o la app con su documento.', 1, 1,
+   'Tu código de acceso · Punta Diamantes', 'Tu código de acceso', 'Úsalo para entrar a tu portal de puntos.',
+   'Vence en {minutos} minutos. No lo compartas con nadie.', NULL, '{codigo}, {minutos}'),
+  ('cerca_canje', 'Casi llegas a tu canje', 'Automático: cuando el cliente alcanza el 80% de su próxima recompensa.', 0, 1,
+   '¡Casi llegas a "{recompensa}"! · Punta Diamantes', '¡Casi llegas, {nombre}!', 'Solo te faltan {faltan} puntos para tu próximo canje.',
+   'Con tu próxima visita al hotel puedes completar tus puntos y reclamar {recompensa} en recepción.', 'Ver mis puntos en el portal',
+   '{nombre}, {puntos}, {recompensa}, {recompensaPuntos}, {faltan}, {porcentaje}'),
+  ('reactivacion', 'Reactivación (te extrañamos)', 'Automático: cliente con puntos y sin comprar en el último mes.', 0, 1,
+   'Te echamos de menos, {nombre} · Punta Diamantes', 'Hace tiempo que no te vemos, {nombre}', 'Tus puntos siguen aquí, esperándote.',
+   'Recuerda que en cada consumo en el hotel ganas puntos automáticamente. ¡Te esperamos pronto en Punta Diamantes!', 'Ver mi saldo en el portal',
+   '{nombre}, {puntos}'),
+  ('bienvenida', 'Bienvenida (cliente nuevo)', 'Se envía cuando registras un cliente nuevo que tiene correo.', 0, 1,
+   '¡Bienvenido al programa de puntos! · Punta Diamantes', '¡Bienvenido, {nombre}!', 'Ya eres parte del programa de puntos de Punta Diamantes.',
+   'Desde ahora, cada consumo en el hotel te da puntos que puedes canjear por recompensas. ¡Nos vemos pronto!', 'Conocer mis puntos',
+   '{nombre}'),
+  ('comprobante', 'Comprobante de consumo', 'Se envía al cliente al registrar su consumo (si tiene correo).', 0, 1,
+   'Tu comprobante de consumo · Punta Diamantes', '¡Gracias por tu visita, {nombre}!', 'Este es el detalle de tu consumo y tus puntos.',
+   'Tu saldo actual es de {saldo} puntos. ¡Te esperamos pronto!', 'Ver mis puntos',
+   '{nombre}, {monto}, {descuento}, {total}, {puntosOtorgados}, {puntosCanjeados}, {saldo}, {recompensa}'),
+  ('promo_nueva', 'Promoción nueva', 'Se envía a todos los clientes con correo cuando creas una promoción.', 0, 1,
+   '¡Nueva promoción en Punta Diamantes! · {promo}', '¡Nueva promoción, {nombre}!', 'Tenemos algo nuevo para ti en Punta Diamantes.',
+   'Aprovecha {promo} en tu próxima visita. ¡Te esperamos!', 'Ver mis puntos',
+   '{nombre}, {promo}, {beneficio}, {vigencia}'),
+  ('promo_por_finalizar', 'Promoción por finalizar', 'Automático: aviso a los clientes antes de que termine una promoción. Los días de antelación se configuran aquí abajo.', 0, 1,
+   '¡Últimos días para {promo}! · Punta Diamantes', '¡No te quedes sin {promo}, {nombre}!', 'Esta promoción está por terminar.',
+   'Te quedan pocos días para aprovechar {promo}. ¡Visítanos antes de que termine!', 'Ver mis puntos',
+   '{nombre}, {promo}, {beneficio}, {vigencia}, {dias}');
+
+-- Días de antelación del aviso "por finalizar" (editable desde el panel).
+UPDATE plantillas_correo SET dias = 2 WHERE clave = 'promo_por_finalizar';
 
 -- ============================================================
 --  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)

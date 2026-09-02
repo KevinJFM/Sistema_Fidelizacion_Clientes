@@ -2,6 +2,7 @@
 // Puntos = total del pedido, $1 = 1 punto. Solo lectura sobre el POS.
 import pool from '../configuracion/bd.js';
 import { enviarPush } from '../configuracion/push.js';
+import { enviarComprobante } from '../configuracion/correo.js';
 import { obtenerConfigPos, obtenerPoolPos } from './conexionPos.js';
 
 const MINUTOS_POLL = 2;    // frecuencia del modo automático
@@ -116,6 +117,10 @@ const crearClienteConDocumento = async (posCliente, doc) => {
   }
 };
 
+// Ventana para el comprobante por POS: solo se envía si el pago es reciente. Evita que la primera
+// sincronización (o un backlog) dispare un aluvión de correos por consumos viejos.
+const HORAS_COMPROBANTE_POS = 48;
+
 // ---------- creación de la transacción (base $1 = 1 punto, con la fecha del pago) ----------
 const registrarTransaccionPos = async ({ id_cliente, monto, referencia, fecha, idUsuario }) => {
   const montoNum = Number(monto) || 0;
@@ -141,11 +146,33 @@ const registrarTransaccionPos = async ({ id_cliente, monto, referencia, fecha, i
     }
     await conexion.commit();
 
-    // Notificación push (si el cliente tiene la app)
-    if (puntos > 0) {
-      const [c] = await pool.query('SELECT push_token, puntos_acumulados FROM clientes WHERE id_cliente = ?', [id_cliente]);
-      if (c.length && c[0].push_token) {
-        enviarPush(c[0].push_token, `¡Ganaste ${puntos} puntos!`, `Tu nuevo saldo es ${c[0].puntos_acumulados} pts.`);
+    // Avisos al cliente (no bloquean ni rompen la sincronización).
+    const [c] = await pool.query(
+      'SELECT push_token, correo, nombres, puntos_acumulados FROM clientes WHERE id_cliente = ?',
+      [id_cliente]
+    );
+    if (c.length) {
+      const saldo = c[0].puntos_acumulados;
+      // Push (si tiene la app y ganó puntos)
+      if (puntos > 0 && c[0].push_token) {
+        enviarPush(c[0].push_token, `¡Ganaste ${puntos} puntos!`, `Tu nuevo saldo es ${saldo} pts.`);
+      }
+      // Comprobante por correo SOLO si el pago es reciente (ventana), para no reenviar consumos
+      // viejos de golpe en la primera sincronización. El POS no aplica descuento ni canje.
+      const msDesdePago = Date.now() - new Date(fecha).getTime();
+      const pagoReciente = Number.isFinite(msDesdePago) && msDesdePago <= HORAS_COMPROBANTE_POS * 3600 * 1000;
+      if (c[0].correo && pagoReciente) {
+        enviarComprobante({
+          destino: c[0].correo,
+          nombre: c[0].nombres,
+          monto: montoNum.toFixed(2),
+          descuento: '0.00',
+          total: montoNum.toFixed(2),
+          puntosOtorgados: puntos,
+          puntosCanjeados: 0,
+          saldo,
+          recompensa: '',
+        }).catch(() => {});
       }
     }
     return idTx;

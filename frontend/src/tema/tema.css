@@ -194,16 +194,34 @@
   color: #4b5273;
 }
 
-/* Botón ojo (ver detalle) en dark */
+/* Botón ojo (ver detalle) en dark — fondo azul más visible */
 [data-theme="dark"] .btn-icon-table {
-  background: rgba(124, 135, 240, 0.16);
-  border-color: #3a4275;
-  color: #aab2f7;
+  background: rgba(79, 95, 232, 0.28);
+  border-color: #4a54a0;
+  color: #c3c9ff;
 }
 [data-theme="dark"] .btn-icon-table:hover {
   background: #4F5FE8;
   border-color: #4F5FE8;
   color: #fff;
+}
+/* Editar (ámbar) en dark */
+[data-theme="dark"] .btn-icon-table.btn-icon-edit {
+  background: rgba(212, 168, 67, 0.22);
+  border-color: #8a6d24;
+  color: #f0c463;
+}
+[data-theme="dark"] .btn-icon-table.btn-icon-edit:hover {
+  background: #D4A843; border-color: #D4A843; color: #1a1200;
+}
+/* Anular (rojo) en dark */
+[data-theme="dark"] .btn-icon-table.btn-icon-danger {
+  background: rgba(220, 38, 38, 0.22);
+  border-color: #b91c1c;
+  color: #f87171;
+}
+[data-theme="dark"] .btn-icon-table.btn-icon-danger:hover {
+  background: #dc2626; border-color: #dc2626; color: #fff;
 }
 
 /* Puntos otorgados: verde más brillante para contrastar en dark */

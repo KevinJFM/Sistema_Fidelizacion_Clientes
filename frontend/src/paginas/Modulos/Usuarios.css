@@ -1,3 +1,11 @@
+/* Buscador de tablas (Clientes, Usuarios): borde azul de marca en modo claro. */
+.filtro-input { border: 2px solid #0D1BB8; }
+[data-theme="dark"] .filtro-input { border: 1.5px solid #3a4275; }  /* en oscuro, borde sutil (no azul brillante) */
+
+/* Lupa del buscador: azul en ambos modos (más brillante en oscuro para que se note). */
+.filtro-lupa { stroke: #0D1BB8; }
+[data-theme="dark"] .filtro-lupa { stroke: #4F5FE8; }
+
 /* ===== Header de página ===== */
 .page-head {
   display: flex;

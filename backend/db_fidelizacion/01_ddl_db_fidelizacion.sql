@@ -8,6 +8,7 @@ USE db_fidelizacion;
 
 -- Limpieza (orden inverso por las llaves foráneas) — re-ejecutable
 DROP TABLE IF EXISTS bitacora;
+DROP TABLE IF EXISTS plantillas_correo;
 DROP TABLE IF EXISTS alertas_enviadas;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
@@ -158,6 +159,7 @@ CREATE TABLE promociones (
   descuento_extra  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   max_usos_cliente INT NOT NULL DEFAULT 1,
   activo           TINYINT NOT NULL DEFAULT 1,
+  aviso_inicio_enviado TINYINT(1) NOT NULL DEFAULT 0,  -- 1 = ya se envió el correo masivo "promoción nueva" al iniciar
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_escenario)
 );
@@ -211,11 +213,16 @@ CREATE TABLE transacciones (
   descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   puntos_otorgados   INT NOT NULL DEFAULT 0,
   puntos_canjeados   INT NOT NULL DEFAULT 0,
+  anulada            TINYINT(1) NOT NULL DEFAULT 0,  -- 1 = anulada (puntos revertidos); no cuenta en totales
+  anulada_por        INT NULL,                       -- usuario que la anuló
+  anulada_en         DATETIME NULL,                  -- cuándo se anuló
+  motivo_anulacion   VARCHAR(255) NULL,              -- por qué se anuló (obligatorio al anular)
   fecha              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_transaccion),
   CONSTRAINT fk_trans_cliente   FOREIGN KEY (id_cliente)   REFERENCES clientes(id_cliente),
   CONSTRAINT fk_trans_usuario   FOREIGN KEY (id_usuario)   REFERENCES usuarios(id_usuario),
   CONSTRAINT fk_trans_promocion FOREIGN KEY (id_escenario) REFERENCES promociones(id_escenario),
+  CONSTRAINT fk_trans_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_trans_fecha (fecha),
   INDEX idx_trans_fecha_ingreso (fecha_ingreso)
 );
@@ -262,10 +269,15 @@ CREATE TABLE transacciones_operador (
   puntos_otorgados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,  -- total
   puntos_canjeados   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   descuento_aplicado DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  anulada            TINYINT(1) NOT NULL DEFAULT 0,   -- 1 = anulada (puntos revertidos); no cuenta en totales
+  anulada_por        INT NULL,                        -- usuario que la anuló
+  anulada_en         DATETIME NULL,                   -- cuándo se anuló
+  motivo_anulacion   VARCHAR(255) NULL,               -- por qué se anuló (obligatorio al anular)
   fecha              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_transaccion_op),
   CONSTRAINT fk_transop_operador FOREIGN KEY (id_operador) REFERENCES operadores_turisticos(id_operador),
   CONSTRAINT fk_transop_usuario  FOREIGN KEY (id_usuario)  REFERENCES usuarios(id_usuario),
+  CONSTRAINT fk_transop_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
   INDEX idx_transop_fecha (fecha)
 );
 
@@ -280,6 +292,32 @@ CREATE TABLE configuracion (
   actualizado_por INT          NULL,            -- último usuario que modificó este valor
   PRIMARY KEY (id_config),
   CONSTRAINT fk_config_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- ============================================================
+--  PLANTILLAS DE CORREO (contenido editable de cada correo al cliente)
+--  El MARCO (logo, colores, pie) es fijo por código; aquí se guarda solo lo
+--  editable: on/off, asunto y textos, con variables tipo {nombre} {puntos}.
+-- ============================================================
+CREATE TABLE plantillas_correo (
+  id_plantilla    INT NOT NULL AUTO_INCREMENT,
+  clave           VARCHAR(40)  NOT NULL,           -- identificador interno (otp, cerca_canje, ...)
+  nombre          VARCHAR(80)  NOT NULL,           -- nombre visible en el panel
+  descripcion     VARCHAR(200) NULL,               -- cuándo se envía
+  obligatorio     TINYINT(1)   NOT NULL DEFAULT 0, -- 1 = no se puede desactivar (ej. código de acceso)
+  activo          TINYINT(1)   NOT NULL DEFAULT 1,
+  asunto          VARCHAR(160) NOT NULL,
+  titulo          VARCHAR(160) NOT NULL,
+  intro           VARCHAR(255) NULL,               -- subtítulo bajo el título
+  cuerpo          TEXT         NULL,               -- mensaje principal
+  boton           VARCHAR(60)  NULL,               -- texto del botón (si el correo lo lleva)
+  variables       VARCHAR(255) NULL,               -- variables disponibles (informativo para el panel)
+  dias            INT          NULL,               -- ajuste numérico del correo (promo_por_finalizar: días de antelación del aviso)
+  actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  actualizado_por INT NULL,
+  PRIMARY KEY (id_plantilla),
+  UNIQUE KEY uq_plantilla_clave (clave),
+  CONSTRAINT fk_plantilla_usuario FOREIGN KEY (actualizado_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 -- ============================================================

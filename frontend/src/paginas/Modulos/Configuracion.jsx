@@ -8,6 +8,8 @@ import {
   eliminarRecompensa,
 } from '../../servicios/servicioRecompensas';
 import Skeleton, { SkeletonConfig } from '../../componentes/Skeleton/Skeleton';
+import ModalExito from '../../componentes/UI/ModalExito';
+import PlantillasCorreo from './PlantillasCorreo';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
 import '../Administracion/PaginasAdmin.css';
 import './Usuarios.css';
@@ -24,15 +26,6 @@ const GRUPOS = [
       { clave: 'bienvenida_descuento', label: 'Descuento de bienvenida',    sufijo: '$'   },
     ],
   },
-  {
-    titulo: 'Descuento por compra alta',
-    descripcion: 'Descuento automático cuando la compra supera cierto monto',
-    toggle: 'descuento_monto_activo',
-    items: [
-      { clave: 'descuento_monto_minimo', label: 'Monto mínimo de compra', sufijo: '$' },
-      { clave: 'descuento_monto_valor',  label: 'Descuento otorgado',     sufijo: '$' },
-    ],
-  },
 ];
 
 // Claves que son interruptores (se guardan como '1'/'0', no se validan como números)
@@ -42,6 +35,8 @@ const CLAVES_TOGGLE = GRUPOS.map((g) => g.toggle).filter(Boolean);
 const CLAVES_OCULTAS = [
   'puntos_monto_base', 'puntos_por_monto', 'valor_canje', 'puntos_para_canje', 'canje_activo',
   'operador_puntos_persona', 'operador_min_personas', 'operador_valor_punto',
+  // Descuento por compra alta: función retirada. Se ocultan por si quedan filas en BD antiguas.
+  'descuento_monto_minimo', 'descuento_monto_valor', 'descuento_monto_activo',
 ];
 
 const FORM_VACIO = { nombre: '', tipo: 'Estándar', puntos: '' };
@@ -50,7 +45,8 @@ export default function Configuracion() {
   const [valores, setValores] = useState({});
   const [otros, setOtros]     = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving]   = useState(false);
+  const [savingGrupo, setSavingGrupo] = useState(false);
+  const [exito, setExito]     = useState('');
 
   // Recompensas
   const [recompensas, setRecompensas]   = useState([]);
@@ -65,6 +61,9 @@ export default function Configuracion() {
   const [cambiandoEstadoR, setCambiandoEstadoR] = useState(false);
   const enviandoR = useRef(false);
 
+  // Espejo de los valores ya guardados en BD (para autoguardar solo lo que cambió).
+  const valoresGuardados = useRef({});
+
   const cargar = async () => {
     setLoading(true);
     try {
@@ -72,6 +71,7 @@ export default function Configuracion() {
       const mapa = {};
       data.forEach((c) => { mapa[c.clave] = c.valor; });
       setValores(mapa);
+      valoresGuardados.current = mapa;
 
       // Claves que no están en ningún grupo (por si se agregan nuevas)
       const conocidas = [
@@ -197,6 +197,7 @@ export default function Configuracion() {
     setValores((prev) => ({ ...prev, [clave]: nuevoValor }));
     try {
       await updateConfiguracion({ [clave]: nuevoValor });
+      valoresGuardados.current = { ...valoresGuardados.current, [clave]: nuevoValor };
       toast.success(nuevoValor === '1' ? 'Opción activada' : 'Opción desactivada');
     } catch {
       setValores((prev) => ({ ...prev, [clave]: anterior }));
@@ -206,24 +207,45 @@ export default function Configuracion() {
 
   const activo = (grupo) => !grupo.toggle || valores[grupo.toggle] === '1';
 
-  const handleGuardar = async (e) => {
-    e.preventDefault();
-    // Validar solo los valores numéricos (no los interruptores)
-    for (const [clave, valor] of Object.entries(valores)) {
-      if (CLAVES_TOGGLE.includes(clave)) continue;
+  // Autoguardado por campo: guarda al salir del campo, solo si cambió.
+  const guardarCampo = async (clave, { numerico = true } = {}) => {
+    const valor = valores[clave] ?? '';
+    if (valor === (valoresGuardados.current[clave] ?? '')) return; // sin cambios
+    if (numerico && (valor === '' || Number(valor) < 0)) {
+      toast.error('El valor no puede estar vacío ni ser negativo');
+      setValores((prev) => ({ ...prev, [clave]: valoresGuardados.current[clave] ?? '' }));
+      return;
+    }
+    try {
+      await updateConfiguracion({ [clave]: valor });
+      valoresGuardados.current = { ...valoresGuardados.current, [clave]: valor };
+      toast.success('Cambio guardado');
+    } catch (err) {
+      setValores((prev) => ({ ...prev, [clave]: valoresGuardados.current[clave] ?? '' }));
+      toast.error(err.response?.data?.message || 'Error al guardar el cambio');
+    }
+  };
+
+  // Guarda con botón los valores (numéricos) de un grupo y confirma con el check de éxito.
+  const guardarGrupo = async (grupo) => {
+    for (const item of grupo.items) {
+      const valor = valores[item.clave] ?? '';
       if (valor === '' || Number(valor) < 0) {
         toast.error('Los valores no pueden estar vacíos ni ser negativos');
         return;
       }
     }
-    setSaving(true);
+    setSavingGrupo(true);
     try {
-      await updateConfiguracion(valores);
-      toast.success('Configuración guardada');
+      const cambios = {};
+      grupo.items.forEach((item) => { cambios[item.clave] = valores[item.clave]; });
+      await updateConfiguracion(cambios);
+      valoresGuardados.current = { ...valoresGuardados.current, ...cambios };
+      setExito('Cambios guardados');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al guardar');
     } finally {
-      setSaving(false);
+      setSavingGrupo(false);
     }
   };
 
@@ -233,6 +255,98 @@ export default function Configuracion() {
     <div className="admin-page">
       <h2 className="page-title">Configuración</h2>
       <p className="page-subtitle">Ajusta las reglas del programa de fidelización. Aplican a las nuevas transacciones.</p>
+
+      {/* ===== Bienvenida (primera compra) y otras reglas ===== */}
+      {loading ? (
+        Array.from({ length: 2 }).map((_, i) => (
+          <div className="config-card" key={i}>
+            <div className="config-head"><div><Skeleton width={200} height={16} /></div></div>
+            <div className="config-grid">
+              <Skeleton height={46} radius={12} />
+              <Skeleton height={46} radius={12} />
+            </div>
+          </div>
+        ))
+      ) : (
+        <>
+          {GRUPOS.map((grupo) => {
+            const habilitado = activo(grupo);
+            return (
+              <div className={`config-card ${grupo.toggle && !habilitado ? 'config-card-off' : ''}`} key={grupo.titulo}>
+                <div className="config-head">
+                  <div>
+                    <h3>{grupo.titulo}</h3>
+                    {grupo.descripcion && <p>{grupo.descripcion}</p>}
+                  </div>
+                  {grupo.toggle && (
+                    <button
+                      type="button"
+                      className={`switch ${habilitado ? 'switch-on' : ''}`}
+                      onClick={() => handleToggle(grupo.toggle)}
+                      aria-pressed={habilitado}
+                      title={habilitado ? 'Regla activa' : 'Regla desactivada'}
+                    >
+                      <span className="switch-knob" />
+                      <span className="switch-label">{habilitado ? 'Activo' : 'Inactivo'}</span>
+                    </button>
+                  )}
+                </div>
+                <div className="config-grid">
+                  {grupo.items.map((item) => (
+                    <div className="config-item" key={item.clave}>
+                      <label>{item.label}</label>
+                      <div className="config-input">
+                        {item.sufijo === '$' && <span className="config-sufijo">$</span>}
+                        <input
+                          type="number"
+                          min="0"
+                          step={item.sufijo === '$' ? '0.01' : '1'}
+                          value={valores[item.clave] ?? ''}
+                          disabled={!habilitado}
+                          onChange={(e) => handleChange(item.clave, e.target.value)}
+                        />
+                        {item.sufijo === 'pts' && <span className="config-sufijo">pts</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="config-actions">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={!habilitado || savingGrupo}
+                    onClick={() => guardarGrupo(grupo)}
+                  >
+                    {savingGrupo ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Otras claves que no están agrupadas */}
+          {otros.length > 0 && (
+            <div className="config-card">
+              <div className="config-head"><div><h3>Tour Operadores</h3></div></div>
+              <div className="config-grid">
+                {otros.map((c) => (
+                  <div className="config-item" key={c.clave}>
+                    <label>{c.descripcion || c.clave}</label>
+                    <div className="config-input">
+                      <input
+                        type="text"
+                        value={valores[c.clave] ?? ''}
+                        onChange={(e) => handleChange(c.clave, e.target.value)}
+                        onBlur={() => guardarCampo(c.clave, { numerico: false })}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ===== Tipos de canje ===== */}
       <div className="config-card recompensas-card">
@@ -294,91 +408,8 @@ export default function Configuracion() {
         )}
       </div>
 
-      {loading ? (
-        Array.from({ length: 2 }).map((_, i) => (
-          <div className="config-card" key={i}>
-            <div className="config-head"><div><Skeleton width={200} height={16} /></div></div>
-            <div className="config-grid">
-              <Skeleton height={46} radius={12} />
-              <Skeleton height={46} radius={12} />
-            </div>
-          </div>
-        ))
-      ) : (
-        <form onSubmit={handleGuardar}>
-          {GRUPOS.map((grupo) => {
-            const habilitado = activo(grupo);
-            return (
-              <div className={`config-card ${grupo.toggle && !habilitado ? 'config-card-off' : ''}`} key={grupo.titulo}>
-                <div className="config-head">
-                  <div>
-                    <h3>{grupo.titulo}</h3>
-                    {grupo.descripcion && <p>{grupo.descripcion}</p>}
-                  </div>
-                  {grupo.toggle && (
-                    <button
-                      type="button"
-                      className={`switch ${habilitado ? 'switch-on' : ''}`}
-                      onClick={() => handleToggle(grupo.toggle)}
-                      aria-pressed={habilitado}
-                      title={habilitado ? 'Regla activa' : 'Regla desactivada'}
-                    >
-                      <span className="switch-knob" />
-                      <span className="switch-label">{habilitado ? 'Activo' : 'Inactivo'}</span>
-                    </button>
-                  )}
-                </div>
-                <div className="config-grid">
-                  {grupo.items.map((item) => (
-                    <div className="config-item" key={item.clave}>
-                      <label>{item.label}</label>
-                      <div className="config-input">
-                        {item.sufijo === '$' && <span className="config-sufijo">$</span>}
-                        <input
-                          type="number"
-                          min="0"
-                          step={item.sufijo === '$' ? '0.01' : '1'}
-                          value={valores[item.clave] ?? ''}
-                          disabled={!habilitado}
-                          onChange={(e) => handleChange(item.clave, e.target.value)}
-                        />
-                        {item.sufijo === 'pts' && <span className="config-sufijo">pts</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Otras claves que no están agrupadas */}
-          {otros.length > 0 && (
-            <div className="config-card">
-              <div className="config-head"><div><h3>Tour Operadores</h3></div></div>
-              <div className="config-grid">
-                {otros.map((c) => (
-                  <div className="config-item" key={c.clave}>
-                    <label>{c.descripcion || c.clave}</label>
-                    <div className="config-input">
-                      <input
-                        type="text"
-                        value={valores[c.clave] ?? ''}
-                        onChange={(e) => handleChange(c.clave, e.target.value)}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="config-actions">
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-          </div>
-        </form>
-      )}
+      {/* ===== Correos al cliente (plantillas configurables) ===== */}
+      <PlantillasCorreo />
 
       {/* ── Modal crear / editar tipo de canje ── */}
       {modalR && (
@@ -491,6 +522,9 @@ export default function Configuracion() {
           </div>
         </div>
       )}
+
+      {/* Confirmación de guardado (check con autocierre) */}
+      {exito && <ModalExito mensaje={exito} onCerrar={() => setExito('')} />}
     </div>
   );
 }
