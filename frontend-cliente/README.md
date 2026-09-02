@@ -1,102 +1,95 @@
-# Portal del Cliente — Fase 2 (Punta Diamantes)
+# Portal del Cliente (PWA) — Punta Diamantes
 
-App web (PWA) de **autoservicio del cliente** para el Sistema de Fidelización del Hotel Punta Diamantes.
-El cliente entra con su **documento + un PIN** y consulta (solo lectura) sus **puntos**, cuánto valen en dinero y su **historial de movimientos**.
+App web de **autoservicio del cliente** construida con **React + Vite**, instalable como **PWA**. El cliente entra con su **documento + un código de acceso (OTP) enviado a su correo** y consulta (**solo lectura**) sus **puntos**, cuánto valen en dinero, las **promociones** vigentes y su **historial de movimientos**. El canje se sigue haciendo en recepción, no aquí.
 
-Es una **extensión (Fase 2)** del sistema existente: **reusa el mismo backend y la misma base de datos**. No es un proyecto independiente; solo es un frontend aparte que consume nuevos endpoints del backend.
+Es una **app aparte** que **reusa el mismo `../backend` y la misma base de datos** que el panel; por eso los puntos que registra recepción se ven al instante en el portal.
 
----
+> **Despliegue MANUAL:** `pnpm build` → subir la carpeta `dist/` al subdominio **`puntos.puntadiamantes.com`**. En producción apunta al backend vía `VITE_API_URL` (`.env.production` → `https://puntadiamantes.com/api`).
 
-## ¿Por qué una carpeta aparte?
-
-El sistema tiene tres carpetas en el mismo repositorio:
-
-```
-sistema fidelizacion clientes/
-├── backend/            API Node/Express + MySQL (compartida)
-├── frontend/           Panel del personal (admin/recepción) — versión aprobada
-└── frontend-cliente/   ESTE proyecto: portal del cliente (PWA)
+```bash
+pnpm install
+cp .env.example .env      # ajusta VITE_API_URL si hace falta
+pnpm dev                  # Vite en http://localhost:5174
 ```
 
-- `frontend/` y `frontend-cliente/` son **dos apps Vite independientes** (cada una con sus dependencias y su build).
-- Las **dos consumen el mismo `backend/`**, que a su vez usa **una sola base de datos** (por eso los puntos que registra recepción se ven al instante en el portal del cliente).
+El backend debe incluir el origen del portal en `CLIENT_URL` (acepta varias URLs separadas por coma).
 
----
+## Scripts
 
-## Qué hace (alcance de esta fase)
+| Script | Qué hace |
+|---|---|
+| `pnpm dev` | Servidor de desarrollo (Vite). |
+| `pnpm build` | Compila a `dist/` (lo que se sube al hosting). |
+| `pnpm preview` | Previsualiza el build. |
+| `pnpm test:e2e` | Pruebas end-to-end (Playwright). |
 
-- **Login del cliente**: tipo de documento (DUI/Pasaporte) + número + PIN de 4–6 dígitos.
-  - Si el cliente **aún no tiene PIN**, el primero que ingrese **queda guardado** como su clave (primera vez).
-- **Mis puntos**: saldo actual y su valor en dólares (regla fija: 1 punto = $0.05).
-- **Recompensas**: catálogo con lo que ya puede canjear y cuántos puntos le faltan.
-- **Historial**: últimos movimientos de puntos (ganados/canjeados/ajustes).
+## Estructura
 
-> El **canje NO se hace desde el portal** — sigue siendo en recepción. El portal es **solo consulta**, lo que reduce el riesgo.
+```
+frontend-cliente/
+├── index.html               Entrada de Vite
+├── vite.config.js           Config de Vite
+├── playwright.config.js      Config de las pruebas E2E
+├── .env* (.env, .example,    Variables VITE_API_URL por entorno
+│         .production, .e2e)
+│
+├── e2e/                      Pruebas end-to-end del portal (Playwright)
+│   └── portal.spec.js
+│
+├── public/                  Estáticos servidos tal cual
+│   ├── manifest.webmanifest  Manifiesto PWA ("Agregar a pantalla de inicio")
+│   ├── icono.svg             Ícono de la app instalada
+│   ├── favicon.svg
+│   └── .htaccess             Reescritura SPA en Hostinger (Apache)
+│
+└── src/
+    ├── main.jsx             Bootstrap de React (Router)
+    ├── App.jsx              Definición de rutas del portal
+    │
+    ├── api/
+    │   └── api.js           axios: baseURL adaptativa + token del cliente (portal_token) y 401
+    │
+    ├── componentes/
+    │   ├── Logo.jsx                  Logo de marca
+    │   ├── Avisos.jsx                Avisos al usuario (ej. sin conexión)
+    │   └── CampanaNotificaciones.jsx Campana con novedades (ej. promoción nueva)
+    │
+    ├── paginas/
+    │   ├── Login.jsx        Acceso: documento + código OTP por correo
+    │   ├── Portal.jsx       Layout/navegación una vez dentro
+    │   ├── MisPuntos.jsx    Saldo, valor en $ y recompensas alcanzables
+    │   ├── Promociones.jsx  Promociones vigentes
+    │   ├── Configuracion.jsx Tema (claro/oscuro) y cerrar sesión
+    │   └── Bienvenida.jsx   Pantalla inicial / presentación
+    │
+    ├── servicios/
+    │   └── servicioPortal.js  Llamadas a /api/portal (solicitar/verificar código, puntos, movimientos)
+    │
+    ├── tema/
+    │   └── tema.jsx         Proveedor y alternador de tema claro/oscuro
+    │
+    ├── estilos/
+    │   └── portal.css       Estilos del portal
+    │
+    └── utilidades/
+        └── formato.js       Formateo de documento, fechas, etc.
+```
 
----
-
-## Backend que usa (ya incluido en `backend/`)
-
-Nuevos archivos/rutas agregados en el backend (montados en `/api/portal`):
+## Endpoints del backend que consume (montados en `/api/portal`)
 
 | Método | Ruta | Descripción | Protección |
 |---|---|---|---|
-| POST | `/api/portal/login` | Login por documento + PIN | Público (rate-limit) |
+| POST | `/api/portal/solicitar-codigo` | Envía el OTP al correo del cliente | Público (rate-limit) |
+| POST | `/api/portal/verificar-codigo` | Valida el OTP y entrega el token | Público (rate-limit) |
 | GET | `/api/portal/mis-puntos` | Puntos, valor en $ y recompensas | JWT rol `cliente` |
 | GET | `/api/portal/mis-movimientos` | Historial de puntos | JWT rol `cliente` |
+| GET | `/api/portal/promociones` | Promociones vigentes | JWT rol `cliente` |
 
-- Controlador: `backend/src/controladores/portalCliente.controlador.js`
-- Rutas: `backend/src/rutas/portalCliente.rutas.js`
-- El token del cliente reusa los middlewares existentes (`verificarToken`, `autorizarRoles('cliente')`).
+- Controlador: `../backend/src/controladores/portalCliente.controlador.js`
+- Rutas: `../backend/src/rutas/portalCliente.rutas.js`
 
-### Migración de base de datos (ejecutar una vez)
+## Notas
 
-Agrega la columna donde se guarda el PIN (hasheado con bcrypt):
-
-```sql
--- backend/src/semillas/migracion_cliente_pin.sql
-ALTER TABLE clientes ADD COLUMN pin_hash VARCHAR(255) NULL AFTER puntos_acumulados;
-```
-
----
-
-## Cómo correrlo en desarrollo
-
-1. **Backend** (desde `backend/`): correr como siempre. Asegúrate de que en su `.env` la variable `CLIENT_URL` incluya el origen del portal. Ahora acepta **varias URLs separadas por coma**:
-
-   ```env
-   CLIENT_URL=http://localhost:5173,http://localhost:5174
-   ```
-
-2. **Portal del cliente** (desde `frontend-cliente/`):
-
-   ```bash
-   pnpm install
-   cp .env.example .env      # ajusta VITE_API_URL si hace falta
-   pnpm dev                  # arranca en http://localhost:5174
-   ```
-
-El panel del personal sigue en `http://localhost:5173` y el portal del cliente en `http://localhost:5174`, ambos contra el mismo backend (`http://localhost:4000/api`).
-
----
-
-## Despliegue (Hostinger)
-
-- `frontend-cliente/` se compila con `pnpm build` → se sube la carpeta `dist/` al subdominio **`puntos.puntadiamantes.com`**.
-- El backend es el mismo de siempre; solo hay que agregar el origen del portal a `CLIENT_URL`.
-- Es una **PWA básica**: incluye `manifest.webmanifest` e íconos, así el cliente puede **"Agregar a pantalla de inicio"** y usarla como app. (Un service worker para uso offline completo queda como mejora futura.)
-
----
-
-## Notas de seguridad (importante para la tesis)
-
-- El PIN se guarda **hasheado con bcrypt**, nunca en texto plano.
-- El login tiene **límite de intentos** (rate-limit) igual que el del personal.
-- El portal es **solo lectura**: no permite canjear ni modificar nada.
-- **Consideración**: hoy la "primera vez" cualquiera que sepa el documento del cliente podría fijar el PIN. Para producción se recomienda que **recepción asigne/entregue el PIN**, o migrar a **código OTP por WhatsApp/correo** (Fase 3).
-
----
-
-## Estado
-
-Fase 2 en desarrollo, en la rama `feature/portal-cliente`. La versión aprobada por el hotel está protegida en el tag `v1-aprobado`.
+- **Solo lectura:** el portal no canjea ni modifica nada — reduce el riesgo.
+- **Acceso por OTP** (no por PIN): un código de 6 dígitos con vigencia corta enviado al correo; la sesión del portal es independiente de la de la app móvil.
+- **PWA:** con `manifest.webmanifest` e íconos, el cliente puede instalarla en su teléfono.
