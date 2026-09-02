@@ -50,6 +50,7 @@
 
 .stat-card-v2 {
   background: #ffffff;
+  border: 2px solid #0D1BB8;            /* borde azul de marca (solo modo claro; ver regla oscura) */
   border-radius: 20px;
   padding: 22px 20px;
   display: flex;
@@ -94,9 +95,10 @@
 
 .stat-hint-v2 {
   font-size: 11px;
-  color: var(--pd-text-xmuted);
-  font-weight: 500;
+  color: #6b7280;          /* subtítulo más oscuro para que se note en modo claro */
+  font-weight: 600;
 }
+[data-theme="dark"] .stat-hint-v2 { color: #c5cae8; }   /* más blanco en modo oscuro */
 
 /* ===== Layout filas inferiores ===== */
 .dash-row-2 {
@@ -108,10 +110,14 @@
 /* ===== Tarjeta genérica del dashboard ===== */
 .dash-card {
   background: #ffffff;
+  border: 2px solid #0D1BB8;            /* borde azul de marca (solo modo claro; ver regla oscura) */
   border-radius: 20px;
   padding: 22px 24px;
   box-shadow: 0 8px 24px rgba(13,27,184,0.06), inset 0 -2px 0 rgba(0,0,0,0.03);
 }
+/* En modo oscuro no se muestra el borde azul. */
+[data-theme="dark"] .stat-card-v2,
+[data-theme="dark"] .dash-card { border-color: transparent; }
 
 .dash-card-header {
   display: flex;
@@ -186,7 +192,8 @@
 
 .top-info { flex: 1; min-width: 0; }
 .top-name { margin: 0; font-size: 13px; font-weight: 700; color: var(--pd-text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.top-doc  { margin: 0; font-size: 11px; color: #9ca3af; }
+.top-doc  { margin: 0; font-size: 11px; color: #6b7280; font-weight: 600; }
+[data-theme="dark"] .top-doc { color: #c5cae8; }
 
 .top-pts {
   font-size: 16px;
@@ -214,7 +221,8 @@
 
 .promo-info { flex: 1; min-width: 0; }
 .promo-name { margin: 0; font-size: 13px; font-weight: 700; color: var(--pd-text-dark); }
-.promo-desc { margin: 2px 0 0; font-size: 11px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.promo-desc { margin: 2px 0 0; font-size: 11px; color: #6b7280; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-theme="dark"] .promo-desc { color: #c5cae8; }
 
 .promo-mult {
   font-size: 18px;
