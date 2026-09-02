@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { buscarCliente, buscarClientesPorNombre } from '../../servicios/servicioClientes';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
+import { getConfiguracion } from '../../servicios/servicioConfiguracion';
+import { getPais, telefonoConCodigo } from '../../utilidades/paises';
 import { exportarPDFCliente } from '../../utilidades/pdf';
 import { formatDui } from '../../utilidades/formato';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
@@ -128,8 +130,24 @@ export default function HistorialCliente() {
   const [detalle, setDetalle]         = useState(null);
   const [page, setPage]               = useState(1);
   const [resultados, setResultados]   = useState([]); // lista al buscar por nombre
+  const [cfgFrecuente, setCfgFrecuente] = useState(null); // regla de cliente frecuente (Configuración)
 
   const esBusquedaNombre = busqueda.id_tipo_documento === 'nombre';
+
+  // Carga la regla de cliente frecuente una sola vez (para el badge del perfil).
+  useEffect(() => {
+    getConfiguracion()
+      .then((data) => {
+        const mapa = {};
+        data.forEach((c) => { mapa[c.clave] = c.valor; });
+        setCfgFrecuente({
+          activo: mapa.frecuente_activo === '1',
+          min:    Number(mapa.frecuente_min_transacciones) || 0,
+          meses:  Number(mapa.frecuente_periodo_meses) || 0,
+        });
+      })
+      .catch(() => {}); // si falla, el perfil funciona igual (sin badge)
+  }, []);
 
   const cargarPerfil = async (idTipo, numDoc) => {
     setBuscando(true);
@@ -183,6 +201,16 @@ export default function HistorialCliente() {
   const totalCanjeados  = activas.reduce((s, t) => s + t.puntos_canjeados, 0);
   const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [historial]); // a la página 1 al buscar otro cliente
+
+  // Cliente frecuente: N transacciones (no anuladas) dentro de la ventana de meses configurada.
+  let transEnVentana = 0;
+  let esFrecuente = false;
+  if (cfgFrecuente?.activo && cfgFrecuente.min > 0 && cfgFrecuente.meses > 0) {
+    const desde = new Date();
+    desde.setMonth(desde.getMonth() - cfgFrecuente.meses);
+    transEnVentana = activas.filter((t) => new Date(t.fecha) >= desde).length;
+    esFrecuente = transEnVentana >= cfgFrecuente.min;
+  }
 
   const handleExportarPDF = () => {
     if (!cliente || historial.length === 0) {
@@ -281,7 +309,25 @@ export default function HistorialCliente() {
                 <span className="badge-rol" style={{ marginRight: 6, background: '#0D1BB8', color: '#fff' }}>{cliente.tipo_documento}</span>
                 <strong style={{ color: '#111827' }}>{cliente.numero_documento}</strong>
               </p>
-              {cliente.telefono && <p style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>Tel: {cliente.telefono}</p>}
+              {esFrecuente && (
+                <p style={{ margin: '8px 0 0' }}>
+                  <span
+                    title={`${transEnVentana} transacciones en los últimos ${cfgFrecuente.meses} meses`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#fffbeb', color: '#b45309', border: '1px solid #fcd34d',
+                      borderRadius: 20, padding: '4px 12px', fontSize: 12.5, fontWeight: 800,
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z" />
+                    </svg>
+                    Cliente frecuente
+                  </span>
+                </p>
+              )}
+              {cliente.telefono && <p style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>Tel: {telefonoConCodigo(cliente.telefono, cliente.pais)}</p>}
+              {cliente.pais && <p style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>País: {getPais(cliente.pais).bandera} {cliente.pais}</p>}
               {cliente.correo && <p style={{ color: '#374151', fontSize: 13, fontWeight: 500 }}>Correo: {cliente.correo}</p>}
             </div>
             <div className="perfil-stats">

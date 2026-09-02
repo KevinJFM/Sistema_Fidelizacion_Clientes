@@ -31,6 +31,14 @@ const GRUPOS = [
 // Claves que son interruptores (se guardan como '1'/'0', no se validan como números)
 const CLAVES_TOGGLE = GRUPOS.map((g) => g.toggle).filter(Boolean);
 
+// Regla "Cliente frecuente": se muestra en su propia tarjeta (frase editable), no en un GRUPO.
+const FRECUENTE = {
+  toggle: 'frecuente_activo',
+  minTransacciones: 'frecuente_min_transacciones',
+  periodoMeses: 'frecuente_periodo_meses',
+};
+const CLAVES_FRECUENTE = [FRECUENTE.toggle, FRECUENTE.minTransacciones, FRECUENTE.periodoMeses];
+
 // Claves que existen en la BD pero no se muestran en esta pantalla
 const CLAVES_OCULTAS = [
   'puntos_monto_base', 'puntos_por_monto', 'valor_canje', 'puntos_para_canje', 'canje_activo',
@@ -77,6 +85,7 @@ export default function Configuracion() {
       const conocidas = [
         ...GRUPOS.flatMap((g) => g.items.map((i) => i.clave)),
         ...CLAVES_TOGGLE,
+        ...CLAVES_FRECUENTE,
         ...CLAVES_OCULTAS,
       ];
       setOtros(data.filter((c) => !conocidas.includes(c.clave)));
@@ -249,6 +258,28 @@ export default function Configuracion() {
     }
   };
 
+  // Guarda la regla de cliente frecuente (transacciones mínimas + ventana en meses).
+  const frecuenteActivo = valores[FRECUENTE.toggle] === '1';
+  const guardarFrecuente = async () => {
+    const min = valores[FRECUENTE.minTransacciones];
+    const meses = valores[FRECUENTE.periodoMeses];
+    if (min === '' || Number(min) < 1 || meses === '' || Number(meses) < 1) {
+      toast.error('Las transacciones y los meses deben ser al menos 1');
+      return;
+    }
+    setSavingGrupo(true);
+    try {
+      const cambios = { [FRECUENTE.minTransacciones]: min, [FRECUENTE.periodoMeses]: meses };
+      await updateConfiguracion(cambios);
+      valoresGuardados.current = { ...valoresGuardados.current, ...cambios };
+      setExito('Cambios guardados');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al guardar');
+    } finally {
+      setSavingGrupo(false);
+    }
+  };
+
   if (inicial) return <SkeletonConfig tarjetas={3} filasPorTarjeta={3} />;
 
   return (
@@ -323,6 +354,63 @@ export default function Configuracion() {
               </div>
             );
           })}
+
+          {/* ===== Cliente frecuente (frase con números editables) ===== */}
+          <div className={`config-card ${!frecuenteActivo ? 'config-card-off' : ''}`}>
+            <div className="config-head">
+              <div>
+                <h3>Cliente frecuente</h3>
+                <p>Marca automáticamente a los huéspedes que visitan seguido (aparece en su perfil)</p>
+              </div>
+              <button
+                type="button"
+                className={`switch ${frecuenteActivo ? 'switch-on' : ''}`}
+                onClick={() => handleToggle(FRECUENTE.toggle)}
+                aria-pressed={frecuenteActivo}
+                title={frecuenteActivo ? 'Regla activa' : 'Regla desactivada'}
+              >
+                <span className="switch-knob" />
+                <span className="switch-label">{frecuenteActivo ? 'Activo' : 'Inactivo'}</span>
+              </button>
+            </div>
+
+            <p className="frecuente-frase">
+              Un cliente se considera <strong>frecuente</strong> cuando registra al menos
+              <span className="config-input frecuente-inline">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={valores[FRECUENTE.minTransacciones] ?? ''}
+                  disabled={!frecuenteActivo}
+                  onChange={(e) => handleChange(FRECUENTE.minTransacciones, e.target.value)}
+                />
+              </span>
+              transacciones en los últimos
+              <span className="config-input frecuente-inline">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={valores[FRECUENTE.periodoMeses] ?? ''}
+                  disabled={!frecuenteActivo}
+                  onChange={(e) => handleChange(FRECUENTE.periodoMeses, e.target.value)}
+                />
+              </span>
+              meses.
+            </p>
+
+            <div className="config-actions">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!frecuenteActivo || savingGrupo}
+                onClick={guardarFrecuente}
+              >
+                {savingGrupo ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
 
           {/* Otras claves que no están agrupadas */}
           {otros.length > 0 && (

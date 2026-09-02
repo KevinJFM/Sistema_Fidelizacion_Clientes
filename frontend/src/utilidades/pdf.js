@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { telefonoConCodigo } from './paises';
 
 const AZUL  = [13, 27, 184];
 const VERDE = [22, 163, 74];
@@ -175,7 +176,7 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(55, 65, 81);
-  if (cliente.telefono) doc.text(`Tel: ${cliente.telefono}`, 46, 150);
+  if (cliente.telefono) doc.text(`Tel: ${telefonoConCodigo(cliente.telefono, cliente.pais)}`, 46, 150);
   if (cliente.correo)   doc.text(`Correo: ${cliente.correo}`, 46, 167);
 
   // Stats en la derecha de la tarjeta

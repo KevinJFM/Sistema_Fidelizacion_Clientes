@@ -4,6 +4,7 @@ import {
   buscarClientePorDocumento,
   buscarClientesPorNombre,
   getTopClientes,
+  getClientesFrecuentes,
   crearCliente,
   actualizarCliente,
   eliminarCliente,
@@ -22,6 +23,8 @@ router.get('/buscar', autorizarRoles('admin', 'recepcionista', 'empleado'), busc
 router.get('/buscar-nombre', autorizarRoles('admin', 'recepcionista', 'empleado'), buscarClientesPorNombre);
 // Top 5 clientes con más puntos (dashboard)
 router.get('/top', autorizarRoles('admin', 'recepcionista'), getTopClientes);
+// Clientes frecuentes (dashboard): los que cumplen la regla de Configuración
+router.get('/frecuentes', autorizarRoles('admin', 'recepcionista'), getClientesFrecuentes);
 
 // Gestión de clientes: solo admin y recepcionista
 router.get('/', autorizarRoles('admin', 'recepcionista'), obtenerClientes);

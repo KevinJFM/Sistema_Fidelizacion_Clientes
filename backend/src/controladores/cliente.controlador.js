@@ -18,23 +18,88 @@ const validarLongitudes = (datos) => {
   return null;
 };
 
-// Listar todos los clientes
+// Lee la regla de "cliente frecuente" desde configuracion, con valores por defecto seguros.
+// Un cliente es frecuente si tiene al menos `min` transacciones (no anuladas) en los últimos `meses` meses.
+const obtenerReglaFrecuente = async () => {
+  const [filas] = await pool.query(
+    `SELECT clave, valor FROM configuracion
+     WHERE clave IN ('frecuente_activo', 'frecuente_min_transacciones', 'frecuente_periodo_meses')`
+  );
+  const mapa = {};
+  for (const f of filas) mapa[f.clave] = f.valor;
+  return {
+    activo: mapa.frecuente_activo === '1',
+    min:    Math.max(parseInt(mapa.frecuente_min_transacciones, 10) || 0, 0),
+    meses:  Math.max(parseInt(mapa.frecuente_periodo_meses, 10) || 0, 0),
+  };
+};
+
+// Listar todos los clientes (con la marca de cliente frecuente y su conteo reciente)
 export const obtenerClientes = async (req, res) => {
   try {
+    const regla = await obtenerReglaFrecuente();
+    const meses = regla.meses > 0 ? regla.meses : 6; // ventana para contar (fallback si la regla no la define)
+
     const [filas] = await pool.query(
       `SELECT c.id_cliente, c.id_tipo_documento, c.numero_documento,
-              c.nombres, c.apellidos, c.telefono, c.correo, c.fecha_nacimiento,
+              c.nombres, c.apellidos, c.telefono, c.pais, c.correo, c.fecha_nacimiento,
               c.id_departamento, c.id_distrito, c.puntos_acumulados, c.id_estado,
               td.nombre AS tipo_documento, e.estado,
-              dep.nombre AS departamento, dis.nombre AS distrito, c.created_at
+              dep.nombre AS departamento, dis.nombre AS distrito, c.created_at,
+              COALESCE(tf.total, 0) AS transacciones_recientes
        FROM clientes c
        JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
        JOIN estados e          ON c.id_estado         = e.id_estado
        LEFT JOIN departamentos dep ON c.id_departamento = dep.id_departamento
        LEFT JOIN distritos dis     ON c.id_distrito     = dis.id_distrito
-       ORDER BY c.id_cliente DESC`
+       LEFT JOIN (
+         SELECT id_cliente, COUNT(*) AS total
+         FROM transacciones
+         WHERE anulada = 0 AND fecha >= DATE_SUB(NOW(), INTERVAL ? MONTH)
+         GROUP BY id_cliente
+       ) tf ON tf.id_cliente = c.id_cliente
+       ORDER BY c.id_cliente DESC`,
+      [meses]
     );
-    return res.status(200).json(filas);
+
+    // La marca de frecuente solo aplica si la regla está activa.
+    const conMarca = filas.map((c) => ({
+      ...c,
+      es_frecuente: regla.activo && regla.min > 0 && Number(c.transacciones_recientes) >= regla.min,
+    }));
+    return res.status(200).json(conMarca);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// Clientes frecuentes para el dashboard: los que cumplen la regla, ordenados por
+// transacciones recientes. Devuelve también si la regla está activa (para el aviso del panel).
+export const getClientesFrecuentes = async (req, res) => {
+  try {
+    const regla = await obtenerReglaFrecuente();
+    if (!regla.activo || regla.min <= 0 || regla.meses <= 0) {
+      return res.status(200).json({ activo: regla.activo, min: regla.min, meses: regla.meses, clientes: [] });
+    }
+
+    const [filas] = await pool.query(
+      `SELECT c.id_cliente, c.nombres, c.apellidos, c.puntos_acumulados,
+              td.nombre AS tipo_documento, c.numero_documento,
+              COUNT(t.id_transaccion) AS transacciones_recientes
+       FROM clientes c
+       JOIN tipos_documento td ON c.id_tipo_documento = td.id_tipo_documento
+       JOIN transacciones t    ON t.id_cliente = c.id_cliente
+                               AND t.anulada = 0
+                               AND t.fecha >= DATE_SUB(NOW(), INTERVAL ? MONTH)
+       WHERE c.id_estado = 1
+       GROUP BY c.id_cliente
+       HAVING COUNT(t.id_transaccion) >= ?
+       ORDER BY transacciones_recientes DESC, c.puntos_acumulados DESC
+       LIMIT 5`,
+      [regla.meses, regla.min]
+    );
+
+    return res.status(200).json({ activo: true, min: regla.min, meses: regla.meses, clientes: filas });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
@@ -98,7 +163,7 @@ export const buscarClientePorDocumento = async (req, res) => {
 
     const [filas] = await pool.query(
       `SELECT c.id_cliente, c.id_tipo_documento, c.numero_documento,
-              c.nombres, c.apellidos, c.telefono, c.correo, c.fecha_nacimiento,
+              c.nombres, c.apellidos, c.telefono, c.pais, c.correo, c.fecha_nacimiento,
               c.id_departamento, c.id_distrito, c.puntos_acumulados, c.id_estado,
               td.nombre AS tipo_documento, e.estado,
               dep.nombre AS departamento, dis.nombre AS distrito
@@ -126,11 +191,18 @@ export const crearCliente = async (req, res) => {
   try {
     const {
       id_tipo_documento, numero_documento, nombres, apellidos,
-      telefono, correo, fecha_nacimiento, id_departamento, id_distrito,
+      telefono, pais, correo, fecha_nacimiento, id_departamento, id_distrito,
     } = req.body;
 
-    if (!id_tipo_documento || !numero_documento || !nombres || !apellidos || !id_departamento || !id_distrito) {
-      return res.status(400).json({ message: 'Tipo de documento, número, nombres, apellidos, departamento y distrito son requeridos' });
+    // El DUI es salvadoreño: departamento y distrito son obligatorios. El pasaporte
+    // suele ser de un cliente extranjero, así que la ubicación local es opcional.
+    const esDui = Number(id_tipo_documento) === 1;
+    if (!id_tipo_documento || !numero_documento || !nombres || !apellidos || (esDui && (!id_departamento || !id_distrito))) {
+      return res.status(400).json({
+        message: esDui
+          ? 'Tipo de documento, número, nombres, apellidos, departamento y distrito son requeridos'
+          : 'Tipo de documento, número, nombres y apellidos son requeridos',
+      });
     }
 
     const errLongitud = validarLongitudes(req.body);
@@ -150,12 +222,12 @@ export const crearCliente = async (req, res) => {
 
     const [resultado] = await pool.query(
       `INSERT INTO clientes
-        (id_tipo_documento, numero_documento, nombres, apellidos, telefono, correo,
+        (id_tipo_documento, numero_documento, nombres, apellidos, telefono, pais, correo,
          fecha_nacimiento, id_departamento, id_distrito, puntos_acumulados, id_estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
       [
         id_tipo_documento, numero_documento, nombres, apellidos,
-        telefono || null, correo || null, fecha_nacimiento || null,
+        telefono || null, pais || 'El Salvador', correo || null, fecha_nacimiento || null,
         id_departamento ?? null, id_distrito ?? null,
       ]
     );
@@ -180,7 +252,7 @@ export const actualizarCliente = async (req, res) => {
     const { id } = req.params;
     const {
       id_tipo_documento, numero_documento, nombres, apellidos,
-      telefono, correo, fecha_nacimiento, id_departamento, id_distrito, id_estado,
+      telefono, pais, correo, fecha_nacimiento, id_departamento, id_distrito, id_estado,
     } = req.body;
 
     const [existe] = await pool.query('SELECT id_cliente FROM clientes WHERE id_cliente = ?', [id]);
@@ -207,12 +279,12 @@ export const actualizarCliente = async (req, res) => {
     await pool.query(
       `UPDATE clientes
        SET id_tipo_documento = ?, numero_documento = ?, nombres = ?, apellidos = ?,
-           telefono = ?, correo = ?, fecha_nacimiento = ?,
+           telefono = ?, pais = ?, correo = ?, fecha_nacimiento = ?,
            id_departamento = ?, id_distrito = ?, id_estado = ?
        WHERE id_cliente = ?`,
       [
         id_tipo_documento, numero_documento, nombres, apellidos,
-        telefono || null, correo || null, fecha_nacimiento || null,
+        telefono || null, pais || 'El Salvador', correo || null, fecha_nacimiento || null,
         id_departamento ?? null, id_distrito ?? null, id_estado, id,
       ]
     );

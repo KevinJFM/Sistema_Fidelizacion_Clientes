@@ -8,7 +8,8 @@ import {
   reenviarCodigo,
 } from '../../servicios/servicioClientes';
 import { getDepartamentos, getDistritos } from '../../servicios/servicioUbicaciones';
-import { formatDui, formatTelefono, esDuiValido, esTelefonoValido, esCorreoValido } from '../../utilidades/formato';
+import { formatDui, formatTelefonoPais, esDuiValido, esTelefonoPaisValido, esCorreoValido } from '../../utilidades/formato';
+import { PAISES, getPais, telefonoConCodigo } from '../../utilidades/paises';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import DatePicker, { isoAFecha, fechaAISO } from '../../componentes/UI/DatePicker';
 import ModalExito from '../../componentes/UI/ModalExito';
@@ -35,6 +36,7 @@ const emptyForm = {
   nombres: '',
   apellidos: '',
   telefono: '',
+  pais: 'El Salvador',
   correo: '',
   fecha_nacimiento: '',
   id_departamento: null,
@@ -42,11 +44,27 @@ const emptyForm = {
   id_estado: 1,
 };
 
+// Estrella de "cliente frecuente". `activa` la pinta dorada rellena; si no, contorno gris.
+function EstrellaFrecuente({ activa = true, size = 15 }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24"
+      fill={activa ? '#f59e0b' : 'none'}
+      stroke={activa ? '#f59e0b' : '#9ca3af'}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [inicial, setInicial]   = useState(true); // solo la PRIMERA carga muestra el skeleton de módulo completo
   const [filtro, setFiltro]     = useState('');
+  const [soloFrecuentes, setSoloFrecuentes] = useState(false); // filtro: mostrar solo clientes frecuentes
   const [page, setPage]         = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -119,6 +137,7 @@ export default function Clientes() {
       nombres: c.nombres,
       apellidos: c.apellidos,
       telefono: c.telefono ?? '',
+      pais: c.pais ?? 'El Salvador',
       correo: c.correo ?? '',
       fecha_nacimiento: c.fecha_nacimiento?.slice(0, 10) ?? '',
       id_departamento: c.id_departamento ?? null,
@@ -161,12 +180,31 @@ export default function Clientes() {
   };
 
   const handleChange = (e) => {
-    const { name } = e.target;
-    let value = e.target.value;
-    if (name.startsWith('id_')) value = Number(value);
-    else if (name === 'telefono') value = formatTelefono(value);
-    else if (name === 'numero_documento' && form.id_tipo_documento === TIPO_DUI) value = formatDui(value);
-    setForm({ ...form, [name]: value });
+    const { name, value } = e.target;
+    setForm((prev) => {
+      const next = { ...prev };
+      if (name === 'id_tipo_documento') {
+        const tipo = Number(value);
+        next.id_tipo_documento = tipo;
+        // El DUI implica cliente salvadoreño: fija el país y re-formatea el teléfono como local.
+        if (tipo === TIPO_DUI) {
+          next.pais = 'El Salvador';
+          next.telefono = formatTelefonoPais('El Salvador', prev.telefono);
+        }
+      } else if (name === 'pais') {
+        next.pais = value;
+        next.telefono = formatTelefonoPais(value, prev.telefono); // re-formatea según el nuevo país
+      } else if (name === 'telefono') {
+        next.telefono = formatTelefonoPais(prev.pais, value);
+      } else if (name === 'numero_documento' && prev.id_tipo_documento === TIPO_DUI) {
+        next.numero_documento = formatDui(value);
+      } else if (name.startsWith('id_')) {
+        next[name] = Number(value);
+      } else {
+        next[name] = value;
+      }
+      return next;
+    });
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -187,14 +225,18 @@ export default function Clientes() {
     if (form.id_tipo_documento === TIPO_DUI && form.numero_documento && !esDuiValido(form.numero_documento)) {
       errores.numero_documento = 'Formato: 12345678-9';
     }
-    if (form.telefono && !esTelefonoValido(form.telefono)) {
-      errores.telefono = 'Formato: 4322-2334';
+    if (form.telefono && !esTelefonoPaisValido(form.pais, form.telefono)) {
+      errores.telefono = form.pais === 'El Salvador' ? 'Formato: 4322-2334' : 'Número inválido';
     }
     if (form.correo && !esCorreoValido(form.correo)) {
       errores.correo = 'Correo inválido';
     }
-    if (!form.id_departamento) errores.id_departamento = 'Requerido';
-    if (!form.id_distrito) errores.id_distrito = 'Requerido';
+    // Departamento y distrito solo son obligatorios para DUI (cliente salvadoreño).
+    // Con pasaporte (cliente extranjero) son opcionales.
+    if (form.id_tipo_documento === TIPO_DUI) {
+      if (!form.id_departamento) errores.id_departamento = 'Requerido';
+      if (!form.id_distrito) errores.id_distrito = 'Requerido';
+    }
     if (Object.keys(errores).length > 0) {
       setFieldErrors(errores);
       return;
@@ -221,13 +263,15 @@ export default function Clientes() {
   };
 
   const filtrados = clientes.filter((c) => {
+    if (soloFrecuentes && !c.es_frecuente) return false;
     // Búsqueda por palabras sueltas: cada término debe aparecer en documento/nombre completo.
     // Así "Kevin Flores" encuentra a "Kevin Javier Flores Mendoza" aunque haya nombres en medio.
     const texto = `${c.numero_documento} ${c.nombres} ${c.apellidos}`.toLowerCase();
     return filtro.toLowerCase().trim().split(/\s+/).every((palabra) => texto.includes(palabra));
   });
+  const hayFrecuentes = clientes.some((c) => c.es_frecuente); // solo mostramos el filtro si la regla marca a alguien
   const pageItems = filtrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [filtro]); // volver a la página 1 al buscar
+  useEffect(() => { setPage(1); }, [filtro, soloFrecuentes]); // volver a la página 1 al buscar/filtrar
 
   // Primera carga: TODA la pantalla se ve como esqueleto (no solo las filas).
   if (inicial) return <SkeletonListado columnas={6} />;
@@ -249,8 +293,8 @@ export default function Clientes() {
       </div>
 
       <div className="table-card">
-        <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
+        <div style={{ padding: '12px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 360 }}>
             <input
               className="filtro-input"
               placeholder="Buscar por documento o nombre..."
@@ -267,10 +311,32 @@ export default function Clientes() {
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
+
+          {/* Filtro: solo clientes frecuentes (aparece si la regla marca a alguien) */}
+          {hayFrecuentes && (
+            <button
+              type="button"
+              onClick={() => setSoloFrecuentes((v) => !v)}
+              title="Mostrar solo los clientes frecuentes"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer',
+                padding: '9px 14px', borderRadius: 999, fontSize: 13, fontWeight: 800,
+                border: soloFrecuentes ? '1px solid #f59e0b' : '2px solid #0D1BB8',
+                background: soloFrecuentes ? '#fffbeb' : '#fff',
+                color: soloFrecuentes ? '#b45309' : '#111827',
+                transition: 'all 0.15s',
+              }}
+            >
+              <EstrellaFrecuente activa={soloFrecuentes} />
+              Solo frecuentes
+            </button>
+          )}
         </div>
 
         {!loading && filtrados.length === 0 ? (
-          <p className="table-empty">No hay clientes registrados</p>
+          <p className="table-empty">
+            {soloFrecuentes ? 'Ningún cliente frecuente con esa búsqueda' : 'No hay clientes registrados'}
+          </p>
         ) : (
           <table className="data-table">
             <thead>
@@ -289,8 +355,17 @@ export default function Clientes() {
               ) : pageItems.map((c) => (
                 <tr key={c.id_cliente}>
                   <td><span className="badge-rol badge-doc">{c.tipo_documento}</span> {c.numero_documento}</td>
-                  <td>{c.nombres} {c.apellidos}</td>
-                  <td>{c.telefono || '—'}</td>
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {c.nombres} {c.apellidos}
+                      {c.es_frecuente && (
+                        <span title={`Cliente frecuente · ${c.transacciones_recientes} transacciones recientes`} style={{ display: 'inline-flex' }}>
+                          <EstrellaFrecuente />
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td>{c.telefono ? telefonoConCodigo(c.telefono, c.pais) : '—'}</td>
                   <td><strong>{c.puntos_acumulados}</strong></td>
                   <td>
                     <span className={`badge-estado estado-${c.estado?.toLowerCase()}`}>{c.estado}</span>
@@ -380,13 +455,36 @@ export default function Clientes() {
               </div>
 
               <div className="form-row">
+                {/* País: define el código del teléfono. Con DUI queda fijo en El Salvador. */}
+                <div className="form-field">
+                  <label>
+                    País {form.id_tipo_documento === TIPO_DUI && <span className="optional">(DUI: El Salvador)</span>}
+                  </label>
+                  <select name="pais" value={form.pais} onChange={handleChange} disabled={form.id_tipo_documento === TIPO_DUI}>
+                    {PAISES.map((p) => (
+                      <option key={p.nombre} value={p.nombre}>{p.bandera} {p.nombre} ({p.codigo})</option>
+                    ))}
+                  </select>
+                </div>
                 <div className={`form-field ${fieldErrors.telefono ? 'has-error' : ''}`}>
                   <label>
-                    Teléfono
+                    Teléfono <span className="optional">(opcional)</span>
                     {fieldErrors.telefono && <span className="req-tag">{fieldErrors.telefono}</span>}
                   </label>
-                  <input name="telefono" value={form.telefono} onChange={handleChange} placeholder="4322-2334" />
+                  <div className="tel-group">
+                    <span className="tel-codigo">{getPais(form.pais).codigo}</span>
+                    <input
+                      name="telefono"
+                      value={form.telefono}
+                      onChange={handleChange}
+                      inputMode="numeric"
+                      placeholder={form.pais === 'El Salvador' ? '4322-2334' : 'Número'}
+                    />
+                  </div>
                 </div>
+              </div>
+
+              <div className="form-row">
                 <div className={`form-field ${fieldErrors.correo ? 'has-error' : ''}`}>
                   <label>
                     Correo
@@ -394,12 +492,22 @@ export default function Clientes() {
                   </label>
                   <input type="email" name="correo" value={form.correo} onChange={handleChange} autoComplete="off" placeholder="ejemplo@correo.com" />
                 </div>
+                <div className="form-field">
+                  <label>Fecha de nacimiento <span className="optional">(opcional)</span></label>
+                  <DatePicker
+                    size="compacto"
+                    className="dp--bloque"
+                    value={isoAFecha(form.fecha_nacimiento)}
+                    onChange={(d) => handleChange({ target: { name: 'fecha_nacimiento', value: fechaAISO(d) } })}
+                    placeholder="Elegir fecha"
+                  />
+                </div>
               </div>
 
               <div className="form-row">
                 <div className={`form-field ${fieldErrors.id_departamento ? 'has-error' : ''}`}>
                   <label>
-                    Departamento
+                    Departamento {form.id_tipo_documento !== TIPO_DUI && <span className="optional">(opcional)</span>}
                     {fieldErrors.id_departamento && <span className="req-tag">{fieldErrors.id_departamento}</span>}
                   </label>
                   <select value={form.id_departamento ?? ''} onChange={onDepartamentoChange}>
@@ -411,7 +519,7 @@ export default function Clientes() {
                 </div>
                 <div className={`form-field ${fieldErrors.id_distrito ? 'has-error' : ''}`}>
                   <label>
-                    Distrito
+                    Distrito {form.id_tipo_documento !== TIPO_DUI && <span className="optional">(opcional)</span>}
                     {fieldErrors.id_distrito && <span className="req-tag">{fieldErrors.id_distrito}</span>}
                   </label>
                   <select value={form.id_distrito ?? ''} onChange={onDistritoChange} disabled={!form.id_departamento}>
@@ -423,18 +531,8 @@ export default function Clientes() {
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Fecha de nacimiento <span className="optional">(opcional)</span></label>
-                  <DatePicker
-                    size="compacto"
-                    className="dp--bloque"
-                    value={isoAFecha(form.fecha_nacimiento)}
-                    onChange={(d) => handleChange({ target: { name: 'fecha_nacimiento', value: fechaAISO(d) } })}
-                    placeholder="Elegir fecha"
-                  />
-                </div>
-                {editingId && (
+              {editingId && (
+                <div className="form-row">
                   <div className="form-field">
                     <label>Estado</label>
                     <select name="id_estado" value={form.id_estado} onChange={handleChange}>
@@ -442,8 +540,8 @@ export default function Clientes() {
                       {ESTADOS_FORM.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
                     </select>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button type="button" className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>

@@ -351,6 +351,31 @@
   border-color: #0a15a0;
 }
 
+/* Grupo teléfono: prefijo con el código de país (+503, +1, ...) + input */
+.tel-group {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.tel-group .tel-codigo {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 42px;
+  border: 2px solid #0D1BB8;
+  border-radius: 12px;
+  background: #EEF0FC;
+  color: #0A1259;
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tel-group input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Input de contraseña con botón de mostrar/ocultar */
 .input-pass {
   position: relative;

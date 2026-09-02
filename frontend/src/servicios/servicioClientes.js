@@ -22,6 +22,12 @@ export const getTopClientes = async () => {
   return data;
 };
 
+// Clientes frecuentes (dashboard): { activo, min, meses, clientes: [...] }
+export const getClientesFrecuentes = async () => {
+  const { data } = await api.get('/clientes/frecuentes');
+  return data;
+};
+
 export const createCliente = async (cliente) => {
   const { data } = await api.post('/clientes', cliente);
   return data;

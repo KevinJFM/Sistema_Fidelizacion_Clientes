@@ -134,6 +134,33 @@
   margin-top: 4px;
 }
 
+/* ===== Cliente frecuente (frase con números editables) ===== */
+.frecuente-frase {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  line-height: 2.2;         /* deja aire para los campos en línea */
+  margin-bottom: 18px;
+}
+.frecuente-frase strong { color: var(--pd-teal-dark); }
+[data-theme="dark"] .frecuente-frase { color: #c5cae8; }
+[data-theme="dark"] .frecuente-frase strong { color: #e8ebff; }
+
+/* Campo numérico embebido en la frase (reusa .config-input, pero angosto e inline) */
+.config-input.frecuente-inline {
+  display: inline-flex;
+  padding: 0 8px;
+  margin: 0 6px;
+  vertical-align: middle;
+}
+.config-input.frecuente-inline input {
+  width: 52px;
+  padding: 6px 0;
+  text-align: center;
+  font-size: 15px;
+}
+.config-card-off .frecuente-frase { opacity: 0.5; }
+
 /* ===== Sección tipos de canje ===== */
 .recompensas-card { margin-bottom: 20px; }
 

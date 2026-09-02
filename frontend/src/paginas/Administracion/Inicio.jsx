@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { getResumen } from '../../servicios/servicioTransacciones';
-import { getTopClientes } from '../../servicios/servicioClientes';
+import { getClientesFrecuentes } from '../../servicios/servicioClientes';
 import { getPromociones } from '../../servicios/servicioPromociones';
 import Skeleton from '../../componentes/Skeleton/Skeleton';
 import { conMinimo } from '../../utilidades/carga';
@@ -73,14 +74,17 @@ function StatCard({ label, value, hint, icon, color, index }) {
 
 export default function Dashboard() {
   const [resumen,     setResumen]  = useState(null);
-  const [topClientes, setTop]      = useState([]);
+  const [frecuentes,  setFrecuentes] = useState(null); // { activo, meses, clientes } | null (cargando)
   const [promociones, setPromos]   = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     conMinimo(getResumen()).then(setResumen).catch(() => toast.error('No se pudo cargar el panel'));
-    getTopClientes().then(setTop).catch(() => {});
+    getClientesFrecuentes().then(setFrecuentes).catch(() => setFrecuentes({ activo: false, clientes: [] }));
     getPromociones().then((p) => setPromos(p.filter((x) => x.estado === 'activo-hoy'))).catch(() => {});
   }, []);
+
+  const listaFrec = frecuentes?.clientes ?? [];
 
   const stats = [
     { label: 'Clientes registrados', value: resumen?.clientes_total ?? null,   hint: 'Total en el sistema' },
@@ -120,34 +124,45 @@ export default function Dashboard() {
       {/* Fila: Top clientes + Promociones activas */}
       <div className="dash-row-2">
 
-        {/* Top 5 clientes */}
+        {/* Clientes frecuentes */}
         <motion.div className="dash-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.5 }}>
           <div className="dash-card-header">
-            <span className="dash-card-title">Top clientes</span>
-            <span className="dash-card-badge">Por puntos</span>
+            <span className="dash-card-title">Clientes frecuentes</span>
+            {frecuentes?.activo && frecuentes?.meses
+              ? <span className="dash-card-badge">Últimos {frecuentes.meses} meses</span>
+              : <span className="dash-card-badge">⭐</span>}
           </div>
-          {topClientes.length === 0
-            ? <p className="dash-empty">Sin datos aún</p>
-            : (
-              <div className="top-list">
-                {topClientes.map((c, i) => (
-                  <div key={c.id_cliente} className="top-item">
-                    <span className="top-rank" style={{ background: i === 0 ? '#FEF9EC' : i === 1 ? '#f3f4f6' : '#f9fafb', color: i === 0 ? '#D4A843' : '#9ca3af' }}>
-                      {i + 1}
-                    </span>
-                    <div className="top-avatar" style={{ background: statColors[i % 4].bg, color: statColors[i % 4].icon }}>
-                      {c.nombres.charAt(0)}{c.apellidos.charAt(0)}
-                    </div>
-                    <div className="top-info">
-                      <p className="top-name">{c.nombres} {c.apellidos}</p>
-                      <p className="top-doc">{c.tipo_documento}: {c.numero_documento}</p>
-                    </div>
-                    <span className="top-pts">{c.puntos_acumulados} <small>pts</small></span>
+          {frecuentes && !frecuentes.activo ? (
+            <p className="dash-empty">Actívalo en Configuración → Cliente frecuente</p>
+          ) : listaFrec.length === 0 ? (
+            <p className="dash-empty">Aún no hay clientes frecuentes</p>
+          ) : (
+            <div className="top-list">
+              {listaFrec.map((c, i) => (
+                <div
+                  key={c.id_cliente}
+                  className="top-item"
+                  onClick={() => navigate(`/admin/historial?doc=${encodeURIComponent(c.numero_documento)}`)}
+                  style={{ cursor: 'pointer' }}
+                  title="Ver perfil del cliente"
+                >
+                  <span className="top-rank" style={{ background: '#FEF9EC', color: '#D4A843', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="#D4A843" stroke="none">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </span>
+                  <div className="top-avatar" style={{ background: statColors[i % 4].bg, color: statColors[i % 4].icon }}>
+                    {c.nombres.charAt(0)}{c.apellidos.charAt(0)}
                   </div>
-                ))}
-              </div>
-            )
-          }
+                  <div className="top-info">
+                    <p className="top-name">{c.nombres} {c.apellidos}</p>
+                    <p className="top-doc">{c.tipo_documento}: {c.numero_documento}</p>
+                  </div>
+                  <span className="top-pts">{c.transacciones_recientes} <small>visitas</small></span>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Promociones activas */}
