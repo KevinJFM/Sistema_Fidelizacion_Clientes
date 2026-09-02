@@ -49,6 +49,21 @@ function ModalDetalle({ t, onClose }) {
           </p>
         </div>
 
+        {/* Aviso de anulación */}
+        {t.anulada === 1 && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
+            <p style={{ margin: 0, fontWeight: 800, color: '#dc2626', fontSize: 14 }}>Transacción anulada</p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: '#7f1d1d' }}>
+              {t.motivo_anulacion || 'Sin motivo registrado'}
+              {t.anulada_por ? ` — ${t.anulada_por}` : ''}
+              {t.anulada_en ? ` · ${new Date(t.anulada_en).toLocaleString()}` : ''}
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#7f1d1d' }}>
+              Los puntos fueron revertidos y no cuenta en los totales.
+            </p>
+          </div>
+        )}
+
         {[
           { label: 'Registrado por', valor: t.cajero },
           { label: 'Fecha',          valor: new Date(t.fecha).toLocaleString() },
@@ -159,10 +174,13 @@ export default function HistorialCliente() {
     cargarPerfil(busqueda.id_tipo_documento, busqueda.numero_documento.trim());
   };
 
-  const totalGastado    = historial.reduce((s, t) => s + Number(t.monto), 0);
-  const totalDescuentos = historial.reduce((s, t) => s + Number(t.descuento_aplicado), 0);
-  const totalPuntos     = historial.reduce((s, t) => s + t.puntos_otorgados, 0);
-  const totalCanjeados  = historial.reduce((s, t) => s + t.puntos_canjeados, 0);
+  // Las transacciones anuladas no suman en los totales (sus puntos fueron revertidos),
+  // igual que en el Historial de transacciones.
+  const activas         = historial.filter((t) => !t.anulada);
+  const totalGastado    = activas.reduce((s, t) => s + Number(t.monto), 0);
+  const totalDescuentos = activas.reduce((s, t) => s + Number(t.descuento_aplicado), 0);
+  const totalPuntos     = activas.reduce((s, t) => s + t.puntos_otorgados, 0);
+  const totalCanjeados  = activas.reduce((s, t) => s + t.puntos_canjeados, 0);
   const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => { setPage(1); }, [historial]); // a la página 1 al buscar otro cliente
 
@@ -174,7 +192,7 @@ export default function HistorialCliente() {
     exportarPDFCliente({
       cliente,
       historial,
-      totales: { totalGastado, totalDescuentos, totalPuntos, totalCanjeados },
+      totales: { totalGastado, totalDescuentos, totalPuntos, totalCanjeados, transacciones: activas.length },
     });
     toast.success('PDF generado');
   };
@@ -272,7 +290,7 @@ export default function HistorialCliente() {
                 <span className="perfil-stat-label">Puntos actuales</span>
               </div>
               <div className="perfil-stat">
-                <span className="perfil-stat-valor">{historial.length}</span>
+                <span className="perfil-stat-valor">{activas.length}</span>
                 <span className="perfil-stat-label">Transacciones</span>
               </div>
               <div className="perfil-stat">
@@ -317,9 +335,12 @@ export default function HistorialCliente() {
                 </thead>
                 <tbody>
                   {pageItems.map((t) => (
-                    <tr key={t.id_transaccion}>
+                    <tr key={t.id_transaccion} className={t.anulada ? 'fila-anulada' : undefined}>
                       <td style={{ color: '#9ca3af', fontSize: 12 }}>#{t.id_transaccion}</td>
-                      <td><small>{new Date(t.fecha).toLocaleString()}</small></td>
+                      <td>
+                        <small>{new Date(t.fecha).toLocaleString()}</small>
+                        {t.anulada === 1 && <><br /><span className="badge-anulada">ANULADA</span></>}
+                      </td>
                       <td>{t.correo || '—'}</td>
                       <td>
                         {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—'}

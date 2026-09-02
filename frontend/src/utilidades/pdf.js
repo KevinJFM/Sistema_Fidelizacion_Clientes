@@ -181,6 +181,8 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   // Stats en la derecha de la tarjeta
   const statsX = ancho - 235;
   const { totalGastado, totalDescuentos, totalPuntos, totalCanjeados } = totales;
+  // Nº de transacciones que cuentan (sin las anuladas); cae a todas si no viene el dato.
+  const numTransacciones = totales.transacciones ?? historial.length;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
@@ -198,13 +200,13 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(75, 85, 99);
-  doc.text(`${historial.length} transacciones  |  $${totalGastado.toFixed(2)} gastados`, statsX, 170);
+  doc.text(`${numTransacciones} transacciones  |  $${totalGastado.toFixed(2)} gastados`, statsX, 170);
 
-  // Tabla de transacciones
+  // Tabla de transacciones. Las anuladas se marcan y se atenúan (no cuentan en los totales).
   const head = ['#', 'Fecha', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Total', 'Puntos'];
   const body = historial.map((t) => [
     `#${t.id_transaccion}`,
-    new Date(t.fecha).toLocaleDateString(),
+    new Date(t.fecha).toLocaleDateString() + (t.anulada ? '\n(ANULADA)' : ''),
     (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—') +
       (t.fecha_salida ? ` a ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
     t.nombre_promocion || '—',
@@ -222,6 +224,12 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
     headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [244, 246, 254] },
     margin: { left: 30, right: 30 },
+    // Atenúa (gris) las filas de transacciones anuladas.
+    didParseCell: (data) => {
+      if (data.section === 'body' && historial[data.row.index]?.anulada) {
+        data.cell.styles.textColor = [156, 163, 175];
+      }
+    },
     didDrawPage: () => {
       const pagina = `Página ${doc.internal.getNumberOfPages()}`;
       doc.setFontSize(8);
@@ -261,7 +269,7 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
     ...(totalCanjeados > 0 ? [{ eti: '  |  Canjeados: ', val: `${totalCanjeados}` }] : []),
   ], ancho / 2, y + 22, 'center');
   linea([{ eti: 'Puntos actuales: ', val: `${cliente.puntos_acumulados}` }], ancho - 46, y + 22, 'right');
-  linea([{ eti: 'Transacciones: ', val: `${historial.length}` }], ancho - 46, y + 40, 'right');
+  linea([{ eti: 'Transacciones: ', val: `${numTransacciones}` }], ancho - 46, y + 40, 'right');
 
   const nombreArchivo = `perfil_${cliente.numero_documento}_${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(nombreArchivo);
