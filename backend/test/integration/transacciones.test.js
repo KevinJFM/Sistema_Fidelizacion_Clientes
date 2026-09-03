@@ -279,6 +279,49 @@ describe('PUT /api/transacciones/:id/anular — anular', () => {
   });
 });
 
+describe('Anular libera la bienvenida / promoción (regresión)', () => {
+  it('tras anular la 1.ª compra, la bienvenida vuelve a aplicar en la nueva compra', async () => {
+    await setConfig('bienvenida_activo', '1');
+    const id = await crearCliente({ puntos: 0 });
+
+    // 1.ª compra con bienvenida (30 pts: 10 base + 20 bienvenida).
+    const primera = await post({ id_cliente: id, monto: 10, promocion: 'bienvenida' });
+    expect(primera.body.puntos_otorgados).toBe(30);
+
+    // El cajero se equivocó de monto → anula la transacción.
+    expect((await anular(primera.body.id_transaccion, { motivo: 'monto equivocado' })).status).toBe(200);
+
+    // Al re-registrar, la bienvenida DEBE poder aplicarse otra vez (antes daba 400).
+    const nueva = await post({ id_cliente: id, monto: 10, promocion: 'bienvenida' });
+    expect(nueva.status).toBe(201);
+    expect(nueva.body.puntos_otorgados).toBe(30);
+    expect(nueva.body.primera_compra).toBe(true);
+    expect(await puntosDe(id)).toBe(30); // solo cuenta la nueva (la anulada no)
+  });
+
+  it('tras anular, una promoción de un solo uso vuelve a estar disponible', async () => {
+    const [r] = await pool.query(
+      `INSERT INTO promociones (nombre, fecha_especial, puntos_extra, descuento_extra, max_usos_cliente, activo)
+       VALUES ('Especial', CURDATE(), 25, 0, 1, 1)`
+    );
+    const idPromo = r.insertId;
+    const id = await crearCliente({ puntos: 0 });
+
+    // Usa la promoción (único uso permitido).
+    const primera = await post({ id_cliente: id, monto: 40, promocion: idPromo });
+    expect(primera.body.puntos_otorgados).toBe(65); // 40 base + 25 promo
+
+    // Se anula por error del cajero.
+    expect((await anular(primera.body.id_transaccion, { motivo: 'error' })).status).toBe(200);
+
+    // La promoción DEBE volver a aceptarse (antes daba 400 "máximo de usos").
+    const nueva = await post({ id_cliente: id, monto: 40, promocion: idPromo });
+    expect(nueva.status).toBe(201);
+    expect(nueva.body.puntos_otorgados).toBe(65);
+    expect(await puntosDe(id)).toBe(65);
+  });
+});
+
 describe('GET /api/transacciones — historial', () => {
   it('lista las transacciones y expone el header de truncado', async () => {
     const id = await crearCliente({ numero_documento: 'HIST-1' });

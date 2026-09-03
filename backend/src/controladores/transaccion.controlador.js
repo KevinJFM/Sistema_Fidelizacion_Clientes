@@ -71,7 +71,7 @@ export const promocionesAplicables = async (req, res) => {
     });
 
     const [filasConteo] = await pool.query(
-      'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ?',
+      'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND anulada = 0',
       [idCliente]
     );
     const esPrimeraCompra = filasConteo[0].total === 0;
@@ -93,7 +93,7 @@ export const promocionesAplicables = async (req, res) => {
       const maxUsos = Number(p.max_usos_cliente) || 0;
       if (maxUsos > 0) {
         const [usos] = await pool.query(
-          'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ?',
+          'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ? AND anulada = 0',
           [idCliente, p.id_escenario]
         );
         if (usos[0].total >= maxUsos) continue;
@@ -146,8 +146,10 @@ export const crearTransaccion = async (req, res) => {
     const bienvenidaActivo     = Number(cfg.bienvenida_activo) === 1;
 
     // ¿Es la primera compra registrada del cliente? (para validar la bienvenida)
+    // Las ANULADAS no cuentan: si el cajero se equivocó y anuló la 1.ª compra, la bienvenida
+    // debe poder aplicarse de nuevo al volver a registrarla.
     const [filasConteo] = await pool.query(
-      'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ?',
+      'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND anulada = 0',
       [id_cliente]
     );
     const esPrimeraCompra = filasConteo[0].total === 0;
@@ -185,11 +187,12 @@ export const crearTransaccion = async (req, res) => {
           return res.status(400).json({ message: 'La promoción no está vigente hoy' });
         }
         promocion = filasPromocion[0];
-        // Respeta el máximo de usos por cliente.
+        // Respeta el máximo de usos por cliente (las anuladas no cuentan: al anular y re-registrar,
+        // la promoción vuelve a estar disponible).
         const maxUsos = Number(promocion.max_usos_cliente) || 0;
         if (maxUsos > 0) {
           const [usos] = await pool.query(
-            'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ?',
+            'SELECT COUNT(*) AS total FROM transacciones WHERE id_cliente = ? AND id_escenario = ? AND anulada = 0',
             [id_cliente, promocion.id_escenario]
           );
           if (usos[0].total >= maxUsos) {
