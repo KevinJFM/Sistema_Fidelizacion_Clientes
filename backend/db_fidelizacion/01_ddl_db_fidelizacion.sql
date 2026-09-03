@@ -10,6 +10,7 @@ USE db_fidelizacion;
 DROP TABLE IF EXISTS bitacora;
 DROP TABLE IF EXISTS plantillas_correo;
 DROP TABLE IF EXISTS alertas_enviadas;
+DROP TABLE IF EXISTS alertas_enviadas_operador;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
@@ -252,6 +253,7 @@ CREATE TABLE operadores_turisticos (
   nombre            VARCHAR(120)  NOT NULL,
   tipo              VARCHAR(20)   NOT NULL DEFAULT 'Persona natural',  -- 'Persona natural' o 'Empresa'
   telefono          VARCHAR(20)   NULL,
+  pais              VARCHAR(60)   NOT NULL DEFAULT 'El Salvador',       -- define el código de marcación del teléfono
   correo            VARCHAR(120)  NULL,
   puntos_acumulados DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   id_estado         INT NOT NULL DEFAULT 1,
@@ -352,6 +354,18 @@ CREATE TABLE alertas_enviadas (
   PRIMARY KEY (id),
   CONSTRAINT fk_alertas_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE,
   INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
+);
+
+-- Alertas de retención enviadas a los OPERADORES (paralela a alertas_enviadas de clientes).
+CREATE TABLE alertas_enviadas_operador (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  id_operador   INT          NOT NULL,
+  tipo          VARCHAR(40)  NOT NULL,       -- 'cerca_canje' | 'resumen'
+  referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; período YYYY-MM para resumen
+  fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_op_operador FOREIGN KEY (id_operador) REFERENCES operadores_turisticos(id_operador) ON DELETE CASCADE,
+  INDEX idx_operador_tipo (id_operador, tipo, referencia)
 );
 
 -- ============================================================

@@ -10,7 +10,8 @@ import {
   canjearOperador,
 } from '../../servicios/servicioOperadores';
 import { getRecompensas } from '../../servicios/servicioTransacciones';
-import { formatTelefono, esCorreoValido } from '../../utilidades/formato';
+import { formatTelefonoPais, esCorreoValido, esTelefonoPaisValido } from '../../utilidades/formato';
+import { PAISES, getPais, telefonoConCodigo } from '../../utilidades/paises';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import { conMinimo, mensajeError } from '../../utilidades/carga';
@@ -21,7 +22,7 @@ import './Usuarios.css';
 import './Transacciones.css';
 
 const ESTADO_INACTIVO = 2;
-const emptyForm = { nombre: '', tipo: 'Persona natural', telefono: '', correo: '' };
+const emptyForm = { nombre: '', tipo: 'Persona natural', telefono: '', pais: 'El Salvador', correo: '' };
 const TIPOS_OPERADOR = ['Persona natural', 'Empresa'];
 const emptyGrupo = { num_personas: '' };
 
@@ -91,15 +92,20 @@ export default function Operadores() {
   const abrirNuevo = () => { setEditingId(null); setForm(emptyForm); setErrores({}); setModalOpen(true); };
   const abrirEditar = (o) => {
     setEditingId(o.id_operador);
-    setForm({ nombre: o.nombre, tipo: o.tipo || 'Persona natural', telefono: o.telefono || '', correo: o.correo || '' });
+    setForm({ nombre: o.nombre, tipo: o.tipo || 'Persona natural', telefono: o.telefono || '', pais: o.pais || 'El Salvador', correo: o.correo || '' });
     setErrores({});
     setModalOpen(true);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const v = name === 'telefono' ? formatTelefono(value) : value;
-    setForm((f) => ({ ...f, [name]: v }));
+    setForm((f) => {
+      const next = { ...f, [name]: value };
+      // El país define el código; al cambiarlo (o el teléfono) se re-formatea según el país.
+      if (name === 'pais') next.telefono = formatTelefonoPais(value, f.telefono);
+      else if (name === 'telefono') next.telefono = formatTelefonoPais(f.pais, value);
+      return next;
+    });
     if (errores[name]) setErrores((prev) => { const n = { ...prev }; delete n[name]; return n; });
   };
 
@@ -107,6 +113,9 @@ export default function Operadores() {
     e.preventDefault();
     const errs = {};
     if (!form.nombre.trim()) errs.nombre = 'Requerido';
+    if (form.telefono && !esTelefonoPaisValido(form.pais, form.telefono)) {
+      errs.telefono = form.pais === 'El Salvador' ? 'Formato: 4322-2334' : 'Número inválido';
+    }
     if (form.correo && !esCorreoValido(form.correo)) errs.correo = 'Correo inválido';
     if (Object.keys(errs).length) { setErrores(errs); return; }
 
@@ -261,7 +270,7 @@ export default function Operadores() {
                 <tr key={o.id_operador}>
                   <td><strong>{o.nombre}</strong></td>
                   <td>{o.tipo || '—'}</td>
-                  <td>{o.telefono || '—'}</td>
+                  <td>{o.telefono ? telefonoConCodigo(o.telefono, o.pais) : '—'}</td>
                   <td>{o.correo || '—'}</td>
                   <td><strong>{Number(o.puntos_acumulados).toFixed(2)}</strong></td>
                   <td><span className={`badge-estado estado-${o.estado?.toLowerCase()}`}>{o.estado}</span></td>
@@ -336,15 +345,33 @@ export default function Operadores() {
                   <input name="nombre" value={form.nombre} onChange={handleChange} />
                 </div>
               </div>
-              <div className="form-row" style={{ gridTemplateColumns: '1fr 1.7fr' }}>
+              <div className="form-row">
+                {/* País: define el código de marcación del teléfono del operador. */}
                 <div className="form-field">
-                  <label>Teléfono</label>
-                  <input name="telefono" value={form.telefono} onChange={handleChange} placeholder="4322-2334" />
+                  <label>País</label>
+                  <select name="pais" value={form.pais} onChange={handleChange}>
+                    {PAISES.map((p) => (
+                      <option key={p.nombre} value={p.nombre}>{p.bandera} {p.nombre} ({p.codigo})</option>
+                    ))}
+                  </select>
                 </div>
-                <div className={`form-field ${errores.correo ? 'has-error' : ''}`}>
-                  <label>Correo {errores.correo && <span className="req-tag">{errores.correo}</span>}</label>
-                  <input name="correo" value={form.correo} onChange={handleChange} placeholder="correo@empresa.com" />
+                <div className={`form-field ${errores.telefono ? 'has-error' : ''}`}>
+                  <label>Teléfono {errores.telefono && <span className="req-tag">{errores.telefono}</span>}</label>
+                  <div className="tel-group">
+                    <span className="tel-codigo">{getPais(form.pais).codigo}</span>
+                    <input
+                      name="telefono"
+                      value={form.telefono}
+                      onChange={handleChange}
+                      inputMode="numeric"
+                      placeholder={form.pais === 'El Salvador' ? '4322-2334' : 'Número'}
+                    />
+                  </div>
                 </div>
+              </div>
+              <div className={`form-field ${errores.correo ? 'has-error' : ''}`}>
+                <label>Correo {errores.correo && <span className="req-tag">{errores.correo}</span>}</label>
+                <input name="correo" value={form.correo} onChange={handleChange} placeholder="correo@empresa.com" />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
@@ -367,7 +394,7 @@ export default function Operadores() {
                 <label>Cantidad de personas</label>
                 <input type="number" min="0" value={grupo.num_personas}
                   onChange={(e) => setGrupo({ ...grupo, num_personas: e.target.value })} />
-                <small style={{ color: '#6b7280', fontWeight: 700 }}>Se otorgan puntos a partir de 12 personas.</small>
+                <small className="form-hint">Se otorgan puntos a partir de 12 personas.</small>
               </div>
 
               {resultado ? (

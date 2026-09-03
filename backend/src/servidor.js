@@ -2,6 +2,7 @@ import "dotenv/config";
 import app from "./aplicacion.js";
 import { iniciarTareasProgramadas } from "./tareas/promociones.tarea.js";
 import { iniciarTareasClientes } from "./tareas/clientes.tarea.js";
+import { iniciarTareasOperadores } from "./tareas/operadores.tarea.js";
 import { iniciarIntegracionPos } from "./integracion-pos/pos.servicio.js";
 
 // Falla al arrancar si faltan variables de entorno críticas (mejor aquí con mensaje claro que en el primer request).
@@ -21,6 +22,8 @@ app.listen(PORT, () => {
   iniciarTareasProgramadas();
   // Alertas de retención de clientes: cerca del canje + reactivación (9:00 AM El Salvador)
   iniciarTareasClientes();
+  // Retención de operadores: cerca del canje (diario) + resumen mensual (10:00 AM El Salvador)
+  iniciarTareasOperadores();
   // Integración con el POS: arranca el poller si el modo está en "automático"
   iniciarIntegracionPos();
 });

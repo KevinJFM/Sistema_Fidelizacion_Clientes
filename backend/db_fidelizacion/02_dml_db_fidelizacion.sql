@@ -66,6 +66,26 @@ INSERT INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, 
 -- Días de antelación del aviso "por finalizar" (editable desde el panel).
 UPDATE plantillas_correo SET dias = 2 WHERE clave = 'promo_por_finalizar';
 
+-- Correos al OPERADOR turístico. Igual que los del cliente, pero el operador NO entra al portal:
+-- por eso van SIN botón (boton = NULL). El comprobante sirve tanto para visitas como para canjes.
+INSERT INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, asunto, titulo, intro, cuerpo, boton, variables) VALUES
+  ('bienvenida_operador', 'Bienvenida (operador nuevo)', 'Se envía cuando registras un operador turístico nuevo que tiene correo.', 0, 1,
+   '¡Bienvenido al programa de puntos! · Punta Diamantes', '¡Bienvenido, {nombre}!', 'Ya eres parte del programa de puntos para operadores turísticos de Punta Diamantes.',
+   'Por cada visita con tu grupo al hotel acumulas puntos que puedes canjear por recompensas en recepción. ¡Nos vemos pronto!', NULL,
+   '{nombre}'),
+  ('comprobante_operador', 'Comprobante de operador', 'Se envía al operador al registrar una visita o un canje (si tiene correo).', 0, 1,
+   'Tu comprobante · Punta Diamantes', '¡Gracias, {nombre}!', 'Este es el detalle de tu registro y tus puntos.',
+   'Tu saldo actual es de {saldo} puntos. ¡Gracias por traer a tu grupo a Punta Diamantes!', NULL,
+   '{nombre}, {personas}, {puntosGanados}, {puntosCanjeados}, {recompensa}, {saldo}, {minimo}'),
+  ('cerca_canje_operador', 'Casi llegas (operador)', 'Automático: cuando el operador alcanza el 80% de su próxima recompensa.', 0, 1,
+   '¡Casi llegas a "{recompensa}"! · Punta Diamantes', '¡Casi llegas, {nombre}!', 'Solo te faltan {faltan} puntos para tu próximo canje.',
+   'En tu próxima visita con tu grupo puedes completar tus puntos y reclamar {recompensa} en recepción.', NULL,
+   '{nombre}, {puntos}, {recompensa}, {recompensaPuntos}, {faltan}, {porcentaje}'),
+  ('resumen_operador', 'Resumen mensual (operador)', 'Automático: cada mes, el saldo del operador y las recompensas que ya puede canjear (no entra al portal).', 0, 1,
+   'Tus puntos este mes · Punta Diamantes', 'Tus puntos, {nombre}', 'Este es tu saldo y lo que ya puedes canjear en recepción.',
+   'Recuerda que en cada visita con tu grupo ganas puntos. ¡Te esperamos pronto en Punta Diamantes!', NULL,
+   '{nombre}, {puntos}');
+
 -- ============================================================
 --  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)
 -- ============================================================

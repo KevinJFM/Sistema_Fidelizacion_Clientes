@@ -129,12 +129,18 @@ export default function PlantillasCorreo() {
 
   const variables = (editando?.variables || '').split(',').map((v) => v.trim()).filter(Boolean);
 
-  return (
+  // Separa las plantillas por destinatario: las del operador llevan la clave *_operador.
+  const esOperador = (p) => String(p.clave || '').endsWith('_operador');
+  const plantillasCliente = lista.filter((p) => !esOperador(p));
+  const plantillasOperador = lista.filter(esOperador);
+
+  // Una tarjeta con su título y su lista de correos (misma UI para cliente y operador).
+  const renderSeccion = (titulo, descripcion, items) => (
     <div className="config-card">
       <div className="config-head">
         <div>
-          <h3>Correos al cliente</h3>
-          <p>Activa o desactiva cada correo y edita su asunto y texto. El diseño (logo y colores) es fijo.</p>
+          <h3>{titulo}</h3>
+          <p>{descripcion}</p>
         </div>
       </div>
 
@@ -144,7 +150,7 @@ export default function PlantillasCorreo() {
         </div>
       ) : (
         <div className="plantilla-list">
-          {lista.map((p) => (
+          {items.map((p) => (
             <div key={p.clave} className={`plantilla-item ${!p.activo ? 'plantilla-off' : ''}`}>
               <div className="plantilla-item-info">
                 <div className="plantilla-item-nombre">{p.nombre}</div>
@@ -172,6 +178,22 @@ export default function PlantillasCorreo() {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {renderSeccion(
+        'Correos al cliente',
+        'Activa o desactiva cada correo y edita su asunto y texto. El diseño (logo y colores) es fijo.',
+        plantillasCliente,
+      )}
+
+      {(loading || plantillasOperador.length > 0) && renderSeccion(
+        'Correos al operador',
+        'Los que recibe el operador turístico al registrarlo y en cada visita o canje. No entra al portal, así que estos correos no llevan botón.',
+        plantillasOperador,
       )}
 
       {/* Editor con vista previa en vivo */}
@@ -279,6 +301,6 @@ export default function PlantillasCorreo() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -120,11 +120,13 @@ const htmlCabecera = (titulo, subtitulo) => `
   <h2 class="pd-title" style="color:#0A1259;margin:0 0 5px;font-size:20px;line-height:1.2">${titulo}</h2>
   ${subtitulo ? `<p class="pd-intro" style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">${subtitulo}</p>` : ''}`;
 
-const htmlPie = () => `
+const htmlPie = (paraOperador = false) => `
   <hr class="pd-divider" style="border:none;border-top:1px solid #f3f4f6;margin:22px 0 16px">
   <p class="pd-foot" style="color:#6b7280;font-size:12.5px;margin:0;line-height:1.7;font-weight:600">
     <strong style="color:#374151;font-weight:700">Hotel Punta Diamantes · Sonsonate, El Salvador</strong><br>
-    Recibiste este correo porque eres cliente registrado del programa de puntos.
+    ${paraOperador
+      ? 'Recibiste este correo porque eres un operador turístico registrado en nuestro programa de puntos.'
+      : 'Recibiste este correo porque eres cliente registrado del programa de puntos.'}
   </p>
 </div>`;
 
@@ -163,6 +165,21 @@ const htmlRecompensaBox = ({ recompensa, recompensaPuntos, puntos }) => `
       </tr>
     </table>
   </div>`;
+
+// Catálogo de recompensas activas (para la bienvenida del operador): qué puede canjear con sus
+// puntos. Tabla (no flex) por compatibilidad con Gmail. Si no hay recompensas activas, no muestra nada.
+const htmlListaRecompensas = (recompensas = []) => (recompensas.length
+  ? `<p class="pd-text" style="font-size:14px;color:#374151;margin:6px 0 8px;font-weight:600">Esto es lo que puedes canjear con tus puntos:</p>
+     <div class="pd-box" style="background:#f4f5fb;border-radius:12px;padding:6px 4px;margin-bottom:16px">
+       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+         ${recompensas.map((r, i) => `
+         <tr>
+           <td class="pd-value" style="font-size:14px;color:#0A1259;font-weight:700;padding:8px 10px;${i ? 'border-top:1px solid #e5e7eb;' : ''}">${escapar(r.nombre)}</td>
+           <td style="font-size:14px;color:#E5388A;font-weight:800;text-align:right;white-space:nowrap;padding:8px 10px;${i ? 'border-top:1px solid #e5e7eb;' : ''}">${escapar(r.puntos)} pts</td>
+         </tr>`).join('')}
+       </table>
+     </div>`
+  : '');
 
 const htmlListaAlcanzables = (alcanzables = []) => (alcanzables.length
   ? `<p class="pd-text" style="font-size:14px;color:#374151;margin:16px 0 8px;font-weight:600">Con tus puntos actuales ya puedes canjear:</p>
@@ -212,6 +229,44 @@ const htmlComprobante = ({ monto, descuento, total, puntosOtorgados, puntosCanje
   ${recompensa ? `<p class="pd-muted" style="font-size:13px;color:#6b7280;margin:10px 0 0">Canje: <strong class="pd-value" style="color:#0A1259">${escapar(recompensa)}</strong></p>` : ''}`;
 };
 
+// Bloque de comprobante del OPERADOR turístico: una visita (personas registradas + puntos por
+// visita) o un canje. A diferencia del cliente, el operador no tiene monto ni descuento: gana
+// puntos por traer grupos al hotel, no por consumo. `tipo` = 'visita' | 'canje'.
+const htmlComprobanteOperador = ({ tipo, personas, puntosGanados, puntosCanjeados, recompensa, minimo, otorgaPuntos }) => {
+  // CANJE: recompensa reclamada + puntos descontados.
+  if (tipo === 'canje') {
+    return `
+    ${recompensa ? `<div class="pd-box" style="background:#f4f5fb;border-radius:12px;padding:14px 18px;margin-bottom:14px">
+      <div class="pd-muted" style="font-size:13px;color:#6b7280;margin-bottom:2px">Recompensa canjeada</div>
+      <div class="pd-value" style="font-weight:700;color:#0A1259;font-size:16px">${escapar(recompensa)}</div>
+    </div>` : ''}
+    <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;text-align:center;padding:12px;margin-bottom:6px">
+      <div style="font-size:22px;font-weight:800;color:#dc2626">-${escapar(puntosCanjeados)}</div>
+      <div style="font-size:12px;color:#374151;font-weight:700">Puntos canjeados</div>
+    </div>`;
+  }
+  // VISITA: personas registradas + puntos ganados (o aviso si no alcanzó el mínimo de personas).
+  const boxPersonas = `
+  <div class="pd-box" style="background:#f4f5fb;border-radius:12px;padding:14px 18px;margin-bottom:14px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">
+      <tr>
+        <td class="pd-muted" style="font-size:14px;color:#6b7280">Personas registradas</td>
+        <td class="pd-value" style="font-size:16px;color:#0A1259;font-weight:800;text-align:right">${escapar(personas)}</td>
+      </tr>
+    </table>
+  </div>`;
+  const boxPuntos = otorgaPuntos
+    ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;text-align:center;padding:12px;margin-bottom:6px">
+         <div style="font-size:22px;font-weight:800;color:#16a34a">+${escapar(puntosGanados)}</div>
+         <div style="font-size:12px;color:#374151;font-weight:700">Puntos ganados</div>
+       </div>`
+    : `<div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;text-align:center;padding:12px;margin-bottom:6px">
+         <div style="font-size:14px;color:#92400e;font-weight:700">No se otorgaron puntos en esta visita</div>
+         <div style="font-size:12.5px;color:#92400e;margin-top:3px">Se requieren mínimo ${escapar(minimo)} personas por visita.</div>
+       </div>`;
+  return boxPersonas + boxPuntos;
+};
+
 // Bloque de promoción: nombre, beneficio y vigencia (para los correos de promoción).
 const htmlPromoBox = ({ promo, beneficio, vigencia, dias }) => `
   <div class="pd-box" style="background:#f4f5fb;border-radius:12px;padding:16px 18px;margin-bottom:16px;border-left:4px solid #E5388A">
@@ -232,28 +287,36 @@ const construirMedio = (clave, vars = {}) => {
     case 'promo_nueva':         return htmlPromoBox(vars);
     case 'promo_por_finalizar': return htmlPromoBox(vars);
     case 'bienvenida':          return '';
+    // Todos los correos del operador incluyen el catálogo de canjes (no entra al portal a verlo).
+    case 'bienvenida_operador': return htmlListaRecompensas(vars.recompensas);
+    case 'comprobante_operador':return htmlComprobanteOperador(vars) + htmlListaRecompensas(vars.recompensas);
+    case 'cerca_canje_operador':return htmlRecompensaBox(vars) + htmlBarra(vars.porcentaje) + htmlListaRecompensas(vars.recompensas);
+    case 'resumen_operador':    return htmlPuntoDestacado(vars.puntos, 'puntos acumulados') + htmlListaRecompensas(vars.recompensas);
     default:                    return '';
   }
 };
 
 // Ensambla cabecera + medio estructural + cuerpo + botón + pie.
-const ensamblar = ({ titulo, intro, medio = '', cuerpo, boton }) => `
+const ensamblar = ({ titulo, intro, medio = '', cuerpo, boton, paraOperador = false }) => `
   ${htmlCabecera(titulo, intro)}
   ${medio}
   ${cuerpo ? `<p class="pd-text" style="font-size:14px;color:#374151;margin:0 0 8px;line-height:1.6">${cuerpo}</p>` : ''}
   ${boton ? htmlBoton(boton) : ''}
-  ${htmlPie()}`;
+  ${htmlPie(paraOperador)}`;
 
 // A partir de una plantilla (fila de BD o editada) + variables, produce { asunto, html }.
 const render = (plantilla, vars = {}) => {
   const medio = construirMedio(plantilla.clave, vars);
   const asunto = sustituirTexto(plantilla.asunto, vars);
+  // Los correos del operador (clave *_operador) llevan un pie propio y nunca botón (no entra al portal).
+  const paraOperador = String(plantilla.clave || '').endsWith('_operador');
   const html = ensamblar({
     titulo: sustituirHtml(plantilla.titulo, vars),
     intro:  sustituirHtml(plantilla.intro, vars),
     medio,
     cuerpo: sustituirHtml(plantilla.cuerpo, vars),
     boton:  plantilla.boton ? sustituirHtml(plantilla.boton, vars) : null,
+    paraOperador,
   });
   return { asunto, html };
 };
@@ -267,6 +330,21 @@ export const cargarPlantilla = async (clave) => {
 // ¿Se debe enviar este correo? Solo si está activo (o es obligatorio, ej. OTP).
 const debeEnviar = (plantilla) => !!plantilla && (plantilla.activo === 1 || plantilla.obligatorio === 1);
 
+// Catálogo de recompensas activas (ordenadas por puntos). Se incrusta en TODOS los correos del
+// operador para que vea qué puede canjear sin entrar al portal.
+const recompensasActivas = async () => {
+  const [filas] = await pool.query('SELECT nombre, puntos FROM recompensas WHERE activo = 1 ORDER BY puntos ASC');
+  return filas;
+};
+
+// Catálogo de ejemplo para las vistas previas de los correos del operador (en el envío real se usan
+// las recompensas activas de la BD). Nombres tomados del catálogo real sembrado.
+const RECOMPENSAS_EJEMPLO = [
+  { nombre: 'Pasanoche (Dom a Jue)', puntos: 700 },
+  { nombre: 'Pasadía (Dom a Jue)',   puntos: 800 },
+  { nombre: 'Estadía 24h · 2 personas (Dom a Jue)', puntos: 1000 },
+];
+
 // Datos de EJEMPLO para la vista previa (no se envía nada real).
 export const EJEMPLOS = {
   otp:          { codigo: '482913', minutos: 5 },
@@ -279,6 +357,10 @@ export const EJEMPLOS = {
   comprobante:  { nombre: 'María', monto: '95.00', descuento: '2.00', total: '93.00', puntosOtorgados: 95, puntosCanjeados: 0, saldo: 340, recompensa: '' },
   promo_nueva:  { nombre: 'María', promo: '2x1 en Pasadía', beneficio: '25 pts extra y 10% de descuento', vigencia: '01/09/2026 al 15/09/2026' },
   promo_por_finalizar: { nombre: 'María', promo: '2x1 en Pasadía', beneficio: '25 pts extra y 10% de descuento', vigencia: '01/09/2026 al 15/09/2026', dias: 2 },
+  bienvenida_operador:  { nombre: 'Sunset Tours', recompensas: RECOMPENSAS_EJEMPLO },
+  comprobante_operador: { nombre: 'Sunset Tours', tipo: 'visita', personas: 15, puntosGanados: 100, puntosCanjeados: 0, recompensa: '', saldo: 300, minimo: 12, otorgaPuntos: true, recompensas: RECOMPENSAS_EJEMPLO },
+  cerca_canje_operador: { nombre: 'Sunset Tours', puntos: 560, recompensa: 'Pasanoche (Dom a Jue)', recompensaPuntos: 700, faltan: 140, porcentaje: 80, recompensas: RECOMPENSAS_EJEMPLO },
+  resumen_operador:     { nombre: 'Sunset Tours', puntos: 900, recompensas: RECOMPENSAS_EJEMPLO },
 };
 
 // Renderiza una plantilla con datos de ejemplo (para la vista previa del panel).
@@ -374,6 +456,80 @@ export const enviarComprobante = async ({
     recompensa: recompensa || '',
   };
   const { asunto, html } = render(plantilla, vars);
+  await enviarMail(t, { to: destino, asunto, html });
+  return true;
+};
+
+// 6. Bienvenida al registrar un operador turístico nuevo (no entra al portal: sin botón).
+export const enviarBienvenidaOperador = async ({ destino, nombre }) => {
+  const t = crearTransportador();
+  if (!t) return false;
+  const plantilla = await cargarPlantilla('bienvenida_operador');
+  if (!debeEnviar(plantilla)) return false;
+
+  // El operador puede ser una empresa ("Sunset Tours"), así que usamos el nombre completo (no solo la 1.ª palabra).
+  const { asunto, html } = render(plantilla, { nombre: String(nombre || ''), recompensas: await recompensasActivas() });
+  await enviarMail(t, { to: destino, asunto, html });
+  return true;
+};
+
+// 7. Comprobante al operador al registrar una visita o un canje (no entra al portal: sin botón).
+export const enviarComprobanteOperador = async ({
+  destino, nombre, tipo, personas, puntosGanados, puntosCanjeados, recompensa, saldo, minimo, otorgaPuntos,
+}) => {
+  const t = crearTransportador();
+  if (!t) return false;
+  const plantilla = await cargarPlantilla('comprobante_operador');
+  if (!debeEnviar(plantilla)) return false;
+
+  const vars = {
+    nombre: String(nombre || ''),
+    tipo: tipo === 'canje' ? 'canje' : 'visita',
+    personas: personas ?? 0,
+    puntosGanados: puntosGanados ?? 0,
+    puntosCanjeados: puntosCanjeados ?? 0,
+    recompensa: recompensa || '',
+    saldo: saldo ?? 0,
+    minimo: minimo ?? 0,
+    otorgaPuntos: !!otorgaPuntos,
+    recompensas: await recompensasActivas(),
+  };
+  const { asunto, html } = render(plantilla, vars);
+  await enviarMail(t, { to: destino, asunto, html });
+  return true;
+};
+
+// 8. Alerta "casi llegas" al operador (80%+ de su próxima recompensa). Sin botón (no entra al portal).
+export const enviarAlertaCercaDelCanjeOperador = async ({
+  destino, nombre, puntosActuales, recompensaNombre, recompensaPuntos, faltan, porcentaje,
+}) => {
+  const t = crearTransportador();
+  if (!t) return false;
+  const plantilla = await cargarPlantilla('cerca_canje_operador');
+  if (!debeEnviar(plantilla)) return false;
+
+  const vars = {
+    nombre: String(nombre || ''),
+    puntos: puntosActuales,
+    recompensa: recompensaNombre,
+    recompensaPuntos,
+    faltan,
+    porcentaje,
+    recompensas: await recompensasActivas(),
+  };
+  const { asunto, html } = render(plantilla, vars);
+  await enviarMail(t, { to: destino, asunto, html });
+  return true;
+};
+
+// 9. Resumen mensual del operador: su saldo + el catálogo de canjes con sus puntos (no ve el portal).
+export const enviarResumenOperador = async ({ destino, nombre, puntos }) => {
+  const t = crearTransportador();
+  if (!t) return false;
+  const plantilla = await cargarPlantilla('resumen_operador');
+  if (!debeEnviar(plantilla)) return false;
+
+  const { asunto, html } = render(plantilla, { nombre: String(nombre || ''), puntos, recompensas: await recompensasActivas() });
   await enviarMail(t, { to: destino, asunto, html });
   return true;
 };

@@ -13,6 +13,7 @@ export { pool };
 // (NO se tocan los catálogos: estados, roles, tipos_documento, ubicaciones,
 //  configuracion, recompensas — vienen sembrados por el esquema.)
 const TABLAS_MUTABLES = [
+  'alertas_enviadas_operador',
   'transacciones_operador',
   'operadores_turisticos',
   'movimientos_puntos',

@@ -1,4 +1,5 @@
 import pool from '../configuracion/bd.js';
+import { enviarBienvenidaOperador, enviarComprobanteOperador } from '../configuracion/correo.js';
 
 const ESTADO_ACTIVO = 1;
 const ESTADO_INACTIVO = 2;
@@ -14,7 +15,7 @@ const MINIMO_PERSONAS = 12;
 export const obtenerOperadores = async (req, res) => {
   try {
     const [filas] = await pool.query(
-      `SELECT o.id_operador, o.nombre, o.tipo, o.telefono, o.correo,
+      `SELECT o.id_operador, o.nombre, o.tipo, o.telefono, o.pais, o.correo,
               o.puntos_acumulados, o.id_estado, e.estado, o.created_at
        FROM operadores_turisticos o
        JOIN estados e ON o.id_estado = e.id_estado
@@ -29,7 +30,7 @@ export const obtenerOperadores = async (req, res) => {
 // Crear un operador
 export const crearOperador = async (req, res) => {
   try {
-    const { nombre, tipo, telefono, correo } = req.body;
+    const { nombre, tipo, telefono, pais, correo } = req.body;
     if (!nombre || !nombre.trim()) {
       return res.status(400).json({ message: 'El nombre es requerido' });
     }
@@ -38,10 +39,16 @@ export const crearOperador = async (req, res) => {
     }
     const tipoNorm = tipo === 'Empresa' ? 'Empresa' : 'Persona natural';
     const [resultado] = await pool.query(
-      `INSERT INTO operadores_turisticos (nombre, tipo, telefono, correo, id_estado)
-       VALUES (?, ?, ?, ?, ?)`,
-      [nombre.trim(), tipoNorm, telefono || null, correo || null, ESTADO_ACTIVO]
+      `INSERT INTO operadores_turisticos (nombre, tipo, telefono, pais, correo, id_estado)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [nombre.trim(), tipoNorm, telefono || null, pais || 'El Salvador', correo || null, ESTADO_ACTIVO]
     );
+
+    // Correo de bienvenida (si tiene correo y la plantilla está activa). No bloquea la respuesta.
+    if (correo) {
+      enviarBienvenidaOperador({ destino: correo, nombre: nombre.trim() }).catch(() => {});
+    }
+
     return res.status(201).json({ message: 'Operador creado', id_operador: resultado.insertId });
   } catch (error) {
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -52,7 +59,7 @@ export const crearOperador = async (req, res) => {
 export const actualizarOperador = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, tipo, telefono, correo, id_estado } = req.body;
+    const { nombre, tipo, telefono, pais, correo, id_estado } = req.body;
     if (!nombre || !nombre.trim()) {
       return res.status(400).json({ message: 'El nombre es requerido' });
     }
@@ -62,9 +69,9 @@ export const actualizarOperador = async (req, res) => {
     const tipoNorm = tipo === 'Empresa' ? 'Empresa' : 'Persona natural';
     const [resultado] = await pool.query(
       `UPDATE operadores_turisticos
-       SET nombre = ?, tipo = ?, telefono = ?, correo = ?, id_estado = ?
+       SET nombre = ?, tipo = ?, telefono = ?, pais = ?, correo = ?, id_estado = ?
        WHERE id_operador = ?`,
-      [nombre.trim(), tipoNorm, telefono || null, correo || null, id_estado || ESTADO_ACTIVO, id]
+      [nombre.trim(), tipoNorm, telefono || null, pais || 'El Salvador', correo || null, id_estado || ESTADO_ACTIVO, id]
     );
     if (resultado.affectedRows === 0) {
       return res.status(404).json({ message: 'Operador no encontrado' });
@@ -144,6 +151,20 @@ export const registrarConsumoOperador = async (req, res) => {
       );
       await conexion.commit();
 
+      // Comprobante por correo (si el operador tiene correo y la plantilla está activa). No bloquea la respuesta.
+      if (filasOp[0].correo) {
+        enviarComprobanteOperador({
+          destino: filasOp[0].correo,
+          nombre: filasOp[0].nombre,
+          tipo: 'visita',
+          personas,
+          puntosGanados: puntosOtorgados,
+          otorgaPuntos,
+          minimo: MINIMO_PERSONAS,
+          saldo: saldoFinal,
+        }).catch(() => {});
+      }
+
       return res.status(201).json({
         message: otorgaPuntos
           ? 'Visita registrada correctamente'
@@ -217,6 +238,18 @@ export const canjearOperador = async (req, res) => {
       );
       await conexion.commit();
 
+      // Comprobante del canje por correo (si el operador tiene correo y la plantilla está activa). No bloquea la respuesta.
+      if (filasOp[0].correo) {
+        enviarComprobanteOperador({
+          destino: filasOp[0].correo,
+          nombre: filasOp[0].nombre,
+          tipo: 'canje',
+          recompensa: recompensa.nombre,
+          puntosCanjeados: recompensa.puntos,
+          saldo: saldoFinal,
+        }).catch(() => {});
+      }
+
       return res.status(201).json({
         message: 'Canje registrado correctamente',
         id_transaccion_op: resultado.insertId,
@@ -247,7 +280,7 @@ export const listarTransaccionesOperador = async (req, res) => {
              t.puntos_personas, t.puntos_otorgados,
              t.puntos_canjeados, t.descuento_aplicado, t.fecha,
              t.anulada, t.anulada_en, t.motivo_anulacion,
-             o.nombre AS operador, o.tipo, o.telefono, o.correo,
+             o.nombre AS operador, o.tipo, o.telefono, o.pais, o.correo,
              u.nombre AS registrado_por,
              ua.nombre AS anulada_por
       FROM transacciones_operador t

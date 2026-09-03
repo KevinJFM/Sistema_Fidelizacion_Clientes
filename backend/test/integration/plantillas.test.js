@@ -123,4 +123,24 @@ describe('POST /api/plantillas/:clave/preview', () => {
     expect(res.status).toBe(200);
     expect(res.body.html).toContain('7'); // "¡Quedan 7 días!"
   });
+
+  it('TODOS los correos del operador muestran el catálogo de canjes, sin botón al portal y con su pie propio', async () => {
+    for (const clave of ['bienvenida_operador', 'comprobante_operador', 'cerca_canje_operador', 'resumen_operador']) {
+      const res = await preview(clave);
+      expect(res.status, clave).toBe(200);
+      expect(res.body.html, clave).toContain('Sunset Tours');              // {nombre} de ejemplo (operador)
+      expect(res.body.html, clave).not.toContain('/login');               // el operador NO entra al portal → sin botón
+      expect(res.body.html, clave).toContain('operador turístico');       // pie propio del operador
+      expect(res.body.html, clave).toContain('Esto es lo que puedes canjear'); // catálogo de canjes
+      expect(res.body.html, clave).toContain('Pasanoche (Dom a Jue)');    // recompensa del catálogo
+      expect(res.body.html, clave).toContain('700 pts');                  // puntos que necesita
+    }
+  });
+
+  it('el comprobante del operador muestra personas y puntos ganados (visita)', async () => {
+    const res = await preview('comprobante_operador');
+    expect(res.status).toBe(200);
+    expect(res.body.html).toContain('Personas registradas');
+    expect(res.body.html).toContain('Puntos ganados');
+  });
 });

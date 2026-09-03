@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listarTransaccionesOperador } from '../../servicios/servicioOperadores';
 import { exportarPDF } from '../../utilidades/pdf';
+import { telefonoConCodigo } from '../../utilidades/paises';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import Boton from '../../componentes/UI/Boton';
@@ -39,7 +40,7 @@ function ModalDetalleOperador({ t, onClose }) {
         {/* Operador */}
         <div style={{ background: '#EEF0FC', border: '1px solid #D6DBF5', borderRadius: 14, padding: '12px 16px', marginBottom: 16 }}>
           <p style={{ margin: 0, fontWeight: 800, color: '#0A1259', fontSize: 15 }}>{t.operador}</p>
-          {t.telefono && <p style={{ margin: '6px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Tel: {t.telefono}</p>}
+          {t.telefono && <p style={{ margin: '6px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Tel: {telefonoConCodigo(t.telefono, t.pais)}</p>}
           {t.correo && <p style={{ margin: '2px 0 0', fontSize: 13, color: '#374151', fontWeight: 700 }}>Correo: {t.correo}</p>}
         </div>
 

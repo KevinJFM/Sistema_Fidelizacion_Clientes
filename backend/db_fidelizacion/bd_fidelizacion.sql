@@ -10,6 +10,7 @@ USE db_fidelizacion;
 DROP TABLE IF EXISTS bitacora;
 DROP TABLE IF EXISTS plantillas_correo;
 DROP TABLE IF EXISTS alertas_enviadas;
+DROP TABLE IF EXISTS alertas_enviadas_operador;
 DROP TABLE IF EXISTS refresh_tokens;
 DROP TABLE IF EXISTS movimientos_puntos;
 DROP TABLE IF EXISTS transacciones;
@@ -253,6 +254,7 @@ CREATE TABLE operadores_turisticos (
   nombre            VARCHAR(120)  NOT NULL,
   tipo              VARCHAR(20)   NOT NULL DEFAULT 'Persona natural',  -- 'Persona natural' o 'Empresa'
   telefono          VARCHAR(20)   NULL,
+  pais              VARCHAR(60)   NOT NULL DEFAULT 'El Salvador',       -- define el código de marcación del teléfono
   correo            VARCHAR(120)  NULL,
   puntos_acumulados DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   id_estado         INT NOT NULL DEFAULT 1,
@@ -355,6 +357,18 @@ CREATE TABLE alertas_enviadas (
   INDEX idx_cliente_tipo (id_cliente, tipo, referencia)
 );
 
+-- Alertas de retención enviadas a los OPERADORES (paralela a alertas_enviadas de clientes).
+CREATE TABLE alertas_enviadas_operador (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  id_operador   INT          NOT NULL,
+  tipo          VARCHAR(40)  NOT NULL,       -- 'cerca_canje' | 'resumen'
+  referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; período YYYY-MM para resumen
+  fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_op_operador FOREIGN KEY (id_operador) REFERENCES operadores_turisticos(id_operador) ON DELETE CASCADE,
+  INDEX idx_operador_tipo (id_operador, tipo, referencia)
+);
+
 -- ============================================================
 --  BITÁCORA / AUDITORÍA (historial de acciones del sistema)
 -- ============================================================
@@ -441,6 +455,26 @@ INSERT INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, 
 
 -- Días de antelación del aviso "por finalizar" (editable desde el panel).
 UPDATE plantillas_correo SET dias = 2 WHERE clave = 'promo_por_finalizar';
+
+-- Correos al OPERADOR turístico. Igual que los del cliente, pero el operador NO entra al portal:
+-- por eso van SIN botón (boton = NULL). El comprobante sirve tanto para visitas como para canjes.
+INSERT INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, asunto, titulo, intro, cuerpo, boton, variables) VALUES
+  ('bienvenida_operador', 'Bienvenida (operador nuevo)', 'Se envía cuando registras un operador turístico nuevo que tiene correo.', 0, 1,
+   '¡Bienvenido al programa de puntos! · Punta Diamantes', '¡Bienvenido, {nombre}!', 'Ya eres parte del programa de puntos para operadores turísticos de Punta Diamantes.',
+   'Por cada visita con tu grupo al hotel acumulas puntos que puedes canjear por recompensas en recepción. ¡Nos vemos pronto!', NULL,
+   '{nombre}'),
+  ('comprobante_operador', 'Comprobante de operador', 'Se envía al operador al registrar una visita o un canje (si tiene correo).', 0, 1,
+   'Tu comprobante · Punta Diamantes', '¡Gracias, {nombre}!', 'Este es el detalle de tu registro y tus puntos.',
+   'Tu saldo actual es de {saldo} puntos. ¡Gracias por traer a tu grupo a Punta Diamantes!', NULL,
+   '{nombre}, {personas}, {puntosGanados}, {puntosCanjeados}, {recompensa}, {saldo}, {minimo}'),
+  ('cerca_canje_operador', 'Casi llegas (operador)', 'Automático: cuando el operador alcanza el 80% de su próxima recompensa.', 0, 1,
+   '¡Casi llegas a "{recompensa}"! · Punta Diamantes', '¡Casi llegas, {nombre}!', 'Solo te faltan {faltan} puntos para tu próximo canje.',
+   'En tu próxima visita con tu grupo puedes completar tus puntos y reclamar {recompensa} en recepción.', NULL,
+   '{nombre}, {puntos}, {recompensa}, {recompensaPuntos}, {faltan}, {porcentaje}'),
+  ('resumen_operador', 'Resumen mensual (operador)', 'Automático: cada mes, el saldo del operador y las recompensas que ya puede canjear (no entra al portal).', 0, 1,
+   'Tus puntos este mes · Punta Diamantes', 'Tus puntos, {nombre}', 'Este es tu saldo y lo que ya puedes canjear en recepción.',
+   'Recuerda que en cada visita con tu grupo ganas puntos. ¡Te esperamos pronto en Punta Diamantes!', NULL,
+   '{nombre}, {puntos}');
 
 -- ============================================================
 --  DATOS INICIALES — CATÁLOGO DE RECOMPENSAS (canje)
