@@ -312,12 +312,19 @@
 }
 .form-field label {
   font-size: 13px;
-  font-weight: 700;
-  color: #6b7280;
+  font-weight: 800;
+  color: #111827;
+}
+/* Texto de ayuda debajo de un campo (ej. "Se otorgan puntos a partir de 12 personas"). */
+.form-field .form-hint {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: #374151;
 }
 .form-field .optional {
-  font-weight: 400;
-  color: #9ca3af;
+  font-weight: 600;
+  color: #6b7280;
   font-size: 11px;
 }
 .form-field input,

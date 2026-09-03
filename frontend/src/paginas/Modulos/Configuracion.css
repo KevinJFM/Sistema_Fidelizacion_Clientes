@@ -72,9 +72,14 @@
 .switch-on .switch-label {
   color: var(--pd-teal);
 }
-/* En modo oscuro el azul de marca no se ve sobre el fondo navy: se aclara casi a blanco. */
+/* En modo oscuro el azul de marca no se ve sobre el fondo navy: se aclara casi a blanco.
+   (Aplica a los switches sobre fondo oscuro, ej. el editor de plantillas en un modal.) */
 [data-theme="dark"] .switch-label { color: #aeb6e6; }
 [data-theme="dark"] .switch-on .switch-label { color: #eef0fc; }
+/* Las tarjetas de configuración se quedan BLANCAS en modo oscuro: ahí el switch usa los
+   mismos colores del modo claro (si no, "Activo" quedaba casi blanco sobre blanco). */
+[data-theme="dark"] .config-card .switch-label { color: #9ca3af; }
+[data-theme="dark"] .config-card .switch-on .switch-label { color: var(--pd-teal); }
 
 /* Tarjeta con la regla desactivada */
 .config-card-off .config-grid {
@@ -143,8 +148,8 @@
   margin-bottom: 18px;
 }
 .frecuente-frase strong { color: var(--pd-teal-dark); }
-[data-theme="dark"] .frecuente-frase { color: #c5cae8; }
-[data-theme="dark"] .frecuente-frase strong { color: #e8ebff; }
+/* La tarjeta se queda BLANCA en modo oscuro, así que la frase usa los mismos colores
+   oscuros del modo claro (si no, quedaba clara sobre blanco, casi invisible). */
 
 /* Campo numérico embebido en la frase (reusa .config-input, pero angosto e inline) */
 .config-input.frecuente-inline {

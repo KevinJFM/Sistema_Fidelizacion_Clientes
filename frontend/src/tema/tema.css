@@ -123,7 +123,14 @@
 [data-theme="dark"] .page-subtitle { color: #c5cae8; }
 /* .res-vacio va sobre la tarjeta blanca (.trans-card): se queda gris oscuro para leerse. */
 /* La tarjeta "Registrar transacción" sigue blanca en oscuro: sus labels quedan oscuros. */
-[data-theme="dark"] .trans-card .form-field label { color: #6b7280; }
+/* En oscuro, las etiquetas de los MODALES (fondo oscuro) van claras. */
+[data-theme="dark"] .form-field .optional { color: #aeb6d8; }
+/* PERO las tarjetas de registro y configuración se quedan con fondo BLANCO en oscuro:
+   ahí las etiquetas deben ser OSCURAS (si no, quedan blancas sobre blanco, invisibles). */
+[data-theme="dark"] .trans-card .form-field label,
+[data-theme="dark"] .config-card .form-field label { color: #111827; }
+[data-theme="dark"] .trans-card .form-field .optional,
+[data-theme="dark"] .config-card .form-field .optional { color: #6b7280; }
 [data-theme="dark"] .stat-card,
 [data-theme="dark"] .stat-card-v2,
 [data-theme="dark"] .placeholder-box,
@@ -231,7 +238,9 @@
 [data-theme="dark"] .modal { background: #11152e; }
 [data-theme="dark"] .confirm-text { color: #dfe3fa; }
 [data-theme="dark"] .confirm-text strong { color: #ffffff; font-weight: 800; }
-[data-theme="dark"] .form-field label { color: #c5cae8; }
+[data-theme="dark"] .form-field label { color: #eef1ff; }
+/* El texto de ayuda debe leerse claro en oscuro (no gris apagado). */
+[data-theme="dark"] .form-field .form-hint { color: #dfe3fa; }
 /* Los campos mantienen el diseño de <Campo> (fondo blanco + borde azul) también en oscuro. */
 [data-theme="dark"] .password-rules { background: #1a1f40; }
 [data-theme="dark"] .btn-ghost {

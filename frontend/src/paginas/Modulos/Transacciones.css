@@ -19,7 +19,7 @@
 }
 [data-theme="dark"] .trans-card { border-color: #2a3160; }
 /* Etiquetas del formulario de transacción: más en negrita y más oscuras para que se noten. */
-.trans-card .form-field label { font-weight: 800; color: #374151; }
+.trans-card .form-field label { font-weight: 800; color: #111827; }
 .trans-card-title {
   font-size: 17px;
   font-weight: 800;
