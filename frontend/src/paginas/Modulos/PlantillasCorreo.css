@@ -11,6 +11,10 @@
   background: var(--pd-surface, #fff);
 }
 [data-theme="dark"] .plantilla-item { border-color: #3a4275; background: #1e244a; }
+/* La fila tiene fondo OSCURO en modo oscuro: el "Activo" del switch va claro (no el teal que
+   usan las tarjetas blancas de Configuracion), para que se lea bien. */
+[data-theme="dark"] .config-card .plantilla-item .switch-label { color: #aeb6e6; }
+[data-theme="dark"] .config-card .plantilla-item .switch-on .switch-label { color: #eef0fc; }
 .plantilla-item.plantilla-off { opacity: 0.6; }
 .plantilla-item-info { flex: 1; min-width: 0; }
 .plantilla-item-nombre { font-weight: 800; color: var(--pd-teal-dark, #0A1259); font-size: 15px; }
