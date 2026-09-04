@@ -29,7 +29,11 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
   -- Interruptores para activar/desactivar cada regla (1 = activo, 0 = inactivo).
   -- La bienvenida nace APAGADA; el admin la activa cuando quiera.
   ('canje_activo',           '1',   'Permite canjear puntos por descuento'),
-  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)');
+  ('bienvenida_activo',      '0',   'Activa el beneficio de bienvenida (primera compra)'),
+  -- Cliente frecuente: al menos N transacciones (no anuladas) en los últimos M meses.
+  ('frecuente_activo',            '1', 'Activa la etiqueta de cliente frecuente'),
+  ('frecuente_min_transacciones', '5', 'Transacciones mínimas para considerar frecuente a un cliente'),
+  ('frecuente_periodo_meses',     '6', 'Ventana en meses para contar las transacciones del cliente frecuente');
 
 -- ============================================================
 --  DATOS INICIALES — PLANTILLAS DE CORREO (texto editable desde el panel)

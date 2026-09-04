@@ -236,3 +236,34 @@ DELETE FROM configuracion WHERE clave IN ('descuento_monto_minimo', 'descuento_m
 
 -- Las promociones sembradas no deben anunciarse retroactivamente.
 UPDATE promociones SET aviso_inicio_enviado = 1;
+
+-- ============================================================
+--  MIGRACIONES INCORPORADAS — DATOS: cliente frecuente + correos de operador
+--  (semillas: migracion_cliente_frecuente, migracion_correos_operador y los
+--   datos de migracion_correos_retencion_operador). Idempotente (INSERT IGNORE).
+-- ============================================================
+
+-- Regla "cliente frecuente" (configurable desde el panel): N transacciones (no anuladas) en M meses.
+INSERT IGNORE INTO configuracion (clave, valor, descripcion) VALUES
+  ('frecuente_activo',            '1', 'Activa la etiqueta de cliente frecuente'),
+  ('frecuente_min_transacciones', '5', 'Transacciones mínimas para considerar frecuente a un cliente'),
+  ('frecuente_periodo_meses',     '6', 'Ventana en meses para contar las transacciones del cliente frecuente');
+
+-- Correos al OPERADOR turístico (bienvenida, comprobante y retención). Sin botón: el operador no entra al portal.
+INSERT IGNORE INTO plantillas_correo (clave, nombre, descripcion, obligatorio, activo, asunto, titulo, intro, cuerpo, boton, variables) VALUES
+  ('bienvenida_operador', 'Bienvenida (operador nuevo)', 'Se envía cuando registras un operador turístico nuevo que tiene correo.', 0, 1,
+   '¡Bienvenido al programa de puntos! · Punta Diamantes', '¡Bienvenido, {nombre}!', 'Ya eres parte del programa de puntos para operadores turísticos de Punta Diamantes.',
+   'Por cada visita con tu grupo al hotel acumulas puntos que puedes canjear por recompensas en recepción. ¡Nos vemos pronto!', NULL,
+   '{nombre}'),
+  ('comprobante_operador', 'Comprobante de operador', 'Se envía al operador al registrar una visita o un canje (si tiene correo).', 0, 1,
+   'Tu comprobante · Punta Diamantes', '¡Gracias, {nombre}!', 'Este es el detalle de tu registro y tus puntos.',
+   'Tu saldo actual es de {saldo} puntos. ¡Gracias por traer a tu grupo a Punta Diamantes!', NULL,
+   '{nombre}, {personas}, {puntosGanados}, {puntosCanjeados}, {recompensa}, {saldo}, {minimo}'),
+  ('cerca_canje_operador', 'Casi llegas (operador)', 'Automático: cuando el operador alcanza el 80% de su próxima recompensa.', 0, 1,
+   '¡Casi llegas a "{recompensa}"! · Punta Diamantes', '¡Casi llegas, {nombre}!', 'Solo te faltan {faltan} puntos para tu próximo canje.',
+   'En tu próxima visita con tu grupo puedes completar tus puntos y reclamar {recompensa} en recepción.', NULL,
+   '{nombre}, {puntos}, {recompensa}, {recompensaPuntos}, {faltan}, {porcentaje}'),
+  ('resumen_operador', 'Resumen mensual (operador)', 'Automático: cada mes, el saldo del operador y las recompensas que ya puede canjear (no entra al portal).', 0, 1,
+   'Tus puntos este mes · Punta Diamantes', 'Tus puntos, {nombre}', 'Este es tu saldo y lo que ya puedes canjear en recepción.',
+   'Recuerda que en cada visita con tu grupo ganas puntos. ¡Te esperamos pronto en Punta Diamantes!', NULL,
+   '{nombre}, {puntos}');

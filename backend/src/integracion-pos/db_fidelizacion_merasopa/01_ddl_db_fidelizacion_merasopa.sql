@@ -432,3 +432,23 @@ ALTER TABLE transacciones_operador
   ADD COLUMN anulada_en       DATETIME     NULL              AFTER anulada_por,
   ADD COLUMN motivo_anulacion VARCHAR(255) NULL              AFTER anulada_en,
   ADD CONSTRAINT fk_transop_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+
+-- País del cliente (define el código telefónico: +503, +1, +34, ...). Existentes -> 'El Salvador'.
+ALTER TABLE clientes
+  ADD COLUMN pais VARCHAR(60) NOT NULL DEFAULT 'El Salvador' AFTER telefono;
+
+-- País del operador turístico (mismo criterio que el cliente).
+ALTER TABLE operadores_turisticos
+  ADD COLUMN pais VARCHAR(60) NOT NULL DEFAULT 'El Salvador' AFTER telefono;
+
+-- Rastreo de correos de retención al operador (para no repetir envíos), paralela a alertas_enviadas de clientes.
+CREATE TABLE IF NOT EXISTS alertas_enviadas_operador (
+  id            INT          NOT NULL AUTO_INCREMENT,
+  id_operador   INT          NOT NULL,
+  tipo          VARCHAR(40)  NOT NULL,       -- 'cerca_canje' | 'resumen'
+  referencia    VARCHAR(100) NULL,           -- id_recompensa para cerca_canje; período YYYY-MM para resumen
+  fecha_enviada DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_alertas_op_operador FOREIGN KEY (id_operador) REFERENCES operadores_turisticos(id_operador) ON DELETE CASCADE,
+  INDEX idx_operador_tipo (id_operador, tipo, referencia)
+);

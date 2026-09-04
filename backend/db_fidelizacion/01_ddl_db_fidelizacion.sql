@@ -124,6 +124,7 @@ CREATE TABLE clientes (
   nombres           VARCHAR(100) NOT NULL,
   apellidos         VARCHAR(100) NOT NULL,
   telefono          VARCHAR(20)  NULL,
+  pais              VARCHAR(60)  NOT NULL DEFAULT 'El Salvador',  -- país del cliente; define el código telefónico (+503, +1, ...)
   correo            VARCHAR(150) NULL,
   fecha_nacimiento  DATE         NULL,
   id_departamento   INT          NULL,
