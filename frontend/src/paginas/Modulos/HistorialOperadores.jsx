@@ -29,6 +29,11 @@ const estiloModal = {
 
 function ModalDetalleOperador({ t, onClose }) {
   if (!t) return null;
+  // Anulado: personas y puntos se muestran en 0 (el registro no otorgó nada).
+  const anulada = !!t.anulada;
+  const personas = anulada ? 0 : t.num_personas;
+  const otorgados = anulada ? 0 : Number(t.puntos_otorgados);
+  const canjeados = anulada ? 0 : Number(t.puntos_canjeados);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div style={estiloModal} onClick={(e) => e.stopPropagation()}>
@@ -45,7 +50,7 @@ function ModalDetalleOperador({ t, onClose }) {
         </div>
 
         {/* Aviso si el registro está anulado */}
-        {t.anulada && (
+        {anulada && (
           <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 14, padding: '10px 16px', marginBottom: 16 }}>
             <p style={{ margin: 0, fontWeight: 800, color: '#b91c1c', fontSize: 13 }}>Registro anulado</p>
             {t.motivo_anulacion && <p style={{ margin: '4px 0 0', fontSize: 13, color: '#374151', fontWeight: 600 }}>Motivo: {t.motivo_anulacion}</p>}
@@ -57,7 +62,7 @@ function ModalDetalleOperador({ t, onClose }) {
         {[
           { label: 'Registrado por', valor: t.registrado_por },
           { label: 'Fecha',          valor: new Date(t.fecha).toLocaleString() },
-          { label: 'Personas',       valor: t.num_personas },
+          { label: 'Personas',       valor: personas },
         ].map(({ label, valor }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #e5e7eb', fontSize: 14 }}>
             <span style={{ color: '#374151', fontWeight: 600 }}>{label}</span>
@@ -67,14 +72,14 @@ function ModalDetalleOperador({ t, onClose }) {
 
         {/* Puntos: otorgados (por visita) o canjeados */}
         <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-          {Number(t.puntos_canjeados) > 0 ? (
+          {canjeados > 0 ? (
             <div style={{ flex: 1, background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{Number(t.puntos_canjeados).toFixed(2)}</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{canjeados.toFixed(2)}</p>
               <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos canjeados</p>
             </div>
           ) : (
             <div style={{ flex: 1, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{otorgados.toFixed(2)}</p>
               <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos otorgados (por visita)</p>
             </div>
           )}
@@ -133,6 +138,7 @@ export default function HistorialOperadores() {
   };
 
   // Los registros anulados no cuentan en los totales.
+  const totalRegistros = historial.filter((t) => !t.anulada).length;
   const totalPersonas = historial.reduce((s, t) => s + (t.anulada ? 0 : Number(t.num_personas)), 0);
   const totalPuntos   = historial.reduce((s, t) => s + (t.anulada ? 0 : Number(t.puntos_otorgados)), 0);
   const pageItems = historial.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -140,18 +146,23 @@ export default function HistorialOperadores() {
 
   const exportarPdf = () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
-    const head = ['Operador', 'Tipo', 'Correo', 'Personas', 'Puntos', 'Registrado por', 'Fecha'];
+    const head = ['Operador', 'Tipo', 'Teléfono', 'Correo', 'Personas', 'Puntos', 'Registrado por', 'Fecha'];
     const body = historial.map((t) => [
-      t.anulada ? `${t.operador} (anulada)` : t.operador,
+      t.operador,
       t.tipo || '—',
+      t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '—',
       t.correo || '—',
-      String(t.num_personas),
-      Number(t.puntos_canjeados) > 0
-        ? `-${Number(t.puntos_canjeados).toFixed(2)}`
-        : `+${Number(t.puntos_otorgados).toFixed(2)}`,
+      // Anulado: en Personas va "(anulada)" en rojo; puntos en 0.
+      t.anulada ? '(anulada)' : String(t.num_personas),
+      t.anulada
+        ? '+0.00'
+        : (Number(t.puntos_canjeados) > 0
+          ? `-${Number(t.puntos_canjeados).toFixed(2)}`
+          : `+${Number(t.puntos_otorgados).toFixed(2)}`),
       t.registrado_por,
-      new Date(t.fecha).toLocaleDateString(),
+      new Date(t.fecha).toLocaleDateString() + '\n' + new Date(t.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     ]);
+    const anuladas = historial.map((t) => !!t.anulada);
 
     const titulo = filtros.tipo
       ? `Historial de Tour Operadores (${filtros.tipo})`
@@ -162,7 +173,7 @@ export default function HistorialOperadores() {
     if (filtros.desde) sub.push(`Desde: ${filtros.desde}`);
     if (filtros.hasta) sub.push(`Hasta: ${filtros.hasta}`);
 
-    const resumen = `Registros: ${historial.length}    Personas: ${totalPersonas}    Puntos otorgados: ${totalPuntos.toFixed(2)}`;
+    const resumen = `Registros: ${totalRegistros}    Personas: ${totalPersonas}    Puntos otorgados: ${totalPuntos.toFixed(2)}`;
     const sufijo = filtros.tipo ? `_${filtros.tipo.replace(/\s+/g, '_').toLowerCase()}` : '_todos';
 
     exportarPDF({
@@ -171,12 +182,14 @@ export default function HistorialOperadores() {
       head,
       body,
       resumen,
+      anuladas,
+      colAnulada: 4,
       archivo: `operadores${sufijo}_${new Date().toISOString().slice(0, 10)}.pdf`,
     });
     toast.success('PDF generado');
   };
 
-  if (inicial) return <SkeletonListado columnas={8} conBoton={false} conBusqueda={false} filtros={2} />;
+  if (inicial) return <SkeletonListado columnas={9} conBoton={false} conBusqueda={false} filtros={2} />;
 
   return (
     <div className="admin-page">
@@ -210,7 +223,7 @@ export default function HistorialOperadores() {
       </form>
 
       <Resumen items={[
-        { etiqueta: 'Registros', valor: historial.length },
+        { etiqueta: 'Registros', valor: totalRegistros },
         { etiqueta: 'Personas', valor: totalPersonas },
         { etiqueta: 'Puntos otorgados', valor: totalPuntos.toFixed(2) },
       ]} />
@@ -224,6 +237,7 @@ export default function HistorialOperadores() {
               <tr>
                 <th>Operador</th>
                 <th>Tipo</th>
+                <th>Teléfono</th>
                 <th>Correo</th>
                 <th>Personas</th>
                 <th>Puntos</th>
@@ -234,17 +248,18 @@ export default function HistorialOperadores() {
             </thead>
             <tbody>
               {cargando ? (
-                <SkeletonFilas columnas={8} filas={8} />
+                <SkeletonFilas columnas={9} filas={8} />
               ) : pageItems.map((t) => (
                 <tr key={t.id_transaccion_op} className={t.anulada ? 'fila-anulada' : undefined}>
                   <td><strong>{t.operador}</strong></td>
                   <td>{t.tipo || '—'}</td>
+                  <td>{t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '—'}</td>
                   <td>{t.correo || '—'}</td>
-                  <td>{t.num_personas}</td>
+                  <td>{t.anulada ? 0 : t.num_personas}</td>
                   <td>
-                    {Number(t.puntos_canjeados) > 0
+                    {!t.anulada && Number(t.puntos_canjeados) > 0
                       ? <strong style={{ color: '#dc2626' }}>-{Number(t.puntos_canjeados).toFixed(2)}</strong>
-                      : <strong style={{ color: '#16a34a' }}>+{Number(t.puntos_otorgados).toFixed(2)}</strong>}
+                      : <strong style={{ color: '#16a34a' }}>+{(t.anulada ? 0 : Number(t.puntos_otorgados)).toFixed(2)}</strong>}
                   </td>
                   <td>{t.registrado_por}</td>
                   <td>

@@ -404,14 +404,14 @@ export default function Operadores() {
                       <span style={{ fontWeight: 700, color: '#063A34' }}>Puntos otorgados (por visita)</span>
                       <strong style={{ color: '#16a34a' }}>+{Number(resultado.puntos_otorgados).toFixed(2)}</strong>
                     </div>
-                    <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
+                    <small style={{ color: '#374151', fontWeight: 800 }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
                   </div>
                 ) : (
                   <div className="cliente-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
                     <span style={{ fontWeight: 700, color: '#b45309' }}>
                       Visita registrada sin puntos: se requieren mínimo {resultado.minimo_personas} personas.
                     </span>
-                    <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
+                    <small style={{ color: '#374151', fontWeight: 800 }}>Saldo del operador: {Number(resultado.saldo_puntos).toFixed(2)} pts</small>
                   </div>
                 )
               ) : null}
@@ -486,7 +486,7 @@ export default function Operadores() {
                     <span style={{ fontWeight: 700, color: '#063A34' }}>{resultadoCanje.recompensa}</span>
                     <strong style={{ color: '#dc2626' }}>-{Number(resultadoCanje.puntos_canjeados).toFixed(2)}</strong>
                   </div>
-                  <small style={{ color: '#6b7280' }}>Saldo del operador: {Number(resultadoCanje.saldo_puntos).toFixed(2)} pts</small>
+                  <small style={{ color: '#374151', fontWeight: 800 }}>Saldo del operador: {Number(resultadoCanje.saldo_puntos).toFixed(2)} pts</small>
                 </div>
               )}
 

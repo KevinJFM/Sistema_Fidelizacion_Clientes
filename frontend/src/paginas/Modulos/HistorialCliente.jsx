@@ -31,7 +31,13 @@ const estiloModal = {
 
 function ModalDetalle({ t, onClose }) {
   if (!t) return null;
-  const totalPagado = Number(t.monto) - Number(t.descuento_aplicado);
+  // Anulada: los montos y puntos se muestran en 0 (la transacción no otorgó nada).
+  const anulada = !!t.anulada;
+  const monto = anulada ? 0 : Number(t.monto);
+  const descuento = anulada ? 0 : Number(t.descuento_aplicado);
+  const otorgados = anulada ? 0 : t.puntos_otorgados;
+  const canjeados = anulada ? 0 : t.puntos_canjeados;
+  const totalPagado = monto - descuento;
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div style={estiloModal} onClick={(e) => e.stopPropagation()}>
@@ -91,11 +97,11 @@ function ModalDetalle({ t, onClose }) {
         <div style={{ background: '#F5F6FE', border: '1.5px solid #D6DBF5', borderRadius: 14, padding: '14px 16px', margin: '16px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8 }}>
             <span style={{ color: '#374151', fontWeight: 500 }}>Monto consumido</span>
-            <span style={{ fontWeight: 600, color: '#111827' }}>${Number(t.monto).toFixed(2)}</span>
+            <span style={{ fontWeight: 600, color: '#111827' }}>${monto.toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 12 }}>
             <span style={{ color: '#374151', fontWeight: 500 }}>Descuento aplicado</span>
-            <span style={{ fontWeight: 600, color: '#16a34a' }}>-${Number(t.descuento_aplicado).toFixed(2)}</span>
+            <span style={{ fontWeight: 600, color: '#16a34a' }}>-${descuento.toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 10 }}>
             <span style={{ fontWeight: 700, color: '#0A1259' }}>Total pagado</span>
@@ -105,12 +111,12 @@ function ModalDetalle({ t, onClose }) {
 
         <div style={{ display: 'flex', gap: 12 }}>
           <div style={{ flex: 1, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{t.puntos_otorgados}</p>
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{otorgados}</p>
             <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos otorgados</p>
           </div>
-          {t.puntos_canjeados > 0 && (
+          {canjeados > 0 && (
             <div style={{ flex: 1, background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{t.puntos_canjeados}</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{canjeados}</p>
               <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos canjeados</p>
             </div>
           )}
@@ -366,44 +372,41 @@ export default function HistorialCliente() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Fecha</th>
-                    <th>Correo</th>
+                    <th>Huésped</th>
+                    <th>Documento</th>
+                    <th>Contacto</th>
                     <th>Hospedaje</th>
                     <th>Folio</th>
-                    <th>Promoción</th>
                     <th>Monto</th>
                     <th>Descuento</th>
-                    <th>Total pagado</th>
                     <th>Puntos</th>
+                    <th>Registrado</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {pageItems.map((t) => (
                     <tr key={t.id_transaccion} className={t.anulada ? 'fila-anulada' : undefined}>
-                      <td style={{ color: '#9ca3af', fontSize: 12 }}>#{t.id_transaccion}</td>
+                      <td>{t.nombres} {t.apellidos}</td>
+                      <td><span className="badge-rol badge-doc">{t.tipo_documento}</span> <strong>{t.numero_documento}</strong></td>
                       <td>
-                        <small>{new Date(t.fecha).toLocaleString()}</small>
-                        {t.anulada === 1 && <><br /><span className="badge-anulada">ANULADA</span></>}
+                        {t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '—'}<br />
+                        <small className="td-correo">{t.correo || ''}</small>
                       </td>
-                      <td>{t.correo || '—'}</td>
                       <td>
                         {t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—'}
                         {t.fecha_salida ? ` → ${new Date(t.fecha_salida).toLocaleDateString()}` : ''}
                       </td>
                       <td>{t.referencia_venta || '—'}</td>
+                      <td>${(t.anulada ? 0 : Number(t.monto)).toFixed(2)}</td>
+                      <td>${(t.anulada ? 0 : Number(t.descuento_aplicado)).toFixed(2)}</td>
                       <td>
-                        {t.nombre_promocion
-                          ? <span className="badge-promo">{t.nombre_promocion}</span>
-                          : <span style={{ color: '#9ca3af' }}>—</span>}
+                        <strong style={{ color: '#16a34a' }}>+{t.anulada ? 0 : t.puntos_otorgados}</strong>
+                        {!t.anulada && t.puntos_canjeados > 0 && <span style={{ color: '#dc2626' }}> / -{t.puntos_canjeados}</span>}
                       </td>
-                      <td>${Number(t.monto).toFixed(2)}</td>
-                      <td>-${Number(t.descuento_aplicado).toFixed(2)}</td>
-                      <td><strong>${(Number(t.monto) - Number(t.descuento_aplicado)).toFixed(2)}</strong></td>
                       <td>
-                        <strong className="puntos-pos">+{t.puntos_otorgados}</strong>
-                        {t.puntos_canjeados > 0 && <span style={{ color: '#dc2626' }}> / -{t.puntos_canjeados}</span>}
+                        <small>{new Date(t.fecha).toLocaleString()}</small>
+                        {t.anulada === 1 && <><br /><span className="badge-anulada">ANULADA</span></>}
                       </td>
                       <td>
                         <button className="btn-icon-table" title="Ver detalle" onClick={() => setDetalle(t)}>

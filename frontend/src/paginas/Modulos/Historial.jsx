@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { listarTransacciones } from '../../servicios/servicioTransacciones';
-import { descargarCSV } from '../../utilidades/csv';
+import { descargarExcel } from '../../utilidades/csv';
 import { exportarPDF } from '../../utilidades/pdf';
 import { formatDocumento } from '../../utilidades/formato';
+import { telefonoConCodigo } from '../../utilidades/paises';
 import Paginacion, { PAGE_SIZE } from '../../componentes/Paginacion/Paginacion';
 import { SkeletonFilas, SkeletonListado } from '../../componentes/Skeleton/Skeleton';
 import Boton from '../../componentes/UI/Boton';
@@ -31,7 +32,13 @@ const estiloModal = {
 
 function ModalDetalle({ t, onClose }) {
   if (!t) return null;
-  const totalPagado = Number(t.monto) - Number(t.descuento_aplicado);
+  // Anulada: los montos y puntos se muestran en 0 (la transacción no otorgó nada).
+  const anulada = !!t.anulada;
+  const monto = anulada ? 0 : Number(t.monto);
+  const descuento = anulada ? 0 : Number(t.descuento_aplicado);
+  const otorgados = anulada ? 0 : t.puntos_otorgados;
+  const canjeados = anulada ? 0 : t.puntos_canjeados;
+  const totalPagado = monto - descuento;
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div style={estiloModal} onClick={(e) => e.stopPropagation()}>
@@ -94,11 +101,11 @@ function ModalDetalle({ t, onClose }) {
         <div style={{ background: '#F5F6FE', border: '1.5px solid #D6DBF5', borderRadius: 14, padding: '14px 16px', margin: '16px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 8 }}>
             <span style={{ color: '#374151', fontWeight: 500 }}>Monto consumido</span>
-            <span style={{ fontWeight: 600, color: '#111827' }}>${Number(t.monto).toFixed(2)}</span>
+            <span style={{ fontWeight: 600, color: '#111827' }}>${monto.toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 12 }}>
             <span style={{ color: '#374151', fontWeight: 500 }}>Descuento aplicado</span>
-            <span style={{ fontWeight: 600, color: '#16a34a' }}>-${Number(t.descuento_aplicado).toFixed(2)}</span>
+            <span style={{ fontWeight: 600, color: '#16a34a' }}>-${descuento.toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, borderTop: '1px solid #e5e7eb', paddingTop: 10 }}>
             <span style={{ fontWeight: 700, color: '#0A1259' }}>Total pagado</span>
@@ -109,12 +116,12 @@ function ModalDetalle({ t, onClose }) {
         {/* Puntos */}
         <div style={{ display: 'flex', gap: 12 }}>
           <div style={{ flex: 1, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{t.puntos_otorgados}</p>
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#16a34a' }}>+{otorgados}</p>
             <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos otorgados</p>
           </div>
-          {t.puntos_canjeados > 0 && (
+          {canjeados > 0 && (
             <div style={{ flex: 1, background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{t.puntos_canjeados}</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#dc2626' }}>-{canjeados}</p>
               <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#374151' }}>Puntos canjeados</p>
             </div>
           )}
@@ -192,22 +199,23 @@ export default function Historial() {
   const trasEditar = () => { setEditando(null); cargar(ultimoFiltro.current); setExito('Cambios guardados'); };
   const trasAnular = () => { setAnulando(null); cargar(ultimoFiltro.current); setExito('Transacción anulada'); };
 
-  const exportar = () => {
+  const exportar = async () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
     const columnas = [
       { label: 'Huésped',          valor: (t) => `${t.nombres} ${t.apellidos}` },
       { label: 'Tipo documento',   valor: (t) => t.tipo_documento },
       { label: 'N° documento',     valor: (t) => t.numero_documento },
-      { label: 'Teléfono',         valor: (t) => t.telefono || '' },
+      { label: 'Teléfono',         valor: (t) => (t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '') },
       { label: 'Correo',           valor: (t) => t.correo || '' },
       { label: 'Fecha ingreso',    valor: (t) => (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '') },
       { label: 'Fecha salida',     valor: (t) => (t.fecha_salida ? new Date(t.fecha_salida).toLocaleDateString() : '') },
       { label: 'Folio',            valor: (t) => t.referencia_venta || '' },
       { label: 'Promoción',        valor: (t) => t.nombre_promocion || '' },
-      { label: 'Monto',            valor: (t) => Number(t.monto).toFixed(2) },
-      { label: 'Descuento',        valor: (t) => Number(t.descuento_aplicado).toFixed(2) },
-      { label: 'Puntos otorgados', valor: (t) => t.puntos_otorgados },
-      { label: 'Puntos canjeados', valor: (t) => t.puntos_canjeados },
+      // Las anuladas se muestran en 0 (no otorgaron nada); el Estado y el Motivo las identifican.
+      { label: 'Monto',            valor: (t) => (t.anulada ? 0 : Number(t.monto)), formato: '#,##0.00' },
+      { label: 'Descuento',        valor: (t) => (t.anulada ? 0 : Number(t.descuento_aplicado)), formato: '#,##0.00' },
+      { label: 'Puntos otorgados', valor: (t) => (t.anulada ? 0 : Number(t.puntos_otorgados)) },
+      { label: 'Puntos canjeados', valor: (t) => (t.anulada ? 0 : Number(t.puntos_canjeados)) },
       { label: 'Cajero',           valor: (t) => t.cajero },
       { label: 'Registrado',       valor: (t) => new Date(t.fecha).toLocaleString() },
       { label: 'Estado',           valor: (t) => (t.anulada ? 'Anulada' : 'Activa') },
@@ -216,26 +224,47 @@ export default function Historial() {
     const sufijo = filtros.numero_documento
       ? `_${filtros.numero_documento}`
       : (filtros.tipo_documento ? `_${filtros.tipo_documento.toLowerCase()}` : '_completo');
-    descargarCSV(`historial${sufijo}_${new Date().toISOString().slice(0, 10)}.csv`, columnas, historial);
-    toast.success('Historial exportado');
+
+    // Fila de totales (sin contar anuladas), alineada a las columnas de arriba.
+    const totalDescuentos = activas.reduce((s, t) => s + Number(t.descuento_aplicado), 0);
+    const totalCanjeados  = activas.reduce((s, t) => s + t.puntos_canjeados, 0);
+    const totales = columnas.map(() => '');
+    totales[0]  = `Totales (sin anuladas): ${activas.length} transacciones`;
+    totales[9]  = totalVentas;        // Monto
+    totales[10] = totalDescuentos;    // Descuento
+    totales[11] = totalPuntos;        // Puntos otorgados
+    totales[12] = totalCanjeados;     // Puntos canjeados
+
+    try {
+      await descargarExcel(`historial${sufijo}_${new Date().toISOString().slice(0, 10)}.xlsx`, columnas, historial, {
+        hoja: 'Historial',
+        atenuar: (t) => !!t.anulada,
+        totales,
+      });
+      toast.success('Historial exportado');
+    } catch {
+      toast.error('No se pudo generar el Excel');
+    }
   };
 
   const exportarPdf = () => {
     if (historial.length === 0) { toast.error('No hay datos para exportar'); return; }
     const head = ['Huésped', 'Documento', 'Teléfono', 'Correo', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Puntos', 'Registrado'];
     const body = historial.map((t) => [
-      `${t.nombres} ${t.apellidos}${t.anulada ? ' (ANULADA)' : ''}`,
+      `${t.nombres} ${t.apellidos}`,
       `${t.tipo_documento}: ${t.numero_documento}`,
-      t.telefono || '—',
+      t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '—',
       t.correo || '—',
       (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—') +
         (t.fecha_salida ? ` a ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
       t.nombre_promocion || '—',
-      `$${Number(t.monto).toFixed(2)}`,
-      `$${Number(t.descuento_aplicado).toFixed(2)}`,
-      `+${t.puntos_otorgados}${t.puntos_canjeados > 0 ? ` / -${t.puntos_canjeados}` : ''}`,
-      new Date(t.fecha).toLocaleDateString(),
+      // Anulada: en Monto va "(anulada)" en rojo; descuento y puntos en 0.
+      t.anulada ? '(anulada)' : `$${Number(t.monto).toFixed(2)}`,
+      `$${(t.anulada ? 0 : Number(t.descuento_aplicado)).toFixed(2)}`,
+      t.anulada ? '+0' : `+${t.puntos_otorgados}${t.puntos_canjeados > 0 ? ` / -${t.puntos_canjeados}` : ''}`,
+      new Date(t.fecha).toLocaleDateString() + '\n' + new Date(t.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     ]);
+    const anuladas = historial.map((t) => !!t.anulada);
 
     const individual = filtros.numero_documento && historial.length > 0;
     const titulo = individual
@@ -250,12 +279,12 @@ export default function Historial() {
     if (filtros.desde) sub.push(`Desde: ${filtros.desde}`);
     if (filtros.hasta) sub.push(`Hasta: ${filtros.hasta}`);
 
-    const resumen = `Transacciones: ${historial.length}    Ingresos: $${totalVentas.toFixed(2)}    Puntos otorgados: ${totalPuntos}`;
+    const resumen = `Transacciones: ${activas.length}    Ingresos: $${totalVentas.toFixed(2)}    Puntos otorgados: ${totalPuntos}`;
     const sufijo = filtros.numero_documento
       ? `_${filtros.numero_documento}`
       : (filtros.tipo_documento ? `_${filtros.tipo_documento.toLowerCase()}` : '_completo');
 
-    exportarPDF({ titulo, subtitulo: sub.join('     |     '), head, body, resumen,
+    exportarPDF({ titulo, subtitulo: sub.join('     |     '), head, body, resumen, anuladas, colAnulada: 6,
       archivo: `historial${sufijo}_${new Date().toISOString().slice(0, 10)}.pdf` });
     toast.success('PDF generado');
   };
@@ -304,7 +333,7 @@ export default function Historial() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-2px' }}>
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          Exportar CSV
+          Exportar Excel
         </Boton>
         <Boton type="button" onClick={exportarPdf} disabled={historial.length === 0}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-2px' }}>
@@ -364,7 +393,7 @@ export default function Historial() {
                   <td>{t.nombres} {t.apellidos}</td>
                   <td><span className="badge-rol badge-doc">{t.tipo_documento}</span> <strong>{t.numero_documento}</strong></td>
                   <td>
-                    {t.telefono || '—'}<br />
+                    {t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '—'}<br />
                     <small className="td-correo">{t.correo || ''}</small>
                   </td>
                   <td>
@@ -372,11 +401,11 @@ export default function Historial() {
                     {t.fecha_salida ? ` → ${new Date(t.fecha_salida).toLocaleDateString()}` : ''}
                   </td>
                   <td>{t.referencia_venta || '—'}</td>
-                  <td>${Number(t.monto).toFixed(2)}</td>
-                  <td>${Number(t.descuento_aplicado).toFixed(2)}</td>
+                  <td>${(t.anulada ? 0 : Number(t.monto)).toFixed(2)}</td>
+                  <td>${(t.anulada ? 0 : Number(t.descuento_aplicado)).toFixed(2)}</td>
                   <td>
-                    <strong style={{ color: '#16a34a' }}>+{t.puntos_otorgados}</strong>
-                    {t.puntos_canjeados > 0 && <span style={{ color: '#dc2626' }}> / -{t.puntos_canjeados}</span>}
+                    <strong style={{ color: '#16a34a' }}>+{t.anulada ? 0 : t.puntos_otorgados}</strong>
+                    {!t.anulada && t.puntos_canjeados > 0 && <span style={{ color: '#dc2626' }}> / -{t.puntos_canjeados}</span>}
                   </td>
                   <td>
                     <small>{new Date(t.fecha).toLocaleString()}</small>

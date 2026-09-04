@@ -473,7 +473,7 @@ export const listarTransacciones = async (req, res) => {
       SELECT t.id_transaccion, t.id_cliente, t.monto, t.descuento_aplicado, t.puntos_otorgados, t.puntos_canjeados,
              t.referencia_venta, t.fecha_ingreso, t.fecha_salida, t.fecha,
              t.anulada, t.anulada_en, t.motivo_anulacion,
-             c.nombres, c.apellidos, c.numero_documento, c.telefono, c.correo,
+             c.nombres, c.apellidos, c.numero_documento, c.telefono, c.correo, c.pais,
              td.nombre AS tipo_documento, u.nombre AS cajero,
              ua.nombre AS anulada_por,
              p.nombre AS nombre_promocion

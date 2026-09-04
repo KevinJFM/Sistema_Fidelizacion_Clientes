@@ -4,6 +4,7 @@ import { telefonoConCodigo } from './paises';
 
 const AZUL  = [13, 27, 184];
 const VERDE = [22, 163, 74];
+const ROJO  = [220, 38, 38]; // rojo del badge "anulada"
 const ROSA  = '#E5388A'; // color de marca del logo
 
 // Toma el logo SVG del sidebar, lo recolorea y lo convierte a PNG para incrustarlo en el PDF. Devuelve null si no lo encuentra (el PDF sale igual sin logo).
@@ -65,8 +66,10 @@ function dibujarEncabezado(doc, logoPng, ancho) {
 
 // Genera un PDF con encabezado del hotel, tabla y resumen.
 // head: [etiquetas]   body: [[fila...]]
-export async function exportarPDF({ titulo, subtitulo, head, body, resumen, archivo }) {
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+// anuladas: [bool...] por fila; colAnulada: índice de la columna que lleva el texto "(anulada)" en rojo.
+export async function exportarPDF({ titulo, subtitulo, head, body, resumen, archivo, anuladas, colAnulada }) {
+  // Vertical A4 (mismo tamaño que el perfil del cliente): así todos los reportes caben en una página de Word.
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
   const ancho = doc.internal.pageSize.getWidth();
   const alto  = doc.internal.pageSize.getHeight();
 
@@ -80,22 +83,37 @@ export async function exportarPDF({ titulo, subtitulo, head, body, resumen, arch
   doc.setFontSize(14);
   doc.text(titulo, 40, 96);
 
+  // La tabla arranca debajo del subtítulo; si el subtítulo se parte en varias líneas, se empuja hacia abajo.
+  let startY = 124;
   if (subtitulo) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(subtitulo, 40, 112);
+    const lineas = doc.splitTextToSize(subtitulo, ancho - 80);
+    doc.text(lineas, 40, 112);
+    startY = 108 + lineas.length * 12;
   }
 
   // ---- Tabla ----
   autoTable(doc, {
-    startY: 124,
+    startY,
     head: [head],
     body,
     styles: { fontSize: 8, cellPadding: 4, textColor: 40 },
     headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [244, 246, 254] },
     margin: { left: 40, right: 40 },
+    // Filas anuladas: toda la fila en gris; la celda "(anulada)" en rojo y negrita.
+    didParseCell: (data) => {
+      if (data.section === 'body' && anuladas?.[data.row.index]) {
+        if (data.column.index === colAnulada) {
+          data.cell.styles.textColor = ROJO;
+          data.cell.styles.fontStyle = 'bold';
+        } else {
+          data.cell.styles.textColor = [156, 163, 175];
+        }
+      }
+    },
     didDrawPage: () => {
       const pagina = `Página ${doc.internal.getNumberOfPages()}`;
       doc.setFontSize(8);
@@ -203,18 +221,22 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
   doc.setTextColor(75, 85, 99);
   doc.text(`${numTransacciones} transacciones  |  $${totalGastado.toFixed(2)} gastados`, statsX, 170);
 
-  // Tabla de transacciones. Las anuladas se marcan y se atenúan (no cuentan en los totales).
-  const head = ['#', 'Fecha', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Total', 'Puntos'];
+  // Tabla de transacciones (mismas columnas que el Historial de transacciones).
+  // Las anuladas se marcan y se atenúan (no cuentan en los totales).
+  const head = ['Huésped', 'Documento', 'Teléfono', 'Correo', 'Hospedaje', 'Promoción', 'Monto', 'Desc.', 'Puntos', 'Registrado'];
   const body = historial.map((t) => [
-    `#${t.id_transaccion}`,
-    new Date(t.fecha).toLocaleDateString() + (t.anulada ? '\n(ANULADA)' : ''),
+    `${t.nombres} ${t.apellidos}`,
+    `${t.tipo_documento}: ${t.numero_documento}`,
+    t.telefono ? telefonoConCodigo(t.telefono, t.pais) : '—',
+    t.correo || '—',
     (t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString() : '—') +
       (t.fecha_salida ? ` a ${new Date(t.fecha_salida).toLocaleDateString()}` : ''),
     t.nombre_promocion || '—',
-    `$${Number(t.monto).toFixed(2)}`,
-    `-$${Number(t.descuento_aplicado).toFixed(2)}`,
-    `$${(Number(t.monto) - Number(t.descuento_aplicado)).toFixed(2)}`,
-    `+${t.puntos_otorgados}${t.puntos_canjeados > 0 ? ` / -${t.puntos_canjeados}` : ''}`,
+    // Anulada: en Monto va "(anulada)" en rojo; descuento y puntos en 0.
+    t.anulada ? '(anulada)' : `$${Number(t.monto).toFixed(2)}`,
+    `$${(t.anulada ? 0 : Number(t.descuento_aplicado)).toFixed(2)}`,
+    t.anulada ? '+0' : `+${t.puntos_otorgados}${t.puntos_canjeados > 0 ? ` / -${t.puntos_canjeados}` : ''}`,
+    new Date(t.fecha).toLocaleDateString() + '\n' + new Date(t.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   ]);
 
   autoTable(doc, {
@@ -225,10 +247,15 @@ export async function exportarPDFCliente({ cliente, historial, totales }) {
     headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [244, 246, 254] },
     margin: { left: 30, right: 30 },
-    // Atenúa (gris) las filas de transacciones anuladas.
+    // Atenúa (gris) las filas anuladas; el "(anulada)" de la columna Monto va en rojo y negrita.
     didParseCell: (data) => {
       if (data.section === 'body' && historial[data.row.index]?.anulada) {
-        data.cell.styles.textColor = [156, 163, 175];
+        if (data.column.index === 6) {
+          data.cell.styles.textColor = ROJO;
+          data.cell.styles.fontStyle = 'bold';
+        } else {
+          data.cell.styles.textColor = [156, 163, 175];
+        }
       }
     },
     didDrawPage: () => {
